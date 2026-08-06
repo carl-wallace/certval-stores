@@ -10,19 +10,10 @@ members = [
 # table below is required for these crates to build *standalone* (e.g. their own
 # CI). When these crates are consumed by a larger workspace (e.g. pbyk), that
 # top-level workspace's own [patch] table governs and this one is ignored.
+# Only the formats 0.3-pre line lacks a crates.io release and is internally
+# git-coupled (cms/x509-cert/x509-ocsp pin the stack together), so it stays on
+# git. Everything else certval needs (crypto-bigint, elliptic-curves, hashes,
+# traits/elliptic-curve, signatures/ecdsa) now resolves from crates.io stable.
 [patch.crates-io]
-crypto-bigint  = { git = "https://github.com/RustCrypto/crypto-bigint.git" }
-primefield     = { git = "https://github.com/RustCrypto/elliptic-curves.git" }
-p256           = { git = "https://github.com/RustCrypto/elliptic-curves.git" }
-p384           = { git = "https://github.com/RustCrypto/elliptic-curves.git" }
-p521           = { git = "https://github.com/RustCrypto/elliptic-curves.git" }
-cms            = { git = "https://github.com/RustCrypto/formats.git" }
-der            = { git = "https://github.com/RustCrypto/formats.git" }
-der_derive     = { git = "https://github.com/RustCrypto/formats.git" }
-spki           = { git = "https://github.com/RustCrypto/formats.git" }
-x509-cert      = { git = "https://github.com/RustCrypto/formats.git" }
-x509-ocsp      = { git = "https://github.com/RustCrypto/formats.git" }
-sha1           = { git = "https://github.com/RustCrypto/hashes.git" }
-sha2           = { git = "https://github.com/RustCrypto/hashes.git" }
-elliptic-curve = { git = "https://github.com/RustCrypto/traits.git" }
-ecdsa          = { git = "https://github.com/RustCrypto/signatures.git" }
+cms        = { git = "https://github.com/RustCrypto/formats.git" }
+x509-ocsp  = { git = "https://github.com/RustCrypto/formats.git" }

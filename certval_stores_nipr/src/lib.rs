@@ -25,8 +25,8 @@ static NIPR_ROOTS: &[&[u8]] = &[
 pub struct NiprStores;
 
 impl TrustStoreProvider for NiprStores {
+    #[allow(unused_mut, clippy::vec_init_then_push)]
     fn entries(&self) -> Vec<StoreEntry> {
-        #[allow(unused_mut)]
         let mut entries = Vec::new();
         #[cfg(feature = "om_nipr")]
         entries.push(StoreEntry {

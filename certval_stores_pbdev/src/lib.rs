@@ -16,6 +16,7 @@ static DEV_ROOTS: &[&[u8]] = &[
 pub struct PbDevStores;
 
 impl TrustStoreProvider for PbDevStores {
+    #[allow(unused_mut, clippy::vec_init_then_push)]
     fn entries(&self) -> Vec<StoreEntry> {
         let mut entries = Vec::new();
         #[cfg(feature = "dev")]
