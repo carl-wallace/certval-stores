@@ -1,0 +1,15 @@
+[package]
+name = "certval_stores_nipr"
+version = "0.1.0"
+edition = "2021"
+description = "NIPR (DoD PKI) trust stores for certval — production (nipr) and operational-test (om_nipr) environments"
+
+[dependencies]
+certval_stores_core = { path = "../certval_stores_core" }
+
+[features]
+default = []
+# NIPR operational-test (JITC) environment.
+om_nipr = []
+# NIPR production environment.
+nipr = []
