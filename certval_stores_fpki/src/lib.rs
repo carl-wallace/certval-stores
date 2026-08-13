@@ -1,18 +1,4 @@
-//! Federal PKI trust store for certval.
-//!
-//! Unlike the other provider crates in this family, the FPKI is a *cross-certified
-//! mesh with a single anchor* rather than a set of roots: the `FPKI` environment
-//! carries exactly one trust anchor — the Federal Common Policy CA G2 — and every
-//! other participant (DoD, Treasury, Entrust, DigiCert, State, WidePoint/ORC,
-//! CertiPath, …) reaches it through cross-certificates carried in the CA store.
-//!
-//! The `fpki_legacy` feature adds the retired Federal Common Policy CA (G1) as a
-//! separate `FPKI_LEGACY` environment. It is anchors-only: the G1 mesh is no
-//! longer published, so there is no CA store to go with it. Enable it only to
-//! validate paths that predate the G2 migration.
-//!
-//! See `README.md` for the provenance of the embedded material and how to
-//! refresh it — unlike the DoD stores, the FPKI mesh is republished frequently.
+#![doc = include_str!("../README.md")]
 
 use certval_stores_core::{StoreEntry, TrustStoreProvider};
 

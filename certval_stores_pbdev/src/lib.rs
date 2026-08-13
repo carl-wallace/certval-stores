@@ -1,8 +1,4 @@
-//! Development (`dev`) trust store for certval — the Purebred development
-//! environment (DoD Engineering roots).
-//!
-//! Enable the `dev` feature (on by default). With `dev` disabled this crate
-//! builds but its provider yields no entries.
+#![doc = include_str!("../README.md")]
 
 use certval_stores_core::{StoreEntry, TrustStoreProvider};
 

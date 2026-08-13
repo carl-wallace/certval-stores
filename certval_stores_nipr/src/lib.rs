@@ -1,9 +1,4 @@
-//! NIPR (DoD PKI) trust stores for certval.
-//!
-//! Provides trust anchors and CA stores for the NIPR production (`nipr`) and
-//! operational-test / JITC (`om_nipr`) environments. Enable the feature(s) for
-//! the environment(s) you need; with neither feature enabled this crate builds
-//! but its provider yields no entries.
+#![doc = include_str!("../README.md")]
 
 use certval_stores_core::{StoreEntry, TrustStoreProvider};
 

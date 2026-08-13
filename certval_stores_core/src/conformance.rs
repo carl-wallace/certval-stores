@@ -1,4 +1,5 @@
-//! Reusable conformance checks over the [`TrustStoreProvider`] contract.
+//! Reusable conformance checks over the expectations a [`TrustStoreProvider`]'s
+//! material must satisfy — the part of the contract the trait cannot express.
 //!
 //! Enabled by the `test-util` feature and intended for use from provider
 //! crates' integration tests:
