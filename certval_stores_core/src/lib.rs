@@ -31,9 +31,25 @@
 //! }
 //! ```
 
+#[cfg(feature = "test-util")]
+pub mod conformance;
+
+// reqwest's wasm backend is a thin fetch() wrapper: no Identity, no Certificate,
+// and no timeout/add_root_certificate on ClientBuilder. Enabling the client on a
+// wasm target therefore fails deep inside this crate with a cascade of missing
+// methods; say so once, here, instead.
+#[cfg(all(feature = "reqwest-client", target_family = "wasm"))]
+compile_error!(
+    "the `reqwest-client` feature cannot build for wasm targets. Depend on \
+     certval_stores_* with default-features = false to embed trust material \
+     without an HTTP client, and bring your own transport."
+);
+
+#[cfg(feature = "reqwest-client")]
 use std::time::Duration;
 
 use log::error;
+#[cfg(feature = "reqwest-client")]
 use reqwest::{Client, ClientBuilder, Identity};
 
 use certval::{CertFile, CertSource, CertVector, Error, PkiEnvironment, TaSource};
@@ -45,7 +61,17 @@ use certval::{CertFile, CertSource, CertVector, Error, PkiEnvironment, TaSource}
 pub struct StoreEntry {
     /// Environment identifier this entry serves, e.g. `"NIPR"`, `"OM_SIPR"`, `"DEV"`.
     pub env: &'static str,
-    /// Trust-anchor certificates (DER).
+    /// Trust anchors, DER-encoded.
+    ///
+    /// These reach `TaSource`, which parses each buffer as an RFC 5914
+    /// `TrustAnchorChoice`, so any of its three alternatives would decode. They
+    /// must nonetheless be the `certificate` alternative — a bare `Certificate`
+    /// — because the same bytes are handed to `reqwest::Certificate::from_der`
+    /// under the `reqwest-client` feature, and that takes only this one. Since
+    /// the call logs and continues, a `taInfo` anchor would build paths normally
+    /// while silently dropping out of every TLS client this crate configures.
+    /// The constraint holds whether or not that feature is enabled: a consumer
+    /// that builds without the client today may add one tomorrow.
     pub roots: &'static [&'static [u8]],
     /// Serialized certval [`CertSource`] (CBOR: intermediate CAs + partial
     /// paths), or `None` for anchors-only providers (e.g. webpki-style roots).
@@ -122,6 +148,7 @@ pub fn get_roots(providers: &[&dyn TrustStoreProvider]) -> Vec<Vec<u8>> {
 
 /// Build a `reqwest` client trusting every root carried by `providers`, using
 /// rustls. Pass `None` as `identity` for server-authenticated TLS.
+#[cfg(feature = "reqwest-client")]
 pub fn get_reqwest_client_rustls(
     providers: &[&dyn TrustStoreProvider],
     timeout_secs: u64,
@@ -139,7 +166,7 @@ pub fn get_reqwest_client_rustls(
 ///
 /// Not available on Android — native-tls there would pull in cross-compiled
 /// OpenSSL. Android consumers must use [`get_reqwest_client_rustls`].
-#[cfg(not(target_os = "android"))]
+#[cfg(all(feature = "reqwest-client", not(target_os = "android")))]
 pub fn get_reqwest_client_native(
     providers: &[&dyn TrustStoreProvider],
     timeout_secs: u64,
@@ -155,6 +182,7 @@ pub fn get_reqwest_client_native(
 /// Attach the optional `identity` (mutual TLS) and every provider root to a
 /// pre-configured `ClientBuilder`, then build. Callers pick the TLS backend
 /// (`.use_rustls_tls()` / `.use_native_tls()`) on the builder they pass in.
+#[cfg(feature = "reqwest-client")]
 pub fn get_reqwest_client(
     providers: &[&dyn TrustStoreProvider],
     mut builder: ClientBuilder,

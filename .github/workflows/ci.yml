@@ -1,0 +1,100 @@
+name: certval-stores
+
+on:
+  pull_request:
+  push:
+    branches: main
+
+env:
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: "-Dwarnings"
+
+# No MSRV matrix leg, deliberately. certval's floor is 1.85, but this workspace
+# cannot reach it: reqwest pulls idna -> icu_* 2.2.0, which requires rustc 1.86,
+# so a 1.85 job fails in dependency resolution before compiling anything here.
+# 1.86 is the earliest candidate for a floor if one is wanted; verify it before
+# adding a leg, and declare `rust-version` in the crates to go with it.
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: RustCrypto/actions/cargo-hack-install@master
+      # Each provider builds with every environment individually and with none:
+      # a crate whose material is behind a feature must still compile without it.
+      - run: cargo hack build --each-feature --workspace
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: RustCrypto/actions/cargo-hack-install@master
+      - run: cargo hack test --each-feature --workspace
+
+  # --each-feature never combines features, so the legs that matter most for a
+  # multi-environment provider run nowhere else: nipr+om_nipr in one build (where
+  # an anchor or partial-path collision between two environments would surface),
+  # fpki+fpki_legacy, and the core crate's composition test, which asks whether
+  # every public provider can share one PkiEnvironment.
+  test-combined:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --workspace --all-features
+
+  # pittv3-wasm is the first consumer to take the trust material without the HTTP
+  # client, and wasm is the configuration that cannot fall back: reqwest's wasm
+  # backend has no Identity/Certificate and no timeout or add_root_certificate, so
+  # `reqwest-client` does not compile there at all. This is the shape that consumer
+  # builds, kept green on purpose.
+  build-wasm-no-client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - run: cargo build -p certval_stores_core --no-default-features --target wasm32-unknown-unknown
+      - run: cargo build -p certval_stores_nipr --no-default-features --features nipr --target wasm32-unknown-unknown
+      - run: cargo build -p certval_stores_fpki --no-default-features --features fpki --target wasm32-unknown-unknown
+      - run: cargo build -p certval_stores_pbdev --no-default-features --features dev --target wasm32-unknown-unknown
+
+  # Without the client the icu crates leave the graph, and with them the rustc 1.86
+  # floor they impose — this configuration holds certval's own 1.85 MSRV. The
+  # default-feature build deliberately has no MSRV leg (see the note above).
+  build-msrv-no-client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.85.0 # certval's MSRV
+      - run: cargo build -p certval_stores_nipr --no-default-features --features nipr
+
+  # Lints run on stable only. The pre-commit hook in each clone runs the same
+  # commands so they fail before a push — an early warning, not a replacement.
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: rustfmt }
+      - run: cargo fmt --all --check
+
+  clippy:
+    name: clippy (-D warnings)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: clippy }
+      # --all-features cannot catch warnings that only exist when a feature is
+      # ABSENT (an import used solely by a gated path). certval_stores_nipr
+      # defaults to no environments at all, so this default-feature run is the
+      # one that covers that shape.
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings

@@ -1,0 +1,116 @@
+//! Tests for the FPKI provider.
+//!
+//! These assert the shape of the embedded material and that it actually
+//! deserializes — a corrupted or truncated `fpki.cbor` fails here rather than at
+//! a consumer's first path build. The shared checks in
+//! `certval_stores_core::conformance` cover the rest of what every provider owes
+//! its consumers.
+//!
+//! There is no generator-input check here, unlike the other providers: the FPKI
+//! store is built from a crawler bundle rather than from `.der` files kept
+//! beside it, so there is nothing on disk to compare against. See `README.md`
+//! for the refresh procedure.
+
+#[cfg(feature = "fpki")]
+use certval::{CertSource, CertVector};
+use certval::{Error, PkiEnvironment, TaSource};
+use certval_stores_core::{conformance, prepare_certval_environment, TrustStoreProvider};
+
+/// Number of intermediate CA certificates in the embedded FPKI CA store. Update
+/// this with the store; see README.md for the refresh procedure.
+#[cfg(feature = "fpki")]
+const EXPECTED_INTERMEDIATES: usize = 133;
+
+fn providers() -> Vec<&'static dyn TrustStoreProvider> {
+    vec![certval_stores_fpki::provider()]
+}
+
+#[test]
+fn provider_is_conformant() {
+    conformance::assert_conformant(certval_stores_fpki::provider());
+}
+
+#[test]
+#[cfg(feature = "fpki")]
+fn fpki_entry_has_one_anchor_and_a_ca_store() {
+    let entries = certval_stores_fpki::PROVIDER.entries();
+    let fpki = entries
+        .iter()
+        .find(|e| e.env == "FPKI")
+        .expect("the fpki feature must yield an FPKI entry");
+
+    // The FPKI is anchored at a single root by design, not by omission.
+    assert_eq!(fpki.roots.len(), 1);
+    assert!(!fpki.roots[0].is_empty());
+    assert!(fpki.cert_store_cbor.is_some());
+}
+
+#[test]
+#[cfg(feature = "fpki")]
+fn embedded_ca_store_deserializes_and_initializes() {
+    let entries = certval_stores_fpki::PROVIDER.entries();
+    let cbor = entries
+        .iter()
+        .find(|e| e.env == "FPKI")
+        .and_then(|e| e.cert_store_cbor)
+        .expect("FPKI entry must carry a CA store");
+
+    let mut cert_source = CertSource::new_from_cbor(cbor).expect("fpki.cbor must deserialize");
+    cert_source
+        .initialize(&Default::default())
+        .expect("fpki.cbor must initialize");
+    assert_eq!(cert_source.len(), EXPECTED_INTERMEDIATES);
+}
+
+#[test]
+#[cfg(feature = "fpki")]
+fn prepare_environment_accepts_fpki() {
+    let mut pe = PkiEnvironment::default();
+    pe.populate_5280_pki_environment();
+    let mut ta_store = TaSource::new();
+
+    prepare_certval_environment(&providers(), &mut pe, &mut ta_store, "FPKI")
+        .expect("FPKI must be a recognized environment");
+    assert_eq!(ta_store.len(), 1);
+}
+
+#[test]
+fn prepare_environment_rejects_unknown_environment() {
+    let mut pe = PkiEnvironment::default();
+    pe.populate_5280_pki_environment();
+    let mut ta_store = TaSource::new();
+
+    let r = prepare_certval_environment(&providers(), &mut pe, &mut ta_store, "NOT_AN_ENV");
+    assert!(matches!(r, Err(Error::Unrecognized)));
+}
+
+#[test]
+#[cfg(feature = "fpki_legacy")]
+fn legacy_entry_is_anchors_only() {
+    let entries = certval_stores_fpki::PROVIDER.entries();
+    let legacy = entries
+        .iter()
+        .find(|e| e.env == "FPKI_LEGACY")
+        .expect("the fpki_legacy feature must yield an FPKI_LEGACY entry");
+
+    assert_eq!(legacy.roots.len(), 1);
+    // The G1 mesh is no longer published, so there is deliberately no CA store.
+    assert!(legacy.cert_store_cbor.is_none());
+}
+
+/// Path *validation*, not just path building: signatures verified from the
+/// anchor down. The environment comes from here rather than from the harness
+/// because the crypto a store needs is the provider's business — this crate's
+/// dev-dependency on certval enables `rsa` for that reason, and without it
+/// certval reports every RSA-signed CA as unverifiable rather than failing
+/// loudly. Settings are time-independent so this asks whether the material is
+/// sound, not whether it is current.
+#[test]
+#[cfg(feature = "fpki")]
+fn paths_validate_under_the_embedded_anchors() {
+    conformance::assert_paths_validate(
+        certval_stores_fpki::provider(),
+        conformance::default_environment,
+        &conformance::structural_validation_settings(),
+    );
+}
