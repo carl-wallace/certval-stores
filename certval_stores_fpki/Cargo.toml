@@ -1,0 +1,21 @@
+[package]
+name = "certval_stores_fpki"
+version = "0.1.0"
+edition = "2021"
+description = "Federal PKI trust store for certval — anchored at the Federal Common Policy CA G2"
+
+[dependencies]
+certval_stores_core = { path = "../certval_stores_core" }
+
+[dev-dependencies]
+certval_stores_core = { path = "../certval_stores_core", features = ["test-util"] }
+certval = { git = "https://github.com/carl-wallace/rust-pki.git", features = ["std", "rsa"], branch = "main" }
+
+[features]
+default = ["fpki"]
+# The Federal PKI as published today: Federal Common Policy CA G2 plus the
+# cross-certified mesh beneath it.
+fpki = []
+# The retired Federal Common Policy CA (G1). Anchors-only, no CA store; enable
+# only to validate paths that predate the G2 migration.
+fpki_legacy = []

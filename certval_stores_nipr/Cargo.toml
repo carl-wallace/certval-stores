@@ -13,3 +13,10 @@ default = []
 om_nipr = []
 # NIPR production environment.
 nipr = []
+
+[dev-dependencies]
+# Used to mangle a copy of the embedded store, to confirm the conformance
+# checks actually fail on a store that has drifted.
+ciborium = { version = "0.2.2", default-features = false, features = ["std"] }
+certval = { git = "https://github.com/carl-wallace/rust-pki.git", features = ["std", "rsa"], branch = "main" }
+certval_stores_core = { path = "../certval_stores_core", features = ["test-util"] }

@@ -31,6 +31,9 @@
 //! }
 //! ```
 
+#[cfg(feature = "test-util")]
+pub mod conformance;
+
 use std::time::Duration;
 
 use log::error;
@@ -45,7 +48,15 @@ use certval::{CertFile, CertSource, CertVector, Error, PkiEnvironment, TaSource}
 pub struct StoreEntry {
     /// Environment identifier this entry serves, e.g. `"NIPR"`, `"OM_SIPR"`, `"DEV"`.
     pub env: &'static str,
-    /// Trust-anchor certificates (DER).
+    /// Trust anchors, DER-encoded.
+    ///
+    /// These reach `TaSource`, which parses each buffer as an RFC 5914
+    /// `TrustAnchorChoice`, so any of its three alternatives would decode. They
+    /// must nonetheless be the `certificate` alternative — a bare `Certificate`
+    /// — because the same bytes are handed to `reqwest::Certificate::from_der`
+    /// in [`get_reqwest_client`], which takes only that one. Since that call
+    /// logs and continues, a `taInfo` anchor would build paths normally while
+    /// silently dropping out of every TLS client this crate configures.
     pub roots: &'static [&'static [u8]],
     /// Serialized certval [`CertSource`] (CBOR: intermediate CAs + partial
     /// paths), or `None` for anchors-only providers (e.g. webpki-style roots).
