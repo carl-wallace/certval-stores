@@ -54,7 +54,28 @@ now taking a `&[&dyn TrustStoreProvider]`:
 - `prepare_certval_environment(providers, pe, ta_store, env)` — env-selected;
   `Err(Error::Unrecognized)` if no provider serves `env`.
 - `get_roots(providers)` — every trust-anchor DER across the providers.
-- `get_reqwest_client{,_rustls,_native}(providers, …)` — a client trusting them.
+- `get_reqwest_client{,_rustls,_native}(providers, …)` — a client trusting them,
+  behind the default-on `reqwest-client` feature.
+
+### The `reqwest-client` feature
+
+`reqwest` is about 60% of this crate's dependency graph — 169 crates become 77
+without it, tokio, hyper and `url -> idna -> icu` among them — and the icu crates
+impose a rustc 1.86 floor that certval itself (MSRV 1.85) does not. It is on by
+default, because the consumers that exist use those constructors. Turn it off to
+embed trust material without an HTTP client:
+
+```toml
+certval_stores_nipr = { git = "…", default-features = false, features = ["nipr"] }
+```
+
+**wasm consumers must turn it off**: reqwest's wasm backend is a thin `fetch()`
+wrapper with no `Identity`, no `Certificate`, and no `timeout` or
+`add_root_certificate` on its `ClientBuilder`, so the feature does not compile for
+`wasm32-*` at all. Enabling it there fails with one explanatory `compile_error!`
+rather than a cascade of missing methods. Each provider crate forwards the switch
+(`reqwest-client = ["certval_stores_core/reqwest-client"]`) — without that
+forwarding a consumer could not turn it off at all, features being additive.
 
 ## Consumer wiring (retaining the pbyk feature array)
 
@@ -128,7 +149,9 @@ providers get the coverage without a copy of the logic in a private repository.
   silently dropping out of every TLS client this crate configures.
 - Each parses on *both* legs — as an x509-cert certificate and as a
   `reqwest::Certificate` — since a root that fails either is skipped with a log
-  line rather than a build failure.
+  line rather than a build failure. The reqwest half of that check is compiled
+  only under the `reqwest-client` feature; the expectation is not conditional, so
+  run the suite with default features before publishing material.
 - Each is one certval can actually use, not merely one it counted.
   `TaSource::initialize` skips a buffer that is not a usable `TrustAnchorChoice`,
   and `index_tas` leaves out anchors whose key identifier cannot be computed, so
@@ -231,8 +254,21 @@ Freshness is a separate question, answered by each store's refresh procedure.
 5. If the store generator's `.der` inputs ship beside the `.cbor`, call
    `conformance::check_generator_inputs`. Nothing `include_bytes!`es those files,
    so without it they drift from the store in silence.
-6. Add the provider to `certval_stores_core/tests/composition.rs`.
-7. Document where the material came from and how to refresh it, as
+6. Forward the client switch, so a consumer can still turn the HTTP stack off:
+
+   ```toml
+   [dependencies]
+   certval_stores_core = { path = "…", default-features = false }
+
+   [features]
+   default = ["…your environments…", "reqwest-client"]
+   reqwest-client = ["certval_stores_core/reqwest-client"]
+   ```
+
+   Skipping this does not break your crate — it breaks everyone else's ability to
+   opt out, since features are additive and your default re-enables the core's.
+7. Add the provider to `certval_stores_core/tests/composition.rs`.
+8. Document where the material came from and how to refresh it, as
    `certval_stores_fpki` does — a store nobody can regenerate is a store that
    expires.
 

@@ -6,14 +6,26 @@ description = "Provider contract and certval/reqwest plumbing shared by the cert
 
 [dependencies]
 log = { version = "0.4.33", features = ["std", "serde"] }
-certval = { git = "https://github.com/carl-wallace/rust-pki.git", features = ["std"], branch = "main" }
+# default-features = false deliberately: certval's defaults are ["remote", "webpki"],
+# and `remote` pulls reqwest. Trust material needs neither, and taking the defaults
+# would drag the HTTP stack in behind the back of the `reqwest-client` feature below,
+# leaving nothing for a consumer to turn off. A provider that wants certval's webpki
+# roots or its revocation support enables `certval/webpki` or `certval/remote` itself.
+certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, features = ["std"], branch = "main" }
 
 # Used by the conformance harness to read the partial paths serialized beside a
 # store's buffers, which CertSource does not expose.
 ciborium = { version = "0.2.2", default-features = false, features = ["std"], optional = true }
 
 [features]
-default = []
+default = ["reqwest-client"]
+# The `get_reqwest_client*` constructors, and with them the whole HTTP stack:
+# reqwest brings tokio, hyper, and url -> idna -> icu, some 60% of this crate's
+# dependency graph. On by default, since the consumers that exist use those
+# constructors. Turn it off to embed trust material without an HTTP client — a
+# wasm or embedded consumer, or one bringing its own — which also drops the
+# rustc 1.86 floor the icu crates impose.
+reqwest-client = ["dep:reqwest"]
 # Conformance checks over the TrustStoreProvider contract, for provider crates
 # to run from their own tests. Off by default so consumers do not carry them.
 test-util = ["dep:ciborium"]
@@ -22,10 +34,10 @@ test-util = ["dep:ciborium"]
 # (system OpenSSL), and Windows (SChannel). Android is the only target where
 # native-tls drags in cross-compiled OpenSSL, so rustls is used there instead.
 [target.'cfg(not(target_os = "android"))'.dependencies]
-reqwest = { version = "0.13.4", features = ["native-tls"] }
+reqwest = { version = "0.13.4", features = ["native-tls"], optional = true }
 
 [target.'cfg(target_os = "android")'.dependencies]
-reqwest = { version = "0.13.4", features = ["rustls"] }
+reqwest = { version = "0.13.4", features = ["rustls"], optional = true }
 
 # The provider crates depend on this one; depending back on them *for tests only*
 # is what lets tests/composition.rs check the family as a whole. Cargo allows a

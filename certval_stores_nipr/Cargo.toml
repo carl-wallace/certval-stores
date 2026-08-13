@@ -5,10 +5,14 @@ edition = "2021"
 description = "NIPR (DoD PKI) trust stores for certval — production (nipr) and operational-test (om_nipr) environments"
 
 [dependencies]
-certval_stores_core = { path = "../certval_stores_core" }
+certval_stores_core = { path = "../certval_stores_core", default-features = false }
 
 [features]
-default = []
+default = ["reqwest-client"]
+# Forwards the core crate's client switch. Without this a consumer could not
+# turn the HTTP stack off: features are additive, so this crate enabling the
+# core default would re-enable it however the consumer configured core.
+reqwest-client = ["certval_stores_core/reqwest-client"]
 # NIPR operational-test (JITC) environment.
 om_nipr = []
 # NIPR production environment.

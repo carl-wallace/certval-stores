@@ -34,7 +34,9 @@ use certval::{
     PkiEnvironment, TaSource, TimeOfInterest,
 };
 
-use crate::{get_reqwest_client, prepare_certval_environment, StoreEntry, TrustStoreProvider};
+#[cfg(feature = "reqwest-client")]
+use crate::get_reqwest_client;
+use crate::{prepare_certval_environment, StoreEntry, TrustStoreProvider};
 
 /// Environment name no provider may serve, used to confirm that an unrecognized
 /// environment is rejected rather than silently served.
@@ -98,12 +100,17 @@ pub fn check_entry_shape(provider: &dyn TrustStoreProvider) -> Vec<String> {
     failures
 }
 
-/// Check that every trust anchor parses both as an x509-cert `Certificate` (the
-/// certval path-building leg) and as a `reqwest::Certificate` (the TLS leg).
+/// Check that every trust anchor parses as an x509-cert `Certificate` (the
+/// certval path-building leg) and, under the `reqwest-client` feature, as a
+/// `reqwest::Certificate` (the TLS leg).
 ///
-/// The reqwest leg is load-bearing: [`get_reqwest_client`] logs and continues
-/// when a root fails to parse, so an unparseable root silently shrinks the trust
-/// set of every client the provider configures instead of failing the build.
+/// The reqwest leg is load-bearing where it applies: [`get_reqwest_client`] logs
+/// and continues when a root fails to parse, so an unparseable root silently
+/// shrinks the trust set of every client the provider configures instead of
+/// failing the build. Building without that feature drops the check but not the
+/// expectation — a consumer that adds a client later inherits the same
+/// requirement, so run the suite with default features before publishing
+/// material.
 pub fn check_roots_parse(provider: &dyn TrustStoreProvider) -> Vec<String> {
     let mut failures = vec![];
     for entry in provider.entries() {
@@ -111,12 +118,15 @@ pub fn check_roots_parse(provider: &dyn TrustStoreProvider) -> Vec<String> {
         let mut seen: BTreeMap<&[u8], usize> = BTreeMap::new();
         for (i, root) in entry.roots.iter().enumerate() {
             match parse_cert(root, env) {
-                Ok(cert) => {
-                    let label = get_leaf_rdn(cert.decoded().tbs_certificate().subject());
-                    if reqwest::Certificate::from_der(root).is_err() {
-                        failures.push(format!(
-                            "entry {env:?} root {i} ({label}) parses as a certificate but is rejected by reqwest, so TLS clients would silently omit it"
-                        ));
+                Ok(_cert) => {
+                    #[cfg(feature = "reqwest-client")]
+                    {
+                        let label = get_leaf_rdn(_cert.decoded().tbs_certificate().subject());
+                        if reqwest::Certificate::from_der(root).is_err() {
+                            failures.push(format!(
+                                "entry {env:?} root {i} ({label}) parses as a certificate but is rejected by reqwest, so TLS clients would silently omit it"
+                            ));
+                        }
                     }
                 }
                 Err(e) => failures.push(format!("entry {env:?} root {i} failed to parse: {e:?}")),
@@ -568,14 +578,25 @@ pub fn check_prepare_environment(provider: &dyn TrustStoreProvider) -> Vec<Strin
 
 /// Check that a `reqwest` client can be built from the provider's anchors.
 ///
+/// Only meaningful under the `reqwest-client` feature; without it there is no
+/// client to build and this reports nothing.
+///
 /// Backend selection is left to the caller elsewhere in this crate; this uses a
 /// default builder so the check exercises anchor installation rather than the
 /// TLS backend the host happens to have compiled in.
 pub fn check_client_builds(provider: &dyn TrustStoreProvider) -> Vec<String> {
-    let providers: [&dyn TrustStoreProvider; 1] = [provider];
-    match get_reqwest_client(&providers, reqwest::Client::builder(), None) {
-        Ok(_) => vec![],
-        Err(e) => vec![format!("failed to build a reqwest client: {e:?}")],
+    #[cfg(not(feature = "reqwest-client"))]
+    {
+        let _ = provider;
+        vec![]
+    }
+    #[cfg(feature = "reqwest-client")]
+    {
+        let providers: [&dyn TrustStoreProvider; 1] = [provider];
+        match get_reqwest_client(&providers, reqwest::Client::builder(), None) {
+            Ok(_) => vec![],
+            Err(e) => vec![format!("failed to build a reqwest client: {e:?}")],
+        }
     }
 }
 

@@ -5,10 +5,14 @@ edition = "2021"
 description = "Development (Purebred dev) trust store for certval"
 
 [dependencies]
-certval_stores_core = { path = "../certval_stores_core" }
+certval_stores_core = { path = "../certval_stores_core", default-features = false }
 
 [features]
-default = ["dev"]
+default = ["dev", "reqwest-client"]
+# Forwards the core crate's client switch. Without this a consumer could not
+# turn the HTTP stack off: features are additive, so this crate enabling the
+# core default would re-enable it however the consumer configured core.
+reqwest-client = ["certval_stores_core/reqwest-client"]
 # Purebred development environment (DoD Engineering roots).
 dev = []
 
