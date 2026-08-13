@@ -11,11 +11,14 @@
 //! beside it, so there is nothing on disk to compare against. See `README.md`
 //! for the refresh procedure.
 
-use certval::{CertSource, CertVector, Error, PkiEnvironment, TaSource};
+#[cfg(feature = "fpki")]
+use certval::{CertSource, CertVector};
+use certval::{Error, PkiEnvironment, TaSource};
 use certval_stores_core::{conformance, prepare_certval_environment, TrustStoreProvider};
 
 /// Number of intermediate CA certificates in the embedded FPKI CA store. Update
 /// this with the store; see README.md for the refresh procedure.
+#[cfg(feature = "fpki")]
 const EXPECTED_INTERMEDIATES: usize = 133;
 
 fn providers() -> Vec<&'static dyn TrustStoreProvider> {
