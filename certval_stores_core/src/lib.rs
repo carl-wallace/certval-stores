@@ -1,17 +1,4 @@
-//! Core provider contract and environment-agnostic plumbing shared by the
-//! `certval_stores_*` trust-store crates.
-//!
-//! A *provider* supplies trust material — trust-anchor certificates (DER) plus
-//! an optional serialized certval [`CertSource`] (CBOR: intermediate CAs and
-//! precomputed partial certification paths) — for one or more named
-//! environments (`"DEV"`, `"NIPR"`, `"OM_NIPR"`, `"SIPR"`, `"OM_SIPR"`, …).
-//!
-//! This crate defines the [`TrustStoreProvider`] contract and the plumbing that
-//! composes any set of providers into a certval [`PkiEnvironment`] or a
-//! configured `reqwest` client. It is deliberately **environment-agnostic**:
-//! it has no knowledge of NIPR/SIPR/etc. Providers *augment* these functions by
-//! being passed in explicitly, so new communities (FPKI, webpki, …) are added
-//! simply by writing a new provider crate — no change to this crate.
+#![doc = include_str!("../README.md")]
 //!
 //! # Example
 //! ```no_run
@@ -60,6 +47,12 @@ use certval::{CertFile, CertSource, CertVector, Error, PkiEnvironment, TaSource}
 /// compile time via `include_bytes!`.
 pub struct StoreEntry {
     /// Environment identifier this entry serves, e.g. `"NIPR"`, `"OM_SIPR"`, `"DEV"`.
+    ///
+    /// There is no fixed set: a provider names its own environments, and this
+    /// crate only compares the label. `certval_stores_fpki` introduced `"FPKI"`
+    /// and `"FPKI_LEGACY"` without any change here, and a new community does the
+    /// same. The label is what [`prepare_certval_environment`] matches verbatim,
+    /// so it must be unique across the providers a consumer loads together.
     pub env: &'static str,
     /// Trust anchors, DER-encoded.
     ///
@@ -80,9 +73,15 @@ pub struct StoreEntry {
 
 /// A source of trust material for one or more environments.
 ///
-/// Implemented by each `certval_stores_*` provider crate. Providers hold only
-/// static bytes; all certval/reqwest work happens in this crate. The set of
-/// entries a provider returns depends on the features it was built with.
+/// Implemented by each `certval_stores_*` provider crate. A provider's library
+/// is `include_bytes!` and a `Vec<StoreEntry>`: it depends on this crate alone,
+/// linking neither certval nor reqwest, so every certval and reqwest call made
+/// against the material at run time is made here. Its *tests* are another
+/// matter — validating the material takes crypto, and which algorithms a
+/// community signs with is the provider's business, so a provider crate depends
+/// on certval directly to supply the environment `conformance` validates under.
+/// The set of entries a provider returns depends on the features it was built
+/// with.
 pub trait TrustStoreProvider {
     /// The environments this provider serves, given its enabled features.
     fn entries(&self) -> Vec<StoreEntry>;
