@@ -2,6 +2,7 @@
 name = "certval_stores_core"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0 OR MIT"
 description = "Provider trait and certval/reqwest plumbing shared by the certval_stores_* trust-store crates"
 
 [dependencies]
@@ -43,6 +44,7 @@ reqwest = { version = "0.13.4", features = ["rustls"], optional = true }
 # is what lets tests/composition.rs check the family as a whole. Cargo allows a
 # cycle through dev-dependencies.
 [dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 certval_stores_core = { path = ".", features = ["test-util"] }
 certval_stores_fpki = { path = "../certval_stores_fpki", features = ["fpki", "fpki_legacy"] }
 certval_stores_nipr = { path = "../certval_stores_nipr", features = ["nipr", "om_nipr"] }

@@ -145,8 +145,10 @@ pub fn get_roots(providers: &[&dyn TrustStoreProvider]) -> Vec<Vec<u8>> {
     retval
 }
 
-/// Build a `reqwest` client trusting every root carried by `providers`, using
-/// rustls. Pass `None` as `identity` for server-authenticated TLS.
+/// Build a `reqwest` client trusting every root carried by `providers` — and
+/// only those roots — using rustls. Pass `None` as `identity` for
+/// server-authenticated TLS. See [`get_reqwest_client`] for what "only those
+/// roots" excludes and how to opt back into the public web PKI.
 #[cfg(feature = "reqwest-client")]
 pub fn get_reqwest_client_rustls(
     providers: &[&dyn TrustStoreProvider],
@@ -160,8 +162,12 @@ pub fn get_reqwest_client_rustls(
     get_reqwest_client(providers, builder, identity)
 }
 
-/// Build a `reqwest` client trusting every root carried by `providers`, using
-/// native-tls. Pass `None` as `identity` for server-authenticated TLS.
+/// Build a `reqwest` client trusting every root carried by `providers` — and
+/// only those roots — using native-tls. Pass `None` as `identity` for
+/// server-authenticated TLS. See [`get_reqwest_client`] for what "only those
+/// roots" excludes and how to opt back into the public web PKI; note in
+/// particular that this disables the platform's native root store, which is
+/// the point rather than a side effect.
 ///
 /// Not available on Android — native-tls there would pull in cross-compiled
 /// OpenSSL. Android consumers must use [`get_reqwest_client_rustls`].
@@ -181,6 +187,29 @@ pub fn get_reqwest_client_native(
 /// Attach the optional `identity` (mutual TLS) and every provider root to a
 /// pre-configured `ClientBuilder`, then build. Callers pick the TLS backend
 /// (`.use_rustls_tls()` / `.use_native_tls()`) on the builder they pass in.
+///
+/// # The resulting client trusts the provider roots and nothing else
+///
+/// This uses `ClientBuilder::tls_certs_only`, so the platform's native roots
+/// and reqwest's built-in web-PKI bundle are **disabled**: the trust set is
+/// exactly what `providers` carries, whatever that happens to be. That is
+/// deliberate. A client built to reach the endpoints one community's anchors
+/// serve has no reason to also accept every CA the host operating system
+/// happens to ship, and accepting them means a misissued or mis-resolved host
+/// can be authenticated by a CA that has nothing to do with the environment.
+///
+/// The rule is about provenance, not about any particular community: it holds
+/// the same way for a consumer whose providers are Federal, DoD, or the public
+/// web PKI itself. What changes is the contents of `providers`.
+///
+/// A consumer that genuinely needs the public web PKI should say so by passing
+/// a provider for it — `certval_stores_mozilla` carries the Mozilla root
+/// program — rather than relying on an ambient default. That keeps the trust
+/// set declared in one place and auditable from the `providers` list.
+///
+/// Note the setting is sticky: `tls_certs_only` cannot be undone by a later
+/// builder call, so the escape hatch is the `providers` argument (or building
+/// a `reqwest::Client` directly), not a flag on the builder passed in here.
 #[cfg(feature = "reqwest-client")]
 pub fn get_reqwest_client(
     providers: &[&dyn TrustStoreProvider],
@@ -190,16 +219,24 @@ pub fn get_reqwest_client(
     if let Some(identity) = identity {
         builder = builder.identity(identity);
     }
+    // Collected rather than added one at a time because `tls_certs_only` is
+    // what disables the built-in roots, and it takes the whole set. A root that
+    // fails to parse is logged and skipped; the conformance suite's
+    // `check_roots_parse` runs the same reqwest leg over every provider, so a
+    // root reqwest rejects is a test failure rather than a silent trust-set
+    // shrink discovered in production.
+    let mut certs = vec![];
     for provider in providers {
         for entry in provider.entries() {
             for der in entry.roots {
                 match reqwest::Certificate::from_der(der) {
-                    Ok(cert) => builder = builder.add_root_certificate(cert),
+                    Ok(cert) => certs.push(cert),
                     Err(e) => error!("Failed to parse a {} root: {e:?}", entry.env),
                 }
             }
         }
     }
+    builder = builder.tls_certs_only(certs);
     match builder.build() {
         Ok(client) => Ok(client),
         Err(e) => {

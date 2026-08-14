@@ -46,8 +46,40 @@ Three entry points, the same ones the former `pb_pki` crate offered, now taking 
 - `prepare_certval_environment(providers, pe, ta_store, env)` — env-selected;
   `Err(Error::Unrecognized)` if no provider serves `env`.
 - `get_roots(providers)` — every trust-anchor DER across the providers.
-- `get_reqwest_client{,_rustls,_native}(providers, …)` — a client trusting them,
-  behind the default-on `reqwest-client` feature.
+- `get_reqwest_client{,_rustls,_native}(providers, …)` — a client trusting them
+  and *only* them, behind the default-on `reqwest-client` feature. Provider-only
+  is the whole rule: reqwest's built-in web-PKI bundle and the platform's native
+  roots are both disabled, so a consumer that wants the public web PKI declares
+  it by passing a provider carrying it rather than inheriting it by default.
+
+The trust set is the `providers` argument, so widening it is an edit to that
+list and nothing else:
+
+```rust,ignore
+use certval_stores_core::{get_reqwest_client_rustls, TrustStoreProvider};
+
+// Trusts what these providers carry and nothing more. A host whose chain ends
+// at a public CA does not authenticate, even though the OS trusts that CA.
+let providers: Vec<&dyn TrustStoreProvider> = vec![
+    certval_stores_nipr::provider(),
+    certval_stores_fpki::provider(),
+];
+let client = get_reqwest_client_rustls(&providers, 30, None)?;
+
+// Reaching a publicly-rooted host as well? Say so. Adding the Mozilla root
+// program as a provider is the same gesture as adding a Federal one — the
+// trust set stays declared in one place and auditable from this list.
+let providers: Vec<&dyn TrustStoreProvider> = vec![
+    certval_stores_nipr::provider(),
+    certval_stores_mozilla::provider(),
+];
+let client = get_reqwest_client_rustls(&providers, 30, None)?;
+```
+
+There is no flag for this. The constructors call reqwest's `tls_certs_only`,
+which is sticky — nothing downstream re-enables the built-in roots — so a
+consumer that needs something outside its providers either adds a provider for
+it or builds its own `reqwest::Client`.
 
 ### The `reqwest-client` feature
 
