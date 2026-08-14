@@ -39,7 +39,10 @@ use log::error;
 #[cfg(feature = "reqwest-client")]
 use reqwest::{Client, ClientBuilder, Identity};
 
-use certval::{CertFile, CertSource, CertVector, Error, PkiEnvironment, TaSource};
+use certval::{
+    CertFile, CertSource, CertVector, CertificationPathBuilderFormats, Error, PkiEnvironment,
+    TaSource,
+};
 
 /// Trust material for a single environment, carried by a [`TrustStoreProvider`].
 ///
@@ -143,6 +146,86 @@ pub fn get_roots(providers: &[&dyn TrustStoreProvider]) -> Vec<Vec<u8>> {
         }
     }
     retval
+}
+
+/// One environment's material in serialized form, as certval loads it back:
+/// `ta_cbor` via `TaSource::new_from_cbor`, `ca_cbor` via
+/// `CertSource::new_from_cbor`.
+pub struct SerializedStore {
+    /// Trust anchors, CBOR.
+    pub ta_cbor: Vec<u8>,
+    /// Intermediate CAs and partial paths, CBOR, or `None` for an anchors-only
+    /// environment.
+    pub ca_cbor: Option<Vec<u8>>,
+}
+
+/// Serialize what `providers` carry for `env`, for consumers that load
+/// artifacts instead of linking a provider crate — a wasm frontend fetching
+/// stores by URL, say, where embedding the bytes is not an option.
+///
+/// Returns [`Error::Unrecognized`] if no provider serves `env`, matching
+/// [`prepare_certval_environment`].
+///
+/// A trust-anchor store is written as a `CertSource` holding the anchors and no
+/// partial paths; that is the form `TaSource::new_from_cbor` reads, and why
+/// there is no `TaSource::serialize` to call here.
+///
+/// Output is deterministic for given material, but is not expected to match a
+/// store generated from the same certificates by other means byte for byte:
+/// anchor labels are serialized alongside the certificates, and a provider
+/// carries no filenames to reproduce.
+pub fn serialize_environment(
+    providers: &[&dyn TrustStoreProvider],
+    env: &str,
+) -> Result<SerializedStore, Error> {
+    let mut ta_store = CertSource::new();
+    let mut ca_cbor: Option<Vec<u8>> = None;
+    let mut acted = false;
+
+    for provider in providers {
+        for entry in provider.entries() {
+            if entry.env != env {
+                continue;
+            }
+            acted = true;
+            for (i, der) in entry.roots.iter().enumerate() {
+                // The label is serialized into the store and surfaces in certval's
+                // logs and reports; path building indexes by key identifier and
+                // name, so it carries no other weight. Index it so the anchors are
+                // told apart there — a provider has no filenames to borrow — and
+                // keep it derived only from the entry, so regenerating the same
+                // material twice produces the same bytes.
+                let cf = CertFile {
+                    filename: format!("{env} root {i}"),
+                    bytes: der.to_vec(),
+                };
+                if !ta_store.contains(&cf) {
+                    ta_store.push(cf);
+                }
+            }
+            if let Some(cbor) = entry.cert_store_cbor {
+                // Two CA stores under one label cannot be combined here — CBOR
+                // documents do not concatenate, and merging would mean parsing
+                // and rebuilding the partial-path graph. Environment labels are
+                // required to be unique across the providers a consumer loads,
+                // so this is misuse rather than a case to support.
+                if ca_cbor.is_some() {
+                    error!("More than one provider carries a CA store for environment {env}.");
+                    return Err(Error::Unrecognized);
+                }
+                ca_cbor = Some(cbor.to_vec());
+            }
+        }
+    }
+
+    if !acted {
+        error!("The environment value ({env}) passed to serialize_environment did not match any provider.");
+        return Err(Error::Unrecognized);
+    }
+
+    ta_store.initialize(&Default::default())?;
+    let ta_cbor = ta_store.serialize(CertificationPathBuilderFormats::Cbor)?;
+    Ok(SerializedStore { ta_cbor, ca_cbor })
 }
 
 /// Build a `reqwest` client trusting every root carried by `providers` — and

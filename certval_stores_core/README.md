@@ -40,12 +40,18 @@ this crate only compares the string. `certval_stores_fpki` added `FPKI` and
 constraint is that no two providers a consumer loads together claim the same
 label, which `check_providers_compose` enforces.
 
-Three entry points, the same ones the former `pb_pki` crate offered, now taking a
-`&[&dyn TrustStoreProvider]`:
+The three entry points the former `pb_pki` crate offered, now taking a
+`&[&dyn TrustStoreProvider]`, plus a serializer:
 
 - `prepare_certval_environment(providers, pe, ta_store, env)` — env-selected;
   `Err(Error::Unrecognized)` if no provider serves `env`.
 - `get_roots(providers)` — every trust-anchor DER across the providers.
+- `serialize_environment(providers, env)` — the same material as `ta_cbor` /
+  `ca_cbor`, for consumers that fetch artifacts rather than link a provider
+  crate (a wasm frontend, where embedding the bytes is not an option). The CA
+  half is a passthrough, since `cert_store_cbor` is already serialized; the
+  anchors are written as a `CertSource` carrying no partial paths, which is the
+  form `TaSource::new_from_cbor` reads.
 - `get_reqwest_client{,_rustls,_native}(providers, …)` — a client trusting them
   and *only* them, behind the default-on `reqwest-client` feature. Provider-only
   is the whole rule: reqwest's built-in web-PKI bundle and the platform's native
