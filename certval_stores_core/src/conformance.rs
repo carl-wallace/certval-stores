@@ -685,7 +685,6 @@ pub fn assert_providers_compose(providers: &[&dyn TrustStoreProvider]) {
 /// `dir` is a filesystem path — provider crates pass
 /// `Path::new(env!("CARGO_MANIFEST_DIR")).join("cas/<env>")`.
 pub fn check_generator_inputs(dir: &Path, cbor: &[u8]) -> Vec<String> {
-    let mut failures = vec![];
     let cert_source = match load_store(cbor) {
         Ok(cert_source) => cert_source,
         Err(e) => {
@@ -701,12 +700,87 @@ pub fn check_generator_inputs(dir: &Path, cbor: &[u8]) -> Vec<String> {
         in_store.insert(buffer.bytes, buffer.filename);
     }
 
-    let read_dir = match std::fs::read_dir(dir) {
-        Ok(read_dir) => read_dir,
-        Err(e) => return vec![format!("failed to read {}: {e}", dir.display())],
+    let (on_disk, mut failures) = match read_der_dir(dir) {
+        Ok(read) => read,
+        Err(e) => return vec![e],
     };
 
-    let mut on_disk: BTreeSet<Vec<u8>> = BTreeSet::new();
+    for (bytes, name) in &on_disk {
+        if !in_store.contains_key(bytes) {
+            failures.push(format!(
+                "{name} is present in {} but not in the store built from it — the store needs regenerating",
+                dir.display()
+            ));
+        }
+    }
+
+    for (bytes, filename) in &in_store {
+        if !on_disk.contains_key(bytes) {
+            failures.push(format!(
+                "the store carries {filename}, which has no corresponding file in {} — the inputs are incomplete",
+                dir.display()
+            ));
+        }
+    }
+    failures
+}
+
+/// Check a trust-anchor directory against the anchors a provider embeds.
+///
+/// Anchors reach a provider through a hand-maintained `include_bytes!` list
+/// rather than through a generated store, so the compiler catches only one
+/// direction of drift: remove a `.der` and the crate stops building. Add one and
+/// nothing happens — the file ships, reads as part of the trust set to anyone
+/// looking at the repository, and is not in it. This compares the directory
+/// against the anchors the provider actually yields, by encoding, in both
+/// directions.
+///
+/// `dir` is a filesystem path — provider crates pass
+/// `Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/<env>")` alongside the
+/// matching entry's `roots`.
+pub fn check_root_inputs(dir: &Path, roots: &[&[u8]]) -> Vec<String> {
+    let (on_disk, mut failures) = match read_der_dir(dir) {
+        Ok(read) => read,
+        Err(e) => return vec![e],
+    };
+
+    let embedded: BTreeSet<&[u8]> = roots.iter().copied().collect();
+    for (bytes, name) in &on_disk {
+        if !embedded.contains(bytes.as_slice()) {
+            failures.push(format!(
+                "{name} is present in {} but is not embedded as a trust anchor — the include_bytes! list needs updating",
+                dir.display()
+            ));
+        }
+    }
+
+    for root in roots {
+        if !on_disk.contains_key(*root) {
+            let label = subject_name(root).unwrap_or_else(|| "<unparseable>".to_string());
+            failures.push(format!(
+                "the crate embeds trust anchor {label:?}, which has no corresponding file in {} — the inputs are incomplete",
+                dir.display()
+            ));
+        }
+    }
+    failures
+}
+
+/// Read the DER-encoded certificates in a directory, keyed by encoding.
+///
+/// `Err` means the directory itself could not be read, which is fatal to the
+/// caller's check. Per-file read errors are returned alongside the certificates
+/// that did load, so one unreadable file does not hide the rest of the
+/// directory.
+#[allow(clippy::type_complexity)]
+fn read_der_dir(dir: &Path) -> Result<(BTreeMap<Vec<u8>, String>, Vec<String>), String> {
+    let read_dir = match std::fs::read_dir(dir) {
+        Ok(read_dir) => read_dir,
+        Err(e) => return Err(format!("failed to read {}: {e}", dir.display())),
+    };
+
+    let mut failures = vec![];
+    let mut on_disk: BTreeMap<Vec<u8>, String> = BTreeMap::new();
     for entry in read_dir.flatten() {
         let path = entry.path();
         let is_der = path
@@ -728,29 +802,14 @@ pub fn check_generator_inputs(dir: &Path, cbor: &[u8]) -> Vec<String> {
             .unwrap_or_default()
             .to_string_lossy()
             .to_string();
-        if !in_store.contains_key(&bytes) {
-            failures.push(format!(
-                "{name} is present in {} but not in the store built from it — the store needs regenerating",
-                dir.display()
-            ));
-        }
-        on_disk.insert(bytes);
+        on_disk.insert(bytes, name);
     }
-
-    for (bytes, filename) in &in_store {
-        if !on_disk.contains(bytes) {
-            failures.push(format!(
-                "the store carries {filename}, which has no corresponding file in {} — the inputs are incomplete",
-                dir.display()
-            ));
-        }
-    }
-    failures
+    Ok((on_disk, failures))
 }
 
 /// Run every provider-level check and return the combined failures. Does not
-/// include [`check_generator_inputs`], which needs a filesystem path the
-/// provider crate supplies.
+/// include [`check_generator_inputs`] or [`check_root_inputs`], which need a
+/// filesystem path the provider crate supplies.
 pub fn conformance_failures(provider: &dyn TrustStoreProvider) -> Vec<String> {
     let mut failures = vec![];
     failures.extend(check_entry_shape(provider));
@@ -964,6 +1023,12 @@ mod tests {
     #[test]
     fn a_missing_generator_input_directory_is_reported() {
         let failures = check_generator_inputs(Path::new("/no/such/directory"), b"\x00truncated");
+        assert_eq!(failures.len(), 1, "{failures:#?}");
+    }
+
+    #[test]
+    fn a_missing_root_directory_is_reported() {
+        let failures = check_root_inputs(Path::new("/no/such/directory"), &[]);
         assert_eq!(failures.len(), 1, "{failures:#?}");
     }
 }

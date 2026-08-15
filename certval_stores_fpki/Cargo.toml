@@ -9,8 +9,12 @@ description = "Federal PKI trust store for certval — anchored at the Federal C
 certval_stores_core = { path = "../certval_stores_core", default-features = false }
 
 [dev-dependencies]
-certval_stores_core = { path = "../certval_stores_core", features = ["test-util"] }
-certval = { git = "https://github.com/carl-wallace/rust-pki.git", features = ["std", "rsa"], branch = "main" }
+certval_stores_core = { path = "../certval_stores_core", default-features = false, features = ["test-util"] }
+# default-features = false for the same reason as the core crate: certval's
+# defaults pull reqwest, and a dev-dependency taking them puts the HTTP stack
+# back into the test graph however `reqwest-client` is configured, so a
+# --no-default-features test run would not build the shape it claims to.
+certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, features = ["std", "rsa"], branch = "main" }
 
 [features]
 default = ["fpki", "reqwest-client"]

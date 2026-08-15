@@ -11,10 +11,25 @@
 //! beside it, so there is nothing on disk to compare against. See `README.md`
 //! for the refresh procedure.
 
+#[cfg(any(feature = "fpki", feature = "fpki_legacy"))]
+use std::path::Path;
+
 #[cfg(feature = "fpki")]
 use certval::{CertSource, CertVector};
 use certval::{Error, PkiEnvironment, TaSource};
 use certval_stores_core::{conformance, prepare_certval_environment, TrustStoreProvider};
+
+/// The anchors an environment advertises, for the checks that take them
+/// alongside the directory they were loaded from.
+#[cfg(any(feature = "fpki", feature = "fpki_legacy"))]
+fn roots_for(env: &str) -> &'static [&'static [u8]] {
+    certval_stores_fpki::PROVIDER
+        .entries()
+        .iter()
+        .find(|e| e.env == env)
+        .map(|e| e.roots)
+        .unwrap_or_else(|| panic!("the enabled features must yield a {env} entry"))
+}
 
 /// Number of intermediate CA certificates in the embedded FPKI CA store. Update
 /// this with the store; see README.md for the refresh procedure.
@@ -96,6 +111,28 @@ fn legacy_entry_is_anchors_only() {
     assert_eq!(legacy.roots.len(), 1);
     // The G1 mesh is no longer published, so there is deliberately no CA store.
     assert!(legacy.cert_store_cbor.is_none());
+}
+
+/// The store has no generator inputs to check, but the anchors do have files on
+/// disk, and they reach the crate through the `include_bytes!` list in
+/// `src/lib.rs`, which the compiler only half-checks: remove a file and the
+/// build breaks, add one and it ships looking like an anchor without being one.
+/// Both environments here are single-anchor, so a second `.der` appearing in
+/// either directory is the drift this catches.
+#[test]
+#[cfg(feature = "fpki")]
+fn fpki_root_inputs_match_the_embedded_anchors() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/fpki");
+    let failures = conformance::check_root_inputs(&dir, roots_for("FPKI"));
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+#[cfg(feature = "fpki_legacy")]
+fn legacy_root_inputs_match_the_embedded_anchors() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/legacy");
+    let failures = conformance::check_root_inputs(&dir, roots_for("FPKI_LEGACY"));
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
 /// Path *validation*, not just path building: signatures verified from the

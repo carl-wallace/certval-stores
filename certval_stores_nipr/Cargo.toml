@@ -23,5 +23,9 @@ nipr = []
 # Used to mangle a copy of the embedded store, to confirm the conformance
 # checks actually fail on a store that has drifted.
 ciborium = { version = "0.2.2", default-features = false, features = ["std"] }
-certval = { git = "https://github.com/carl-wallace/rust-pki.git", features = ["std", "rsa"], branch = "main" }
-certval_stores_core = { path = "../certval_stores_core", features = ["test-util"] }
+# default-features = false for the same reason as the core crate: certval's
+# defaults pull reqwest, and a dev-dependency taking them puts the HTTP stack
+# back into the test graph however `reqwest-client` is configured, so a
+# --no-default-features test run would not build the shape it claims to.
+certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, features = ["std", "rsa"], branch = "main" }
+certval_stores_core = { path = "../certval_stores_core", default-features = false, features = ["test-util"] }

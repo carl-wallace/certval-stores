@@ -28,8 +28,18 @@ a decision — keep the expired anchor or drop it — not as a broken one.
 The DER inputs the store was generated from ship beside the `.cbor` (`cas/dev/`),
 and `conformance::check_generator_inputs` asserts they still match what the store
 carries — nothing `include_bytes!`es those files, so without that check they
-would drift in silence. Regenerating from them reproduces the committed
-`dev.cbor` byte for byte (verified 2026-08-13).
+would drift in silence. Regenerating from them reproduced the committed
+`dev.cbor` byte for byte (verified 2026-08-13), though that is not a property to
+rely on: the generator folds certificates in the order the filesystem lists them,
+so a regeneration elsewhere can reorder the buffers without changing the
+material. The set is what matters, and `check_generator_inputs` is what asserts
+it.
+
+The anchors in `roots/dev/` *are* `include_bytes!`d, one line per file in
+`src/lib.rs`, and `conformance::check_root_inputs` asserts the directory and that
+list agree. The compiler checks only half of it: removing a `.der` breaks the
+build, while adding one leaves a file that ships and reads as an anchor without
+being in the trust set.
 
 This is development material: it turns over when the dev environment is rebuilt,
 which is more often than the production stores move, so the refresh path below
