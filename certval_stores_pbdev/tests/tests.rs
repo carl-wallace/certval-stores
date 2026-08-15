@@ -79,6 +79,24 @@ fn dev_generator_inputs_match_the_store() {
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
+/// The `roots/dev/*.der` files reach the crate through the `include_bytes!`
+/// list in `src/lib.rs`, which the compiler only half-checks: remove a file and
+/// the build breaks, add one and it ships looking like an anchor without being
+/// one.
+#[test]
+#[cfg(feature = "dev")]
+fn dev_root_inputs_match_the_embedded_anchors() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/dev");
+    let entries = certval_stores_pbdev::PROVIDER.entries();
+    let roots = entries
+        .iter()
+        .find(|e| e.env == "DEV")
+        .map(|e| e.roots)
+        .expect("DEV anchors");
+    let failures = conformance::check_root_inputs(&dir, roots);
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
 /// Path *validation*, not just path building: signatures verified from the
 /// anchor down. The environment comes from here rather than from the harness
 /// because the crypto a store needs is the provider's business — this crate's

@@ -34,6 +34,13 @@ the FPKI graph on idmanagement.gov — published in the `GSA/idmanagement.gov` r
 at `_implement/tools/`. Snapshot taken **2026-08-12** from a bundle the crawler
 published **2026-08-10**.
 
+The store is built from that bundle rather than from `.der` files kept beside it,
+so there is no generator-input check here as there is in the DoD providers. The
+two anchors above are files, though, and `conformance::check_root_inputs` asserts
+each directory holds exactly what `src/lib.rs` `include_bytes!`es — both
+environments are single-anchor, so a second `.der` appearing in either directory
+is the drift it catches.
+
 ## Refreshing
 
 Unlike the DoD stores, this material moves: the crawler republishes automatically

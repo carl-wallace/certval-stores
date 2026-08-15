@@ -35,8 +35,18 @@ issuers, including their `AE` variants.
 The DER inputs the stores were generated from ship beside each `.cbor`
 (`cas/prod/`, `cas/om/`), and `conformance::check_generator_inputs` asserts they
 still match what the store carries — nothing `include_bytes!`es those files, so
-without that check they would drift in silence. Regenerating from them reproduces
-the committed `.cbor` byte for byte (verified 2026-08-13).
+without that check they would drift in silence. Regenerating from them reproduced
+the committed `.cbor` byte for byte (verified 2026-08-13), though that is not a
+property to rely on: the generator folds certificates in the order the filesystem
+lists them, so a regeneration elsewhere can reorder the buffers without changing
+the material. The set is what matters, and `check_generator_inputs` is what
+asserts it.
+
+The anchors in `roots/prod/` and `roots/om/` *are* `include_bytes!`d, one line
+per file in `src/lib.rs`, and `conformance::check_root_inputs` asserts the
+directory and that list agree. The compiler checks only half of it: removing a
+`.der` breaks the build, while adding one leaves a file that ships and reads as
+an anchor without being in the trust set.
 
 The production anchors can be corroborated against a public source: the DoD Root
 CA 3 and DoD Root CA 6 public keys embedded here match those in cross-certificates

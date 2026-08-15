@@ -237,7 +237,11 @@ Freshness is a separate question, answered by each store's refresh procedure.
 5. If the store generator's `.der` inputs ship beside the `.cbor`, call
    `conformance::check_generator_inputs`. Nothing `include_bytes!`es those files,
    so without it they drift from the store in silence.
-6. Forward the client switch, so a consumer can still turn the HTTP stack off:
+6. If the trust anchors ship as `.der` files, call `conformance::check_root_inputs`
+   with the directory and the matching entry's `roots`. The compiler checks only
+   one direction of that list: remove a file and the build breaks, add one and it
+   ships looking like an anchor without being one.
+7. Forward the client switch, so a consumer can still turn the HTTP stack off:
 
    ```toml
    [dependencies]
@@ -250,8 +254,8 @@ Freshness is a separate question, answered by each store's refresh procedure.
 
    Skipping this does not break your crate — it breaks everyone else's ability to
    opt out, since features are additive and your default re-enables the core's.
-7. Add the provider to `certval_stores_core/tests/composition.rs`.
-8. Document how to refresh the material — a store nobody can regenerate is a
+8. Add the provider to `certval_stores_core/tests/composition.rs`.
+9. Document how to refresh the material — a store nobody can regenerate is a
    store that expires. Where the material is a moving snapshot rather than a
    constant, record where it comes from too, as `certval_stores_fpki` does; where
    it is stable, the refresh procedure is the part that earns its keep.

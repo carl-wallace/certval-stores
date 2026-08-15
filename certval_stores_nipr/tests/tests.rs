@@ -151,6 +151,26 @@ fn om_nipr_generator_inputs_match_the_store() {
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
+/// The `roots/<env>/*.der` files reach the crate through the `include_bytes!`
+/// list in `src/lib.rs`, which the compiler only half-checks: remove a file and
+/// the build breaks, add one and it ships looking like an anchor without being
+/// one.
+#[test]
+#[cfg(feature = "nipr")]
+fn nipr_root_inputs_match_the_embedded_anchors() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/prod");
+    let failures = conformance::check_root_inputs(&dir, entry("NIPR").roots);
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+#[cfg(feature = "om_nipr")]
+fn om_nipr_root_inputs_match_the_embedded_anchors() {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/om");
+    let failures = conformance::check_root_inputs(&dir, entry("OM_NIPR").roots);
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
 /// Path *validation*, not just path building: signatures verified from the
 /// anchor down. The environment comes from here rather than from the harness
 /// because the crypto a store needs is the provider's business — this crate's
