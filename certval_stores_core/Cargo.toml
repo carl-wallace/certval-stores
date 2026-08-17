@@ -12,7 +12,7 @@ log = { version = "0.4.33", features = ["std", "serde"] }
 # would drag the HTTP stack in behind the back of the `reqwest-client` feature below,
 # leaving nothing for a consumer to turn off. A provider that wants certval's webpki
 # roots or its revocation support enables `certval/webpki` or `certval/remote` itself.
-certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, features = ["std"], branch = "main" }
+certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, branch = "main" }
 
 # Used by the conformance harness to read the partial paths serialized beside a
 # store's buffers, which CertSource does not expose.
