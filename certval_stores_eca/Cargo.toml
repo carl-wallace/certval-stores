@@ -1,23 +1,23 @@
 [package]
-name = "certval_stores_nipr"
+name = "certval_stores_eca"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0 OR MIT"
-description = "NIPR (DoD PKI) trust stores for certval — production (nipr) and operational-test (om_nipr) environments"
+description = "ECA (DoD External Certification Authority) trust store for certval"
 
 [dependencies]
 certval_stores_core = { path = "../certval_stores_core", default-features = false }
 
 [features]
-default = ["reqwest-client"]
+default = ["eca", "reqwest-client"]
 # Forwards the core crate's client switch. Without this a consumer could not
 # turn the HTTP stack off: features are additive, so this crate enabling the
 # core default would re-enable it however the consumer configured core.
 reqwest-client = ["certval_stores_core/reqwest-client"]
-# NIPR operational-test (JITC) environment.
-om_nipr = []
-# NIPR production environment.
-nipr = []
+# The ECA program as published today: ECA Root CA 4 and 5 plus the vendor CAs
+# beneath them. The crate's only environment, so it is on by default — unlike
+# certval_stores_nipr, where a consumer has to say which of two it wants.
+eca = []
 
 [dev-dependencies]
 # default-features = false for the same reason as the core crate: certval's

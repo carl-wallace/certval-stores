@@ -39,6 +39,38 @@ use certval::{
 use crate::get_reqwest_client;
 use crate::{prepare_certval_environment, StoreEntry, TrustStoreProvider};
 
+/// A store's contents in a form this crate can build and edit.
+///
+/// [`certval::BuffersAndPaths`] is `#[readonly::make]`: its fields read from outside but neither
+/// construct nor mutate, and both are needed to *break* a store on purpose — which is the only way
+/// to show that the checks below actually bite. The serde shape here is the same, so this reads and
+/// writes exactly the bytes certval does; nothing in it is a second opinion about the format.
+///
+/// For tests. A provider's real material is produced by the generator, never by this.
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct RawStore {
+    /// The certificates the store carries.
+    pub buffers: Vec<CertFile>,
+    /// Partial certification paths, as indices into `buffers` keyed by the leaf CA's key
+    /// identifier.
+    pub partial_paths: certval::PartialPaths,
+}
+
+impl RawStore {
+    /// Read a serialized store.
+    pub fn from_cbor(cbor: &[u8]) -> Self {
+        ciborium::de::from_reader(cbor).expect("store must deserialize")
+    }
+
+    /// Serialize, leaking the bytes because [`StoreEntry`] holds `'static` material — which is what
+    /// `include_bytes!` gives the real providers.
+    pub fn into_static_cbor(self) -> &'static [u8] {
+        let mut cbor = vec![];
+        ciborium::ser::into_writer(&self, &mut cbor).expect("store must serialize");
+        Box::leak(cbor.into_boxed_slice())
+    }
+}
+
 /// Environment name no provider may serve, used to confirm that an unrecognized
 /// environment is rejected rather than silently served.
 const NO_SUCH_ENV: &str = "__CONFORMANCE_NO_SUCH_ENV__";
@@ -859,13 +891,11 @@ mod tests {
         buffers: Vec<certval::CertFile>,
         partial_paths: certval::PartialPaths,
     ) -> &'static [u8] {
-        let bap = BuffersAndPaths {
+        RawStore {
             buffers,
             partial_paths,
-        };
-        let mut cbor = vec![];
-        ciborium::ser::into_writer(&bap, &mut cbor).expect("store must serialize");
-        Box::leak(cbor.into_boxed_slice())
+        }
+        .into_static_cbor()
     }
 
     fn buffer(filename: &str) -> certval::CertFile {

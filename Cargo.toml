@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "certval_stores_core",
+    "certval_stores_eca",
     "certval_stores_fpki",
     "certval_stores_nipr",
     "certval_stores_pbdev",

@@ -4,16 +4,18 @@ use certval_stores_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "om_nipr")]
 static OM_NIPR_ROOTS: &[&[u8]] = &[
-    include_bytes!("../roots/om/DOD_JITC_Root_CA-3.der"),
-    include_bytes!("../roots/om/DOD_JITC_Root_CA-5.der"),
-    include_bytes!("../roots/om/DOD_JITC_Root_CA-6.der"),
+    include_bytes!("../roots/om/DoD_JITC_Root_CA_3.der"),
+    include_bytes!("../roots/om/DoD_JITC_Root_CA_4.der"),
+    include_bytes!("../roots/om/DoD_JITC_Root_CA_5.der"),
+    include_bytes!("../roots/om/DoD_JITC_Root_CA_6.der"),
 ];
 
 #[cfg(feature = "nipr")]
 static NIPR_ROOTS: &[&[u8]] = &[
-    include_bytes!("../roots/prod/DOD_Root_CA-3.der"),
-    include_bytes!("../roots/prod/DOD_Root_CA-5.der"),
-    include_bytes!("../roots/prod/DOD_Root_CA-6.der"),
+    include_bytes!("../roots/prod/DoD_Root_CA_3.der"),
+    include_bytes!("../roots/prod/DoD_Root_CA_4.der"),
+    include_bytes!("../roots/prod/DoD_Root_CA_5.der"),
+    include_bytes!("../roots/prod/DoD_Root_CA_6.der"),
 ];
 
 /// Trust-store provider for the NIPR (DoD PKI) environments.

@@ -17,6 +17,9 @@ certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-featur
 # Used by the conformance harness to read the partial paths serialized beside a
 # store's buffers, which CertSource does not expose.
 ciborium = { version = "0.2.2", default-features = false, features = ["std"], optional = true }
+# Derives the serde shape of a store for `conformance::RawStore`; certval's own
+# BuffersAndPaths is readonly, so it cannot be built or edited from out here.
+serde = { version = "1", default-features = false, features = ["derive", "alloc"], optional = true }
 
 [features]
 default = ["reqwest-client"]
@@ -29,7 +32,7 @@ default = ["reqwest-client"]
 reqwest-client = ["dep:reqwest"]
 # Conformance checks over the TrustStoreProvider contract, for provider crates
 # to run from their own tests. Off by default so consumers do not carry them.
-test-util = ["dep:ciborium"]
+test-util = ["dep:ciborium", "dep:serde"]
 
 # native-tls uses the OS-blessed crypto on macOS/iOS (Secure Transport), Linux
 # (system OpenSSL), and Windows (SChannel). Android is the only target where
@@ -46,6 +49,7 @@ reqwest = { version = "0.13.4", features = ["rustls"], optional = true }
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 certval_stores_core = { path = ".", default-features = false, features = ["test-util"] }
+certval_stores_eca = { path = "../certval_stores_eca", default-features = false, features = ["eca"] }
 certval_stores_fpki = { path = "../certval_stores_fpki", default-features = false, features = ["fpki", "fpki_legacy"] }
 certval_stores_nipr = { path = "../certval_stores_nipr", default-features = false, features = ["nipr", "om_nipr"] }
 certval_stores_pbdev = { path = "../certval_stores_pbdev", default-features = false, features = ["dev"] }

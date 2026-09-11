@@ -59,6 +59,7 @@ jobs:
           targets: wasm32-unknown-unknown
       - run: cargo build -p certval_stores_core --no-default-features --target wasm32-unknown-unknown
       - run: cargo build -p certval_stores_nipr --no-default-features --features nipr --target wasm32-unknown-unknown
+      - run: cargo build -p certval_stores_eca --no-default-features --features eca --target wasm32-unknown-unknown
       - run: cargo build -p certval_stores_fpki --no-default-features --features fpki --target wasm32-unknown-unknown
       - run: cargo build -p certval_stores_pbdev --no-default-features --features dev --target wasm32-unknown-unknown
 
