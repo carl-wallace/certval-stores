@@ -20,9 +20,6 @@ reqwest-client = ["certval_stores_core/reqwest-client"]
 eca = []
 
 [dev-dependencies]
-# Used to mangle a copy of the embedded store, to confirm the conformance
-# checks actually fail on a store that has drifted.
-ciborium = { version = "0.2.2", default-features = false, features = ["std"] }
 # default-features = false for the same reason as the core crate: certval's
 # defaults pull reqwest, and a dev-dependency taking them puts the HTTP stack
 # back into the test graph however `reqwest-client` is configured, so a

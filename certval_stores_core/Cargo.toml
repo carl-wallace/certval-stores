@@ -17,6 +17,9 @@ certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-featur
 # Used by the conformance harness to read the partial paths serialized beside a
 # store's buffers, which CertSource does not expose.
 ciborium = { version = "0.2.2", default-features = false, features = ["std"], optional = true }
+# Derives the serde shape of a store for `conformance::RawStore`; certval's own
+# BuffersAndPaths is readonly, so it cannot be built or edited from out here.
+serde = { version = "1", default-features = false, features = ["derive", "alloc"], optional = true }
 
 [features]
 default = ["reqwest-client"]
@@ -29,7 +32,7 @@ default = ["reqwest-client"]
 reqwest-client = ["dep:reqwest"]
 # Conformance checks over the TrustStoreProvider contract, for provider crates
 # to run from their own tests. Off by default so consumers do not carry them.
-test-util = ["dep:ciborium"]
+test-util = ["dep:ciborium", "dep:serde"]
 
 # native-tls uses the OS-blessed crypto on macOS/iOS (Secure Transport), Linux
 # (system OpenSSL), and Windows (SChannel). Android is the only target where

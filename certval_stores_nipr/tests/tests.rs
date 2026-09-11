@@ -84,20 +84,17 @@ fn om_nipr_entry_carries_four_roots_and_a_ca_store() {
 fn paths_filed_under_the_wrong_key_are_reported() {
     let nipr = entry("NIPR");
     let cbor = nipr.cert_store_cbor.expect("NIPR CA store");
-    let mut bap: certval::BuffersAndPaths =
-        ciborium::de::from_reader(cbor).expect("store must deserialize");
-
-    let row = bap
+    // `conformance::RawStore` rather than `certval::BuffersAndPaths`, which is `#[readonly::make]`
+    // and so cannot be edited from here -- and editing is the whole point.
+    let mut store = conformance::RawStore::from_cbor(cbor);
+    let row = store
         .partial_paths
         .first_mut()
         .expect("store must have paths");
     let key = row.keys().next().expect("row must have a key").clone();
     let paths = row.remove(&key).expect("key was just read");
     row.insert("DEADBEEF".to_string(), paths);
-
-    let mut mangled = vec![];
-    ciborium::ser::into_writer(&bap, &mut mangled).expect("store must serialize");
-    let mangled: &'static [u8] = Box::leak(mangled.into_boxed_slice());
+    let mangled = store.into_static_cbor();
 
     struct Mangled(&'static [u8], &'static [&'static [u8]]);
     impl TrustStoreProvider for Mangled {
