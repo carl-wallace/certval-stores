@@ -1,0 +1,31 @@
+[package]
+name = "certval_stores_eca"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+description = "ECA (DoD External Certification Authority) trust store for certval"
+
+[dependencies]
+certval_stores_core = { path = "../certval_stores_core", default-features = false }
+
+[features]
+default = ["eca", "reqwest-client"]
+# Forwards the core crate's client switch. Without this a consumer could not
+# turn the HTTP stack off: features are additive, so this crate enabling the
+# core default would re-enable it however the consumer configured core.
+reqwest-client = ["certval_stores_core/reqwest-client"]
+# The ECA program as published today: ECA Root CA 4 and 5 plus the vendor CAs
+# beneath them. The crate's only environment, so it is on by default — unlike
+# certval_stores_nipr, where a consumer has to say which of two it wants.
+eca = []
+
+[dev-dependencies]
+# Used to mangle a copy of the embedded store, to confirm the conformance
+# checks actually fail on a store that has drifted.
+ciborium = { version = "0.2.2", default-features = false, features = ["std"] }
+# default-features = false for the same reason as the core crate: certval's
+# defaults pull reqwest, and a dev-dependency taking them puts the HTTP stack
+# back into the test graph however `reqwest-client` is configured, so a
+# --no-default-features test run would not build the shape it claims to.
+certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, features = ["std", "rsa"], branch = "main" }
+certval_stores_core = { path = "../certval_stores_core", default-features = false, features = ["test-util"] }

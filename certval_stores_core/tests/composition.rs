@@ -9,12 +9,16 @@
 //! only arrangement that puts the check somewhere none of the providers owns.
 //!
 //! A new provider — the private SIPR one, a webpki/Mozilla one — belongs in the
-//! list below as soon as it is public and buildable here.
+//! list below as soon as it is public and buildable here. The list is written out
+//! rather than discovered, so adding a crate to the workspace does not add it
+//! here: `certval_stores_eca` was in the workspace, tested and lint-clean while
+//! still missing from this check.
 
 use certval_stores_core::{conformance, TrustStoreProvider};
 
 fn providers() -> Vec<&'static dyn TrustStoreProvider> {
     vec![
+        certval_stores_eca::provider(),
         certval_stores_fpki::provider(),
         certval_stores_nipr::provider(),
         certval_stores_pbdev::provider(),

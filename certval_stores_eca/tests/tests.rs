@@ -1,39 +1,34 @@
-//! Tests for the NIPR (DoD PKI) provider.
+//! Tests for the ECA (DoD External Certification Authority) provider.
 //!
 //! The shared checks in `certval_stores_core::conformance` cover what every
 //! provider owes its consumers (roots parse for both certval and reqwest, the
 //! CA store loads, its serialized partial paths cover every CA and are keyed and
 //! rooted correctly, every advertised environment is accepted). What is left
-//! here is NIPR-specific: the environment labels, which are the match keys
-//! callers pass, counts that pin the embedded material so a root or CA cannot be
-//! added or dropped silently, and the path validation the harness delegates to
-//! each provider.
+//! here is ECA-specific: the environment label, which is the match key callers
+//! pass, counts that pin the embedded material so a root or CA cannot be added
+//! or dropped silently, and the path validation the harness delegates to each
+//! provider.
 
-#[cfg(any(feature = "nipr", feature = "om_nipr"))]
+#[cfg(feature = "eca")]
 use std::path::Path;
 
-#[cfg(any(feature = "nipr", feature = "om_nipr"))]
+#[cfg(feature = "eca")]
 use certval::{CertSource, CertVector};
 use certval_stores_core::{conformance, get_roots, TrustStoreProvider};
 
-/// Number of intermediate CAs in the embedded NIPR production store, which is every CA the
-/// `DoD.ir4` stream publishes. Update alongside the store.
-#[cfg(feature = "nipr")]
-const EXPECTED_NIPR_INTERMEDIATES: usize = 41;
-
-/// Number of intermediate CAs in the embedded NIPR operational-test (JITC/O&M) store, which is
-/// the DoD population of the `JITC.ir4` stream. Update alongside the store.
-#[cfg(feature = "om_nipr")]
-const EXPECTED_OM_NIPR_INTERMEDIATES: usize = 53;
+/// Number of intermediate CAs in the embedded ECA store, which is every CA the
+/// `ECA.ir4` stream publishes. Update alongside the store.
+#[cfg(feature = "eca")]
+const EXPECTED_INTERMEDIATES: usize = 6;
 
 fn providers() -> Vec<&'static dyn TrustStoreProvider> {
-    vec![certval_stores_nipr::provider()]
+    vec![certval_stores_eca::provider()]
 }
 
 /// Load an embedded store the way a consumer does, with time-of-interest checks
 /// disabled so this counts what the store carries rather than what is currently
 /// valid.
-#[cfg(any(feature = "nipr", feature = "om_nipr"))]
+#[cfg(feature = "eca")]
 fn load(cbor: &[u8]) -> CertSource {
     let mut cps = certval::CertificationPathSettings::new();
     cps.set_time_of_interest(certval::TimeOfInterest::disabled());
@@ -42,9 +37,9 @@ fn load(cbor: &[u8]) -> CertSource {
     cert_source
 }
 
-#[cfg(any(feature = "nipr", feature = "om_nipr"))]
+#[cfg(feature = "eca")]
 fn entry(env: &str) -> certval_stores_core::StoreEntry {
-    certval_stores_nipr::PROVIDER
+    certval_stores_eca::PROVIDER
         .entries()
         .into_iter()
         .find(|e| e.env == env)
@@ -53,25 +48,16 @@ fn entry(env: &str) -> certval_stores_core::StoreEntry {
 
 #[test]
 fn provider_is_conformant() {
-    conformance::assert_conformant(certval_stores_nipr::provider());
+    conformance::assert_conformant(certval_stores_eca::provider());
 }
 
 #[test]
-#[cfg(feature = "nipr")]
-fn nipr_entry_carries_four_roots_and_a_ca_store() {
-    let nipr = entry("NIPR");
-    assert_eq!(nipr.roots.len(), 4);
-    let cert_source = load(nipr.cert_store_cbor.expect("NIPR must carry a CA store"));
-    assert_eq!(cert_source.len(), EXPECTED_NIPR_INTERMEDIATES);
-}
-
-#[test]
-#[cfg(feature = "om_nipr")]
-fn om_nipr_entry_carries_four_roots_and_a_ca_store() {
-    let om = entry("OM_NIPR");
-    assert_eq!(om.roots.len(), 4);
-    let cert_source = load(om.cert_store_cbor.expect("OM_NIPR must carry a CA store"));
-    assert_eq!(cert_source.len(), EXPECTED_OM_NIPR_INTERMEDIATES);
+#[cfg(feature = "eca")]
+fn eca_entry_carries_two_roots_and_a_ca_store() {
+    let eca = entry("ECA");
+    assert_eq!(eca.roots.len(), 2);
+    let cert_source = load(eca.cert_store_cbor.expect("ECA must carry a CA store"));
+    assert_eq!(cert_source.len(), EXPECTED_INTERMEDIATES);
 }
 
 /// The shared checks are only worth running if they fail on a store that has
@@ -80,10 +66,10 @@ fn om_nipr_entry_carries_four_roots_and_a_ca_store() {
 /// covers every buffer, and is still rooted correctly — but those paths are now
 /// unreachable, because `get_paths_for_target` finds paths by that key.
 #[test]
-#[cfg(feature = "nipr")]
+#[cfg(feature = "eca")]
 fn paths_filed_under_the_wrong_key_are_reported() {
-    let nipr = entry("NIPR");
-    let cbor = nipr.cert_store_cbor.expect("NIPR CA store");
+    let eca = entry("ECA");
+    let cbor = eca.cert_store_cbor.expect("ECA CA store");
     let mut bap: certval::BuffersAndPaths =
         ciborium::de::from_reader(cbor).expect("store must deserialize");
 
@@ -103,7 +89,7 @@ fn paths_filed_under_the_wrong_key_are_reported() {
     impl TrustStoreProvider for Mangled {
         fn entries(&self) -> Vec<certval_stores_core::StoreEntry> {
             vec![certval_stores_core::StoreEntry {
-                env: "NIPR",
+                env: "ECA",
                 roots: self.1,
                 cert_store_cbor: Some(self.0),
             }]
@@ -113,7 +99,7 @@ fn paths_filed_under_the_wrong_key_are_reported() {
     // Exactly one failure: refiling a key leaves coverage, rooting, indices and
     // row lengths intact, so anything else firing would mean the mangle broke
     // more than the one property under test.
-    let failures = conformance::check_partial_paths(&Mangled(mangled, nipr.roots));
+    let failures = conformance::check_partial_paths(&Mangled(mangled, eca.roots));
     assert_eq!(failures.len(), 1, "{failures:#?}");
     assert!(failures[0].contains("DEADBEEF"), "{failures:#?}");
 }
@@ -123,7 +109,7 @@ fn paths_filed_under_the_wrong_key_are_reported() {
 /// no fewer (an entry left out of the fold).
 #[test]
 fn get_roots_returns_every_advertised_anchor() {
-    let expected: usize = certval_stores_nipr::PROVIDER
+    let expected: usize = certval_stores_eca::PROVIDER
         .entries()
         .iter()
         .map(|e| e.roots.len())
@@ -131,43 +117,26 @@ fn get_roots_returns_every_advertised_anchor() {
     assert_eq!(get_roots(&providers()).len(), expected);
 }
 
-/// The `cas/<env>/*.der` files are the store generator's inputs: they ship but
+/// The `cas/prod/*.der` files are the store generator's outputs: they ship but
 /// nothing `include_bytes!`es them, so they drift from the store in silence.
 #[test]
-#[cfg(feature = "nipr")]
-fn nipr_generator_inputs_match_the_store() {
+#[cfg(feature = "eca")]
+fn generator_inputs_match_the_store() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("cas/prod");
-    let cbor = entry("NIPR").cert_store_cbor.expect("NIPR CA store");
+    let cbor = entry("ECA").cert_store_cbor.expect("ECA CA store");
     let failures = conformance::check_generator_inputs(&dir, cbor);
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
-#[test]
-#[cfg(feature = "om_nipr")]
-fn om_nipr_generator_inputs_match_the_store() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("cas/om");
-    let cbor = entry("OM_NIPR").cert_store_cbor.expect("OM_NIPR CA store");
-    let failures = conformance::check_generator_inputs(&dir, cbor);
-    assert!(failures.is_empty(), "{}", failures.join("\n"));
-}
-
-/// The `roots/<env>/*.der` files reach the crate through the `include_bytes!`
+/// The `roots/prod/*.der` files reach the crate through the `include_bytes!`
 /// list in `src/lib.rs`, which the compiler only half-checks: remove a file and
 /// the build breaks, add one and it ships looking like an anchor without being
 /// one.
 #[test]
-#[cfg(feature = "nipr")]
-fn nipr_root_inputs_match_the_embedded_anchors() {
+#[cfg(feature = "eca")]
+fn root_inputs_match_the_embedded_anchors() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/prod");
-    let failures = conformance::check_root_inputs(&dir, entry("NIPR").roots);
-    assert!(failures.is_empty(), "{}", failures.join("\n"));
-}
-
-#[test]
-#[cfg(feature = "om_nipr")]
-fn om_nipr_root_inputs_match_the_embedded_anchors() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/om");
-    let failures = conformance::check_root_inputs(&dir, entry("OM_NIPR").roots);
+    let failures = conformance::check_root_inputs(&dir, entry("ECA").roots);
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
@@ -179,10 +148,10 @@ fn om_nipr_root_inputs_match_the_embedded_anchors() {
 /// loudly. Settings are time-independent so this asks whether the material is
 /// sound, not whether it is current.
 #[test]
-#[cfg(any(feature = "nipr", feature = "om_nipr"))]
+#[cfg(feature = "eca")]
 fn paths_validate_under_the_embedded_anchors() {
     conformance::assert_paths_validate(
-        certval_stores_nipr::provider(),
+        certval_stores_eca::provider(),
         conformance::default_environment,
         &conformance::structural_validation_settings(),
     );

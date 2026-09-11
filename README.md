@@ -15,6 +15,7 @@ material by trust community so the sensitive members can live in separate
 | Crate | Repo | Environments (features) |
 |-------|------|-------------------------|
 | [`certval_stores_core`](certval_stores_core/README.md)  | public `carl-wallace/certval-stores` | — (the provider trait + plumbing) |
+| [`certval_stores_eca`](certval_stores_eca/README.md)    | public `carl-wallace/certval-stores` | `eca` (DoD External Certification Authority) |
 | [`certval_stores_fpki`](certval_stores_fpki/README.md)  | public `carl-wallace/certval-stores` | `fpki`, `fpki_legacy` (Federal PKI) |
 | [`certval_stores_nipr`](certval_stores_nipr/README.md)  | public `carl-wallace/certval-stores` | `om_nipr`, `nipr` (DoD PKI) |
 | [`certval_stores_pbdev`](certval_stores_pbdev/README.md) | public `carl-wallace/certval-stores` | `dev` (Purebred development) |
@@ -24,6 +25,11 @@ Each provider crate's README records what material it carries, where that
 material came from, and how to refresh it. `certval_stores_fpki` is the one whose
 material is a dated snapshot rather than a constant: the FPKI mesh is republished
 by the FPKI crawler whenever it changes.
+
+`certval_stores_nipr` and `certval_stores_eca` keep the DoD InstallRoot stream
+they are generated from, in `inputs/*.ir4`. The stream is a set of signed RFC 5934
+messages, so it records what DoD published rather than what someone collected, and
+regenerating from it is how those crates are refreshed.
 
 ## Where the rest of the documentation lives
 
