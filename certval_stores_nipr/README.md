@@ -60,6 +60,15 @@ belong to different crates. The generator selects the DoD population by anchor,
 takes the CAs that chain to it, and logs the rest rather than dropping it
 silently.
 
+`provenance/<env>/published.txt` and `provenance/<env>/collected.txt` carry the two
+dates the entries report, written by the generator from the stream itself:
+`published` is the `signingTime` on the InstallRoot messages read, and `collected`
+the day the stream was fetched. They are files rather than literals in `src/lib.rs`
+so that a refresh moves them with the material. The gap between them is the point —
+`JITC.ir4` was signed **2025-02-03** and fetched **2026-09-11**, so a consumer told
+only when the store was built would read nineteen months of DoD anchor changes as
+freshness.
+
 **Signatures are not verified yet.** Requiring a good signature belongs in
 generation, where the anchors are already in hand, and it is not built. Until it
 is, treat the streams as material of stated rather than proven provenance.

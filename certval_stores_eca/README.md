@@ -45,6 +45,11 @@ certificates being withdrawn.
 generation, where the anchors are already in hand, and it is not built. Until it
 is, treat the stream as material of stated rather than proven provenance.
 
+`provenance/prod/published.txt` and `provenance/prod/collected.txt` carry the dates
+the entry reports — the `signingTime` on the InstallRoot messages read, and the day
+`ECA.ir4` was fetched. Both are written by the generator, so a refresh moves them
+with the material rather than leaving them to a hand edit.
+
 The generated DER ships beside the `.cbor` in `cas/prod/`, and
 `conformance::check_generator_inputs` asserts it still matches what the store
 carries — nothing `include_bytes!`es those files, so without that check they

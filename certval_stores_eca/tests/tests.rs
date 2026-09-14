@@ -89,6 +89,8 @@ fn paths_filed_under_the_wrong_key_are_reported() {
                 env: "ECA",
                 roots: self.1,
                 cert_store_cbor: Some(self.0),
+                published: None,
+                collected: None,
             }]
         }
     }
@@ -152,4 +154,14 @@ fn paths_validate_under_the_embedded_anchors() {
         conformance::default_environment,
         &conformance::structural_validation_settings(),
     );
+}
+
+/// Generated from `inputs/ECA.ir4`, which states a `signingTime`, so both dates are
+/// knowable. See the same test in `certval_stores_nipr`.
+#[test]
+#[cfg(feature = "eca")]
+fn the_eca_entry_carries_both_dates() {
+    let eca = entry("ECA");
+    assert!(eca.published.is_some(), "ECA.ir4 states a signingTime");
+    assert!(eca.collected.is_some());
 }

@@ -96,3 +96,25 @@ fn serialization_is_deterministic() {
     assert_eq!(a.ta_cbor, b.ta_cbor);
     assert_eq!(a.ca_cbor, b.ca_cbor);
 }
+
+/// The CBOR has nowhere to carry the dates, so `SerializedStore` is the only route
+/// by which a consumer that fetches artifacts can say how current a store is. A
+/// serializer that dropped them would leave the browser frontend silently unable to
+/// answer the question the desktop answers from the provider directly.
+#[test]
+fn the_dates_survive_serialization() {
+    let provider = certval_stores_nipr::provider();
+    let entry = provider
+        .entries()
+        .into_iter()
+        .find(|e| e.env == "NIPR")
+        .expect("the provider serves NIPR");
+    let store = serialize_environment(&[provider], "NIPR").expect("NIPR must serialize");
+
+    assert_eq!(store.published, entry.published);
+    assert_eq!(store.collected, entry.collected);
+    assert!(
+        store.published.is_some() && store.collected.is_some(),
+        "the NIPR store is generated from a dated stream, so both dates are known"
+    );
+}

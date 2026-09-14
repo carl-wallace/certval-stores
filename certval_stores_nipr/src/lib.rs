@@ -18,6 +18,20 @@ static NIPR_ROOTS: &[&[u8]] = &[
     include_bytes!("../roots/prod/DoD_Root_CA_6.der"),
 ];
 
+// Written by `certval-store-gen` from the stream each environment is generated from:
+// `published` is the `signingTime` of the InstallRoot messages read, `collected` the day
+// the stream was fetched. Files rather than literals so a refresh carries the dates with
+// the material instead of leaving them to a hand edit -- the gap the two answer is real
+// here, `JITC.ir4` having been signed well over a year before it was fetched.
+#[cfg(feature = "nipr")]
+const NIPR_PUBLISHED: &str = include_str!("../provenance/prod/published.txt").trim_ascii_end();
+#[cfg(feature = "nipr")]
+const NIPR_COLLECTED: &str = include_str!("../provenance/prod/collected.txt").trim_ascii_end();
+#[cfg(feature = "om_nipr")]
+const OM_NIPR_PUBLISHED: &str = include_str!("../provenance/om/published.txt").trim_ascii_end();
+#[cfg(feature = "om_nipr")]
+const OM_NIPR_COLLECTED: &str = include_str!("../provenance/om/collected.txt").trim_ascii_end();
+
 /// Trust-store provider for the NIPR (DoD PKI) environments.
 pub struct NiprStores;
 
@@ -30,12 +44,16 @@ impl TrustStoreProvider for NiprStores {
             env: "OM_NIPR",
             roots: OM_NIPR_ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/om/om.cbor")),
+            published: Some(OM_NIPR_PUBLISHED),
+            collected: Some(OM_NIPR_COLLECTED),
         });
         #[cfg(feature = "nipr")]
         entries.push(StoreEntry {
             env: "NIPR",
             roots: NIPR_ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/prod/prod.cbor")),
+            published: Some(NIPR_PUBLISHED),
+            collected: Some(NIPR_COLLECTED),
         });
         entries
     }
