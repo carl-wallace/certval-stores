@@ -20,6 +20,11 @@ impl TrustStoreProvider for PbDevStores {
             env: "DEV",
             roots: DEV_ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/dev/dev.cbor")),
+            // The development PKI publishes nothing anywhere, so there is no publication
+            // date to state -- see the README's note that these roots have no external
+            // source to corroborate them against either.
+            published: None,
+            collected: Some("2026-08-06"),
         });
         entries
     }

@@ -34,6 +34,13 @@ the FPKI graph on idmanagement.gov — published in the `GSA/idmanagement.gov` r
 at `_implement/tools/`. Snapshot taken **2026-08-12** from a bundle the crawler
 published **2026-08-10**.
 
+Those two dates are what the `FPKI` entry reports as `published` and `collected`.
+They are literals in `src/lib.rs` here, unlike the DoD providers' generator-written
+files: the `.p7b` states neither date, so both come off the GSA repository it was
+downloaded from. `FPKI_LEGACY` reports no publication date at all — the G1 mesh is
+no longer published — and gives the day its anchor reached this repository as the
+collection date, the latest it can have been fetched.
+
 The store is built from that bundle rather than from `.der` files kept beside it,
 so there is no generator-input check here as there is in the DoD providers. The
 two anchors above are files, though, and `conformance::check_root_inputs` asserts

@@ -45,7 +45,10 @@ This is development material: it turns over when the dev environment is rebuilt,
 which is more often than the production stores move, so the refresh path below
 matters more here than the anchor count suggests. The ENG roots are not published
 anywhere public, so unlike the production DoD roots there is no external source
-to check them against — the conformance and validation tests are the check.
+to check them against — the conformance and validation tests are the check. For
+the same reason the entry reports no publication date: there is no publisher to
+state one. It gives a collection date only, and a refresh has to move it by hand,
+since the `local` adapter below is handed a folder rather than a dated artifact.
 
 ## Refreshing
 

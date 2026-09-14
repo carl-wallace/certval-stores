@@ -25,6 +25,8 @@ pub struct StoreEntry {
     pub env: &'static str,                       // provider-defined: "NIPR", "DEV", "FPKI", …
     pub roots: &'static [&'static [u8]],         // trust-anchor DERs
     pub cert_store_cbor: Option<&'static [u8]>,  // serialized certval CertSource (CBOR)
+    pub published: Option<&'static str>,         // the source's own date, YYYY-MM-DD
+    pub collected: Option<&'static str>,         // when this material was taken, YYYY-MM-DD
 }
 
 pub trait TrustStoreProvider {
@@ -33,6 +35,19 @@ pub trait TrustStoreProvider {
 ```
 
 Each provider crate exposes `provider() -> &'static dyn TrustStoreProvider`.
+
+**The two dates answer different questions, and both are optional.** `published`
+is the publisher's own statement — an InstallRoot stream's `signingTime`, a CCADB
+report date, the publication date of a crawler bundle — and is what says how
+current the material is. `collected` is when the provider took it, which is the
+bound on staleness a provider can always give even where the source states
+nothing. They can be far apart: `certval_stores_nipr`'s operational-test stream
+was signed nineteen months before it was fetched, and a consumer showing only the
+fetch date would report that store as fresh. A provider that cannot answer either
+one honestly says `None` rather than offering a plausible-looking date; neither is
+ever the date the crate was built, released or committed, which describe this
+repository rather than the trust material. `check_entry_shape` requires
+`YYYY-MM-DD` and rejects a pair claiming collection before publication.
 
 Environment labels are the provider's to choose: there is no enumerated set, and
 this crate only compares the string. `certval_stores_fpki` added `FPKI` and
@@ -51,7 +66,9 @@ The three entry points the former `pb_pki` crate offered, now taking a
   crate (a wasm frontend, where embedding the bytes is not an option). The CA
   half is a passthrough, since `cert_store_cbor` is already serialized; the
   anchors are written as a `CertSource` carrying no partial paths, which is the
-  form `TaSource::new_from_cbor` reads.
+  form `TaSource::new_from_cbor` reads. The two dates ride along on the result:
+  the CBOR has nowhere to hold them, so this is the only way they reach a
+  consumer that does not link the provider.
 - `get_reqwest_client{,_rustls,_native}(providers, …)` — a client trusting them
   and *only* them, behind the default-on `reqwest-client` feature. Provider-only
   is the whole rule: reqwest's built-in web-PKI bundle and the platform's native

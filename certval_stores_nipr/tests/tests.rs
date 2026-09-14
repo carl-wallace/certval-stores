@@ -103,6 +103,8 @@ fn paths_filed_under_the_wrong_key_are_reported() {
                 env: "NIPR",
                 roots: self.1,
                 cert_store_cbor: Some(self.0),
+                published: None,
+                collected: None,
             }]
         }
     }
@@ -183,4 +185,24 @@ fn paths_validate_under_the_embedded_anchors() {
         conformance::default_environment,
         &conformance::structural_validation_settings(),
     );
+}
+
+/// Both environments are generated from an InstallRoot stream, so both dates are
+/// knowable and a missing one means a refresh dropped them rather than that the
+/// publisher said nothing. The format itself is `conformance::check_entry_shape`'s
+/// job; what is asserted here is that they are there at all.
+#[test]
+#[cfg(feature = "nipr")]
+fn the_production_entry_carries_both_dates() {
+    let nipr = entry("NIPR");
+    assert!(nipr.published.is_some(), "DoD.ir4 states a signingTime");
+    assert!(nipr.collected.is_some());
+}
+
+#[test]
+#[cfg(feature = "om_nipr")]
+fn the_operational_test_entry_carries_both_dates() {
+    let om = entry("OM_NIPR");
+    assert!(om.published.is_some(), "JITC.ir4 states a signingTime");
+    assert!(om.collected.is_some());
 }

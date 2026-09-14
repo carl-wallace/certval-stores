@@ -129,8 +129,57 @@ pub fn check_entry_shape(provider: &dyn TrustStoreProvider) -> Vec<String> {
                 }
             }
         }
+        // The dates are shown to a user as a statement about how current the material
+        // is, so a malformed one is worse than none: it reads as an answer. Both are
+        // written by the generator into files the provider `include_str!`s, which is
+        // where a stray newline or a half-finished hand edit would arrive from.
+        for (what, value) in [
+            ("published", entry.published),
+            ("collected", entry.collected),
+        ] {
+            let Some(value) = value else {
+                continue;
+            };
+            if !is_iso_date(value) {
+                failures.push(format!(
+                    "entry {env:?} {what} date {value:?} is not an ISO 8601 calendar date (YYYY-MM-DD)"
+                ));
+            }
+        }
+        // Lexicographic comparison is a date comparison for this format, which is most
+        // of why the format is required above. Collecting material before its publisher
+        // published it is not a thing that happened, so one of the two is wrong.
+        if let (Some(published), Some(collected)) = (entry.published, entry.collected) {
+            if is_iso_date(published) && is_iso_date(collected) && published > collected {
+                failures.push(format!(
+                    "entry {env:?} says it was published {published} and collected {collected}, which is before it existed"
+                ));
+            }
+        }
     }
     failures
+}
+
+/// Whether `value` is a `YYYY-MM-DD` calendar date.
+///
+/// Syntax and range only: this rejects `2026-13-01` and `2026-08-32`, and accepts
+/// `2026-02-31`, which no publisher emits and which nothing here would do anything
+/// different about. A full calendar is not worth carrying to check a date a human
+/// reads.
+fn is_iso_date(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    if bytes.len() != 10 || bytes[4] != b'-' || bytes[7] != b'-' {
+        return false;
+    }
+    if !bytes
+        .iter()
+        .enumerate()
+        .all(|(i, b)| i == 4 || i == 7 || b.is_ascii_digit())
+    {
+        return false;
+    }
+    let part = |from: usize, to: usize| value[from..to].parse::<u32>().unwrap_or(0);
+    (1..=12).contains(&part(5, 7)) && (1..=31).contains(&part(8, 10))
 }
 
 /// Check that every trust anchor parses as an x509-cert `Certificate` (the
@@ -919,20 +968,61 @@ mod tests {
                     env: " NIPR",
                     roots: NO_ROOTS,
                     cert_store_cbor: None,
+                    published: None,
+                    collected: None,
                 },
                 StoreEntry {
                     env: "DEV",
                     roots: EMPTY_ROOT,
                     cert_store_cbor: None,
+                    published: None,
+                    collected: None,
                 },
                 StoreEntry {
                     env: "DEV",
                     roots: EMPTY_ROOT,
                     cert_store_cbor: None,
+                    published: None,
+                    collected: None,
                 },
             ]
         }));
         assert_eq!(failures.len(), 5, "{failures:#?}");
+    }
+
+    /// `ROOTS_ONE_BAD` so neither entry trips the anchor checks: what is under test
+    /// is the dates alone, and a third failure here would mean something else fired.
+    #[test]
+    fn a_malformed_date_and_one_collected_before_it_was_published_are_reported() {
+        let failures = check_entry_shape(&fake(|| {
+            vec![
+                StoreEntry {
+                    env: "DEV",
+                    roots: ROOTS_ONE_BAD,
+                    cert_store_cbor: None,
+                    // The trailing newline an `include_str!` of a generated file brings
+                    // with it when nothing trims it.
+                    published: Some("2026-08-13\n"),
+                    collected: None,
+                },
+                StoreEntry {
+                    env: "NIPR",
+                    roots: ROOTS_ONE_BAD,
+                    cert_store_cbor: None,
+                    published: Some("2026-09-11"),
+                    collected: Some("2026-06-12"),
+                },
+            ]
+        }));
+        assert_eq!(failures.len(), 2, "{failures:#?}");
+        assert!(
+            failures.iter().any(|f| f.contains("ISO 8601")),
+            "{failures:#?}"
+        );
+        assert!(
+            failures.iter().any(|f| f.contains("before it existed")),
+            "{failures:#?}"
+        );
     }
 
     #[test]
@@ -942,6 +1032,8 @@ mod tests {
                 env: "DEV",
                 roots: ROOTS_ONE_BAD,
                 cert_store_cbor: None,
+                published: None,
+                collected: None,
             }]
         }));
         assert_eq!(failures.len(), 1, "{failures:#?}");
@@ -954,6 +1046,8 @@ mod tests {
                 env: "DEV",
                 roots: DUPLICATE_ROOTS,
                 cert_store_cbor: None,
+                published: None,
+                collected: None,
             }]
         }));
         // One parse failure per copy, plus the duplication itself.
@@ -967,6 +1061,8 @@ mod tests {
                 env: "DEV",
                 roots: NO_ROOTS,
                 cert_store_cbor: Some(b"\x00truncated"),
+                published: None,
+                collected: None,
             }]
         }));
         assert_eq!(failures.len(), 1, "{failures:#?}");
@@ -982,6 +1078,8 @@ mod tests {
                 env: "DEV",
                 roots: NO_ROOTS,
                 cert_store_cbor: Some(cbor),
+                published: None,
+                collected: None,
             }]
         }));
         assert_eq!(failures.len(), 1, "{failures:#?}");
@@ -1007,6 +1105,8 @@ mod tests {
                 env: "DEV",
                 roots: NO_ROOTS,
                 cert_store_cbor: Some(cbor),
+                published: None,
+                collected: None,
             }]
         }));
         assert_eq!(failures.len(), 2, "{failures:#?}");
@@ -1036,6 +1136,8 @@ mod tests {
                 env: "DEV",
                 roots: NO_ROOTS,
                 cert_store_cbor: Some(cbor),
+                published: None,
+                collected: None,
             }]
         }));
         assert_eq!(failures.len(), 1, "{failures:#?}");
