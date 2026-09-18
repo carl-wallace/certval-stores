@@ -13,7 +13,10 @@
 //! // `providers()` is assembled by the consumer from its enabled features,
 //! // e.g. certval_stores_nipr::provider(), certval_stores_sipr::provider(), …
 //! let providers = providers();
-//! if let Err(e) = prepare_certval_environment(&providers, &mut pe, &mut ta_store, "NIPR") {
+//! // The store id comes from the provider as a constant — `certval_stores_nipr::NIPR_PROD`
+//! // here — rather than as a literal, so a renamed store fails to compile instead of
+//! // failing to match.
+//! if let Err(e) = prepare_certval_environment(&providers, &mut pe, &mut ta_store, "dod_nipr_prod") {
 //!     log::error!("prepare_certval_environment failed with: {e}");
 //! }
 //! ```
@@ -49,14 +52,35 @@ use certval::{
 /// All fields are `'static` because provider crates embed their material at
 /// compile time via `include_bytes!`.
 pub struct StoreEntry {
-    /// Environment identifier this entry serves, e.g. `"NIPR"`, `"OM_SIPR"`, `"DEV"`.
+    /// Identifier for this store, e.g. `"dod_nipr_prod"`, `"webpki"`.
     ///
-    /// There is no fixed set: a provider names its own environments, and this
-    /// crate only compares the label. `certval_stores_fpki` introduced `"FPKI"`
-    /// and `"FPKI_LEGACY"` without any change here, and a new community does the
-    /// same. The label is what [`prepare_certval_environment`] matches verbatim,
-    /// so it must be unique across the providers a consumer loads together.
-    pub env: &'static str,
+    /// The one name a store has. [`prepare_certval_environment`] and
+    /// [`serialize_environment`] match it verbatim, and it is what a consumer
+    /// keys on to recognize two copies of the same material as the same store —
+    /// an application that embeds a serialized copy and a service that serves
+    /// one, which would otherwise offer a person the same trust anchors twice
+    /// under two spellings. There is no fixed set: a provider names its own
+    /// stores, and it must be unique across the providers a consumer loads
+    /// together.
+    ///
+    /// Each provider exports its ids as public constants, which is what a caller
+    /// should pass rather than a literal: the parameter is a `&str`, so a
+    /// spelling that no longer matches anything compiles and fails at run time.
+    ///
+    /// Treat it as published: changing one renames a store that consumers,
+    /// configuration and command lines may already refer to. Lowercase, with
+    /// words separated by underscores, since it travels through URLs, file names
+    /// and command lines.
+    pub id: &'static str,
+    /// Name for this store as a person choosing between them reads it, e.g.
+    /// `"U.S. DoD (NIPR)"`.
+    ///
+    /// The provider states it because the material is the provider's: only it
+    /// knows that `OM_NIPR` is what the department calls JITC, or that a root
+    /// set carrying both trust bits is not the same offer as a TLS-only one.
+    /// Free text, and expected to change as wording improves — unlike
+    /// [`id`](StoreEntry::id), nothing keys on it.
+    pub label: &'static str,
     /// Trust anchors, DER-encoded.
     ///
     /// These reach `TaSource`, which parses each buffer as an RFC 5914
@@ -123,18 +147,18 @@ pub fn prepare_certval_environment(
     providers: &[&dyn TrustStoreProvider],
     pe: &mut PkiEnvironment,
     ta_store: &mut TaSource,
-    env: &str,
+    id: &str,
 ) -> Result<(), Error> {
     let mut acted = false;
     for provider in providers {
         for entry in provider.entries() {
-            if entry.env != env {
+            if entry.id != id {
                 continue;
             }
             acted = true;
             for der in entry.roots {
                 ta_store.push(CertFile {
-                    filename: format!("{env} root"),
+                    filename: format!("{id} root"),
                     bytes: der.to_vec(),
                 });
             }
@@ -148,7 +172,7 @@ pub fn prepare_certval_environment(
 
     if !acted {
         error!(
-            "The environment value ({env}) passed to prepare_certval_environment did not match any provider."
+            "The store id ({id}) passed to prepare_certval_environment did not match any provider."
         );
         Err(Error::Unrecognized)
     } else {
@@ -176,6 +200,13 @@ pub fn get_roots(providers: &[&dyn TrustStoreProvider]) -> Vec<Vec<u8>> {
 /// `ta_cbor` via `TaSource::new_from_cbor`, `ca_cbor` via
 /// `CertSource::new_from_cbor`.
 pub struct SerializedStore {
+    /// [`StoreEntry::id`] for this environment, carried across so a consumer
+    /// that serializes the material names the result what everyone else names
+    /// it.
+    pub id: &'static str,
+    /// [`StoreEntry::label`] for this environment, carried across for the same
+    /// reason.
+    pub label: &'static str,
     /// Trust anchors, CBOR.
     pub ta_cbor: Vec<u8>,
     /// Intermediate CAs and partial paths, CBOR, or `None` for an anchors-only
@@ -207,23 +238,29 @@ pub struct SerializedStore {
 /// carries no filenames to reproduce.
 pub fn serialize_environment(
     providers: &[&dyn TrustStoreProvider],
-    env: &str,
+    id: &str,
 ) -> Result<SerializedStore, Error> {
     let mut ta_store = CertSource::new();
     let mut ca_cbor: Option<Vec<u8>> = None;
+    // The matched entry's own `id`, which is `'static` where the parameter is
+    // only borrowed, and is what the returned store is named by.
+    let mut matched_id: Option<&'static str> = None;
+    let mut label: Option<&'static str> = None;
     let mut published: Option<&'static str> = None;
     let mut collected: Option<&'static str> = None;
     let mut acted = false;
 
     for provider in providers {
         for entry in provider.entries() {
-            if entry.env != env {
+            if entry.id != id {
                 continue;
             }
             acted = true;
-            // First statement wins, which only matters if two providers serve one
-            // environment -- and that is already misuse, caught by the CA-store
-            // check below and by `conformance::check_entry_shape`.
+            // First statement wins, which only matters if two providers carry one
+            // store -- and that is already misuse, caught by the CA-store check
+            // below and by `conformance::check_providers_compose`.
+            matched_id = matched_id.or(Some(entry.id));
+            label = label.or(Some(entry.label));
             published = published.or(entry.published);
             collected = collected.or(entry.collected);
             for (i, der) in entry.roots.iter().enumerate() {
@@ -234,7 +271,7 @@ pub fn serialize_environment(
                 // keep it derived only from the entry, so regenerating the same
                 // material twice produces the same bytes.
                 let cf = CertFile {
-                    filename: format!("{env} root {i}"),
+                    filename: format!("{id} root {i}"),
                     bytes: der.to_vec(),
                 };
                 if !ta_store.contains(&cf) {
@@ -242,13 +279,13 @@ pub fn serialize_environment(
                 }
             }
             if let Some(cbor) = entry.cert_store_cbor {
-                // Two CA stores under one label cannot be combined here — CBOR
+                // Two CA stores under one id cannot be combined here — CBOR
                 // documents do not concatenate, and merging would mean parsing
-                // and rebuilding the partial-path graph. Environment labels are
-                // required to be unique across the providers a consumer loads,
-                // so this is misuse rather than a case to support.
+                // and rebuilding the partial-path graph. Ids are required to be
+                // unique across the providers a consumer loads, so this is misuse
+                // rather than a case to support.
                 if ca_cbor.is_some() {
-                    error!("More than one provider carries a CA store for environment {env}.");
+                    error!("More than one provider carries a CA store for store {id}.");
                     return Err(Error::Unrecognized);
                 }
                 ca_cbor = Some(cbor.to_vec());
@@ -257,13 +294,24 @@ pub fn serialize_environment(
     }
 
     if !acted {
-        error!("The environment value ({env}) passed to serialize_environment did not match any provider.");
+        error!("The store id ({id}) passed to serialize_environment did not match any provider.");
         return Err(Error::Unrecognized);
     }
+
+    // Both are set in the same breath as `acted`, so this arm is unreachable; it
+    // is here rather than an unwrap because a library has no business panicking
+    // over its own invariant, and `Unrecognized` is what the caller already
+    // handles for "this id yielded nothing".
+    let (Some(matched_id), Some(label)) = (matched_id, label) else {
+        error!("Entries for store {id} carry no id or label.");
+        return Err(Error::Unrecognized);
+    };
 
     ta_store.initialize(&Default::default())?;
     let ta_cbor = ta_store.serialize(CertificationPathBuilderFormats::Cbor)?;
     Ok(SerializedStore {
+        id: matched_id,
+        label,
         ta_cbor,
         ca_cbor,
         published,
@@ -357,7 +405,7 @@ pub fn get_reqwest_client(
             for der in entry.roots {
                 match reqwest::Certificate::from_der(der) {
                     Ok(cert) => certs.push(cert),
-                    Err(e) => error!("Failed to parse a {} root: {e:?}", entry.env),
+                    Err(e) => error!("Failed to parse a {} root: {e:?}", entry.id),
                 }
             }
         }

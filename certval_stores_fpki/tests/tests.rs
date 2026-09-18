@@ -22,13 +22,13 @@ use certval_stores_core::{conformance, prepare_certval_environment, TrustStorePr
 /// The anchors an environment advertises, for the checks that take them
 /// alongside the directory they were loaded from.
 #[cfg(any(feature = "fpki", feature = "fpki_legacy"))]
-fn roots_for(env: &str) -> &'static [&'static [u8]] {
+fn roots_for(id: &str) -> &'static [&'static [u8]] {
     certval_stores_fpki::PROVIDER
         .entries()
         .iter()
-        .find(|e| e.env == env)
+        .find(|e| e.id == id)
         .map(|e| e.roots)
-        .unwrap_or_else(|| panic!("the enabled features must yield a {env} entry"))
+        .unwrap_or_else(|| panic!("the enabled features must yield a {id} entry"))
 }
 
 /// Number of intermediate CA certificates in the embedded FPKI CA store. Update
@@ -51,7 +51,7 @@ fn fpki_entry_has_one_anchor_and_a_ca_store() {
     let entries = certval_stores_fpki::PROVIDER.entries();
     let fpki = entries
         .iter()
-        .find(|e| e.env == "FPKI")
+        .find(|e| e.id == certval_stores_fpki::FPKI)
         .expect("the fpki feature must yield an FPKI entry");
 
     // The FPKI is anchored at a single root by design, not by omission.
@@ -66,7 +66,7 @@ fn embedded_ca_store_deserializes_and_initializes() {
     let entries = certval_stores_fpki::PROVIDER.entries();
     let cbor = entries
         .iter()
-        .find(|e| e.env == "FPKI")
+        .find(|e| e.id == certval_stores_fpki::FPKI)
         .and_then(|e| e.cert_store_cbor)
         .expect("FPKI entry must carry a CA store");
 
@@ -84,8 +84,13 @@ fn prepare_environment_accepts_fpki() {
     pe.populate_5280_pki_environment();
     let mut ta_store = TaSource::new();
 
-    prepare_certval_environment(&providers(), &mut pe, &mut ta_store, "FPKI")
-        .expect("FPKI must be a recognized environment");
+    prepare_certval_environment(
+        &providers(),
+        &mut pe,
+        &mut ta_store,
+        certval_stores_fpki::FPKI,
+    )
+    .expect("FPKI must be a recognized store id");
     assert_eq!(ta_store.len(), 1);
 }
 
@@ -105,7 +110,7 @@ fn legacy_entry_is_anchors_only() {
     let entries = certval_stores_fpki::PROVIDER.entries();
     let legacy = entries
         .iter()
-        .find(|e| e.env == "FPKI_LEGACY")
+        .find(|e| e.id == certval_stores_fpki::FPKI_LEGACY)
         .expect("the fpki_legacy feature must yield an FPKI_LEGACY entry");
 
     assert_eq!(legacy.roots.len(), 1);
@@ -123,7 +128,7 @@ fn legacy_entry_is_anchors_only() {
 #[cfg(feature = "fpki")]
 fn fpki_root_inputs_match_the_embedded_anchors() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/fpki");
-    let failures = conformance::check_root_inputs(&dir, roots_for("FPKI"));
+    let failures = conformance::check_root_inputs(&dir, roots_for(certval_stores_fpki::FPKI));
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
@@ -131,7 +136,8 @@ fn fpki_root_inputs_match_the_embedded_anchors() {
 #[cfg(feature = "fpki_legacy")]
 fn legacy_root_inputs_match_the_embedded_anchors() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/legacy");
-    let failures = conformance::check_root_inputs(&dir, roots_for("FPKI_LEGACY"));
+    let failures =
+        conformance::check_root_inputs(&dir, roots_for(certval_stores_fpki::FPKI_LEGACY));
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 

@@ -38,12 +38,12 @@ fn load(cbor: &[u8]) -> CertSource {
 }
 
 #[cfg(feature = "eca")]
-fn entry(env: &str) -> certval_stores_core::StoreEntry {
+fn entry(id: &str) -> certval_stores_core::StoreEntry {
     certval_stores_eca::PROVIDER
         .entries()
         .into_iter()
-        .find(|e| e.env == env)
-        .unwrap_or_else(|| panic!("the enabled features must yield a {env} entry"))
+        .find(|e| e.id == id)
+        .unwrap_or_else(|| panic!("the enabled features must yield a {id} entry"))
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn provider_is_conformant() {
 #[test]
 #[cfg(feature = "eca")]
 fn eca_entry_carries_two_roots_and_a_ca_store() {
-    let eca = entry("ECA");
+    let eca = entry(certval_stores_eca::ECA);
     assert_eq!(eca.roots.len(), 2);
     let cert_source = load(eca.cert_store_cbor.expect("ECA must carry a CA store"));
     assert_eq!(cert_source.len(), EXPECTED_INTERMEDIATES);
@@ -68,7 +68,7 @@ fn eca_entry_carries_two_roots_and_a_ca_store() {
 #[test]
 #[cfg(feature = "eca")]
 fn paths_filed_under_the_wrong_key_are_reported() {
-    let eca = entry("ECA");
+    let eca = entry(certval_stores_eca::ECA);
     let cbor = eca.cert_store_cbor.expect("ECA CA store");
     // `conformance::RawStore` rather than `certval::BuffersAndPaths`, which is `#[readonly::make]`
     // and so cannot be edited from here -- and editing is the whole point.
@@ -86,7 +86,8 @@ fn paths_filed_under_the_wrong_key_are_reported() {
     impl TrustStoreProvider for Mangled {
         fn entries(&self) -> Vec<certval_stores_core::StoreEntry> {
             vec![certval_stores_core::StoreEntry {
-                env: "ECA",
+                id: "dod_eca",
+                label: "Test",
                 roots: self.1,
                 cert_store_cbor: Some(self.0),
                 published: None,
@@ -122,7 +123,9 @@ fn get_roots_returns_every_advertised_anchor() {
 #[cfg(feature = "eca")]
 fn generator_inputs_match_the_store() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("cas/prod");
-    let cbor = entry("ECA").cert_store_cbor.expect("ECA CA store");
+    let cbor = entry(certval_stores_eca::ECA)
+        .cert_store_cbor
+        .expect("ECA CA store");
     let failures = conformance::check_generator_inputs(&dir, cbor);
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
@@ -135,7 +138,7 @@ fn generator_inputs_match_the_store() {
 #[cfg(feature = "eca")]
 fn root_inputs_match_the_embedded_anchors() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/prod");
-    let failures = conformance::check_root_inputs(&dir, entry("ECA").roots);
+    let failures = conformance::check_root_inputs(&dir, entry(certval_stores_eca::ECA).roots);
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
@@ -161,7 +164,7 @@ fn paths_validate_under_the_embedded_anchors() {
 #[test]
 #[cfg(feature = "eca")]
 fn the_eca_entry_carries_both_dates() {
-    let eca = entry("ECA");
+    let eca = entry(certval_stores_eca::ECA);
     assert!(eca.published.is_some(), "ECA.ir4 states a signingTime");
     assert!(eca.collected.is_some());
 }
