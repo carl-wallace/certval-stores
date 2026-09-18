@@ -98,34 +98,50 @@ fn subject_name(der: &[u8]) -> Option<String> {
         .map(|c| name_to_string(c.decoded().tbs_certificate().subject()))
 }
 
-/// Check the shape of the entries a provider yields: usable environment labels
-/// and at least one non-empty trust anchor.
+/// Check the shape of the entries a provider yields: usable identifiers and at
+/// least one non-empty trust anchor.
 ///
-/// The `env` string is the match key in [`prepare_certval_environment`], so a
-/// typo or stray whitespace there means the provider silently serves nothing.
+/// The `id` is the match key in [`prepare_certval_environment`] and the name the
+/// store answers to downstream, so a typo, a stray space or a duplicate means the
+/// provider silently serves nothing, or serves the wrong thing.
 pub fn check_entry_shape(provider: &dyn TrustStoreProvider) -> Vec<String> {
     let mut failures = vec![];
-    let mut seen = BTreeSet::new();
+    let mut seen_ids = BTreeSet::new();
     for entry in provider.entries() {
-        let env = entry.env;
-        if env.trim().is_empty() {
-            failures.push("an entry carries an empty env label".to_string());
-        } else if env != env.trim() {
+        // The identifier is the store's only name: it is what the two entry points
+        // match and what a consumer keys on to recognize two copies of one store as
+        // the same store. A duplicate does not merely look untidy — it makes two
+        // different sets of anchors answer to one name, and whichever arrives second
+        // wins by accident of iteration order.
+        let id = entry.id;
+        if id.trim().is_empty() {
+            failures.push("an entry carries an empty id".to_string());
+        } else if id != id.trim() {
             failures.push(format!(
-                "env label {env:?} has leading or trailing whitespace; it would never match a caller's environment string"
+                "id {id:?} has leading or trailing whitespace; it travels through URLs, file names and command lines"
+            ));
+        } else if !id
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+        {
+            failures.push(format!(
+                "id {id:?} is not lowercase ASCII, digits and underscores; it travels through URLs, file names and command lines"
             ));
         }
-        if !seen.insert(env) {
-            failures.push(format!(
-                "env label {env:?} is carried by more than one entry"
-            ));
+        if !seen_ids.insert(id) {
+            failures.push(format!("id {id:?} is carried by more than one entry"));
+        }
+        // Not checked for shape: a label is prose shown to a person, and the only
+        // thing that can be wrong with it here is that there is none.
+        if entry.label.trim().is_empty() {
+            failures.push(format!("entry {id:?} carries an empty label"));
         }
         if entry.roots.is_empty() {
-            failures.push(format!("entry {env:?} carries no trust anchors"));
+            failures.push(format!("entry {id:?} carries no trust anchors"));
         } else {
             for (i, root) in entry.roots.iter().enumerate() {
                 if root.is_empty() {
-                    failures.push(format!("entry {env:?} root {i} is empty"));
+                    failures.push(format!("entry {id:?} root {i} is empty"));
                 }
             }
         }
@@ -142,7 +158,7 @@ pub fn check_entry_shape(provider: &dyn TrustStoreProvider) -> Vec<String> {
             };
             if !is_iso_date(value) {
                 failures.push(format!(
-                    "entry {env:?} {what} date {value:?} is not an ISO 8601 calendar date (YYYY-MM-DD)"
+                    "entry {id:?} {what} date {value:?} is not an ISO 8601 calendar date (YYYY-MM-DD)"
                 ));
             }
         }
@@ -152,7 +168,7 @@ pub fn check_entry_shape(provider: &dyn TrustStoreProvider) -> Vec<String> {
         if let (Some(published), Some(collected)) = (entry.published, entry.collected) {
             if is_iso_date(published) && is_iso_date(collected) && published > collected {
                 failures.push(format!(
-                    "entry {env:?} says it was published {published} and collected {collected}, which is before it existed"
+                    "entry {id:?} says it was published {published} and collected {collected}, which is before it existed"
                 ));
             }
         }
@@ -196,26 +212,26 @@ fn is_iso_date(value: &str) -> bool {
 pub fn check_roots_parse(provider: &dyn TrustStoreProvider) -> Vec<String> {
     let mut failures = vec![];
     for entry in provider.entries() {
-        let env = entry.env;
+        let id = entry.id;
         let mut seen: BTreeMap<&[u8], usize> = BTreeMap::new();
         for (i, root) in entry.roots.iter().enumerate() {
-            match parse_cert(root, env) {
+            match parse_cert(root, id) {
                 Ok(_cert) => {
                     #[cfg(feature = "reqwest-client")]
                     {
                         let label = get_leaf_rdn(_cert.decoded().tbs_certificate().subject());
                         if reqwest::Certificate::from_der(root).is_err() {
                             failures.push(format!(
-                                "entry {env:?} root {i} ({label}) parses as a certificate but is rejected by reqwest, so TLS clients would silently omit it"
+                                "entry {id:?} root {i} ({label}) parses as a certificate but is rejected by reqwest, so TLS clients would silently omit it"
                             ));
                         }
                     }
                 }
-                Err(e) => failures.push(format!("entry {env:?} root {i} failed to parse: {e:?}")),
+                Err(e) => failures.push(format!("entry {id:?} root {i} failed to parse: {e:?}")),
             }
             if let Some(prev) = seen.insert(root, i) {
                 failures.push(format!(
-                    "entry {env:?} roots {prev} and {i} are the same certificate"
+                    "entry {id:?} roots {prev} and {i} are the same certificate"
                 ));
             }
         }
@@ -231,19 +247,19 @@ pub fn check_roots_parse(provider: &dyn TrustStoreProvider) -> Vec<String> {
 pub fn check_cert_stores_load(provider: &dyn TrustStoreProvider) -> Vec<String> {
     let mut failures = vec![];
     for entry in provider.entries() {
-        let env = entry.env;
+        let id = entry.id;
         let Some(cbor) = entry.cert_store_cbor else {
             continue;
         };
         let cert_source = match load_store(cbor) {
             Ok(cert_source) => cert_source,
             Err(e) => {
-                failures.push(format!("entry {env:?} CA store failed to load: {e:?}"));
+                failures.push(format!("entry {id:?} CA store failed to load: {e:?}"));
                 continue;
             }
         };
         if cert_source.num_buffers() == 0 {
-            failures.push(format!("entry {env:?} carries an empty CA store"));
+            failures.push(format!("entry {id:?} carries an empty CA store"));
         }
         let buffers = cert_source.get_buffers();
         for (i, cert) in cert_source.certs().iter().enumerate() {
@@ -253,7 +269,7 @@ pub fn check_cert_stores_load(provider: &dyn TrustStoreProvider) -> Vec<String> 
                     .map(|b| b.filename.clone())
                     .unwrap_or_default();
                 failures.push(format!(
-                    "entry {env:?} CA store buffer {i} ({filename}) failed to decode"
+                    "entry {id:?} CA store buffer {i} ({filename}) failed to decode"
                 ));
             }
         }
@@ -287,7 +303,7 @@ pub fn check_cert_stores_load(provider: &dyn TrustStoreProvider) -> Vec<String> 
 pub fn check_partial_paths(provider: &dyn TrustStoreProvider) -> Vec<String> {
     let mut failures = vec![];
     for entry in provider.entries() {
-        let env = entry.env;
+        let id = entry.id;
         let Some(cbor) = entry.cert_store_cbor else {
             continue;
         };
@@ -312,7 +328,7 @@ pub fn check_partial_paths(provider: &dyn TrustStoreProvider) -> Vec<String> {
 
         if bap.partial_paths.is_empty() && !bap.buffers.is_empty() {
             failures.push(format!(
-                "entry {env:?} carries {} CAs but no serialized partial paths at all",
+                "entry {id:?} carries {} CAs but no serialized partial paths at all",
                 bap.buffers.len()
             ));
             continue;
@@ -370,31 +386,31 @@ pub fn check_partial_paths(provider: &dyn TrustStoreProvider) -> Vec<String> {
 
         for i in out_of_range {
             failures.push(format!(
-                "entry {env:?} has a partial path referencing buffer {i}, which the store does not carry; certval indexes its parsed-certificate vector with these directly, so a consumer would panic rather than fail over"
+                "entry {id:?} has a partial path referencing buffer {i}, which the store does not carry; certval indexes its parsed-certificate vector with these directly, so a consumer would panic rather than fail over"
             ));
         }
         for (key, tail) in miskeyed {
             failures.push(format!(
-                "entry {env:?} files paths under key {key} whose leaf CA is {:?}, whose own key identifier differs; paths are found by that key, so these would never be returned",
+                "entry {id:?} files paths under key {key} whose leaf CA is {:?}, whose own key identifier differs; paths are found by that key, so these would never be returned",
                 label(tail)
             ));
         }
         for (row, len) in mislevelled {
             failures.push(format!(
-                "entry {env:?} has a path of {len} certificates in row {row}, which holds paths of {}",
+                "entry {id:?} has a path of {len} certificates in row {row}, which holds paths of {}",
                 row + 1
             ));
         }
         for i in unanchored {
             failures.push(format!(
-                "entry {env:?} has partial paths starting at {:?}, which none of the entry's trust anchors issued",
+                "entry {id:?} has partial paths starting at {:?}, which none of the entry's trust anchors issued",
                 label(i)
             ));
         }
         for (i, seen) in in_a_path.iter().enumerate() {
             if !seen {
                 failures.push(format!(
-                    "entry {env:?} CA {:?} appears in no serialized partial path, so the path builder will never reach it",
+                    "entry {id:?} CA {:?} appears in no serialized partial path, so the path builder will never reach it",
                     label(i)
                 ));
             }
@@ -403,7 +419,7 @@ pub fn check_partial_paths(provider: &dyn TrustStoreProvider) -> Vec<String> {
     failures
 }
 
-/// Build the environment a consumer would get for `env`, with time-of-interest
+/// Build the environment a consumer would get for this store, with time-of-interest
 /// checks disabled so the material is judged on its structure rather than on
 /// what happens to be valid today.
 fn environment_for(entry: &StoreEntry) -> Option<(PkiEnvironment, TaSource)> {
@@ -425,7 +441,7 @@ fn environment_from(
     let mut ta_store = TaSource::new();
     for der in entry.roots {
         ta_store.push(CertFile {
-            filename: format!("{} root", entry.env),
+            filename: format!("{} root", entry.id),
             bytes: der.to_vec(),
         });
     }
@@ -449,23 +465,23 @@ fn environment_from(
 pub fn check_anchors_are_usable(provider: &dyn TrustStoreProvider) -> Vec<String> {
     let mut failures = vec![];
     for entry in provider.entries() {
-        let env = entry.env;
+        let id = entry.id;
         let Some((pe, _)) = environment_for(&entry) else {
             continue; // the load failure is reported by check_cert_stores_load
         };
         for (i, root) in entry.roots.iter().enumerate() {
-            let Ok(cert) = parse_cert(root, env) else {
+            let Ok(cert) = parse_cert(root, id) else {
                 continue; // reported by check_roots_parse
             };
             let hex_skid = hex_skid_from_cert(&cert);
             let label = get_leaf_rdn(cert.decoded().tbs_certificate().subject());
             if hex_skid.is_empty() {
                 failures.push(format!(
-                    "entry {env:?} root {i} ({label}) has no computable key identifier, so certval cannot index it as an anchor"
+                    "entry {id:?} root {i} ({label}) has no computable key identifier, so certval cannot index it as an anchor"
                 ));
             } else if pe.get_trust_anchor_by_hex_skid(&hex_skid).is_err() {
                 failures.push(format!(
-                    "entry {env:?} root {i} ({label}) is installed but unusable as a trust anchor — it is not a usable TrustAnchorChoice, or its key identifier collides with another anchor carrying a different key"
+                    "entry {id:?} root {i} ({label}) is installed but unusable as a trust anchor — it is not a usable TrustAnchorChoice, or its key identifier collides with another anchor carrying a different key"
                 ));
             }
         }
@@ -484,7 +500,7 @@ pub fn check_anchors_are_usable(provider: &dyn TrustStoreProvider) -> Vec<String
 pub fn check_paths_build(provider: &dyn TrustStoreProvider) -> Vec<String> {
     let mut failures = vec![];
     for entry in provider.entries() {
-        let env = entry.env;
+        let id = entry.id;
         let Some(cbor) = entry.cert_store_cbor else {
             continue;
         };
@@ -496,7 +512,7 @@ pub fn check_paths_build(provider: &dyn TrustStoreProvider) -> Vec<String> {
             let found = pe.get_paths_for_target(cert, &mut paths, 0, TimeOfInterest::disabled());
             if found.is_err() || paths.is_empty() {
                 failures.push(format!(
-                    "entry {env:?} yields no certification path for CA {:?}, which a consumer asking certval for one would see as an unusable CA",
+                    "entry {id:?} yields no certification path for CA {:?}, which a consumer asking certval for one would see as an unusable CA",
                     get_leaf_rdn(cert.decoded().tbs_certificate().subject())
                 ));
             }
@@ -539,7 +555,7 @@ pub fn check_paths_validate(
 ) -> Vec<String> {
     let mut failures = vec![];
     for entry in provider.entries() {
-        let env = entry.env;
+        let id = entry.id;
         let Some(cbor) = entry.cert_store_cbor else {
             continue;
         };
@@ -569,7 +585,7 @@ pub fn check_paths_validate(
             });
             if !validated {
                 failures.push(format!(
-                    "entry {env:?} builds paths for CA {label:?} but none validates: {:?}",
+                    "entry {id:?} builds paths for CA {label:?} but none validates: {:?}",
                     last_error
                 ));
             }
@@ -626,22 +642,22 @@ pub fn check_prepare_environment(provider: &dyn TrustStoreProvider) -> Vec<Strin
     let mut failures = vec![];
     let providers: [&dyn TrustStoreProvider; 1] = [provider];
     for entry in provider.entries() {
-        let env = entry.env;
+        let id = entry.id;
         let mut pe = PkiEnvironment::default();
         pe.populate_5280_pki_environment();
         let mut ta_store = TaSource::new();
-        match prepare_certval_environment(&providers, &mut pe, &mut ta_store, env) {
+        match prepare_certval_environment(&providers, &mut pe, &mut ta_store, id) {
             Ok(()) => {
                 if ta_store.len() != entry.roots.len() {
                     failures.push(format!(
-                        "entry {env:?} advertises {} anchors but installed {} — duplicate anchor bytes?",
+                        "entry {id:?} advertises {} anchors but installed {} — duplicate anchor bytes?",
                         entry.roots.len(),
                         ta_store.len()
                     ));
                 }
             }
             Err(e) => failures.push(format!(
-                "prepare_certval_environment rejected advertised environment {env:?}: {e:?}"
+                "prepare_certval_environment rejected advertised environment {id:?}: {e:?}"
             )),
         }
     }
@@ -698,21 +714,25 @@ pub fn check_client_builds(provider: &dyn TrustStoreProvider) -> Vec<String> {
 /// consumer should run over its own assembled list.
 pub fn check_providers_compose(providers: &[&dyn TrustStoreProvider]) -> Vec<String> {
     let mut failures = vec![];
-    let mut envs: BTreeMap<&str, usize> = BTreeMap::new();
+    let mut ids: BTreeMap<&str, usize> = BTreeMap::new();
     let mut anchors: BTreeMap<String, (certval::PDVCertificate, String)> = BTreeMap::new();
 
     for (p, provider) in providers.iter().enumerate() {
         for entry in provider.entries() {
-            if let Some(prev) = envs.insert(entry.env, p) {
+            // Two providers claiming one id leave two distinct stores answering to
+            // a single name: preparing it merges material from both, and a consumer
+            // offering both cannot tell them apart. Within a single provider this
+            // is `check_entry_shape`'s.
+            if let Some(prev) = ids.insert(entry.id, p) {
                 if prev != p {
                     failures.push(format!(
-                        "providers {prev} and {p} both serve environment {:?}, so preparing it would merge material from both",
-                        entry.env
+                        "providers {prev} and {p} both claim id {:?}, so preparing it would merge material from both",
+                        entry.id
                     ));
                 }
             }
             for root in entry.roots {
-                let Ok(cert) = parse_cert(root, entry.env) else {
+                let Ok(cert) = parse_cert(root, entry.id) else {
                     continue; // reported per-provider by check_roots_parse
                 };
                 let hex_skid = hex_skid_from_cert(&cert);
@@ -722,7 +742,7 @@ pub fn check_providers_compose(providers: &[&dyn TrustStoreProvider]) -> Vec<Str
                 let label = format!(
                     "{:?} in {:?}",
                     get_leaf_rdn(cert.decoded().tbs_certificate().subject()),
-                    entry.env
+                    entry.id
                 );
                 match anchors.get(&hex_skid) {
                     Some((first, first_label)) => {
@@ -764,7 +784,7 @@ pub fn assert_providers_compose(providers: &[&dyn TrustStoreProvider]) {
 /// compares the two sets by encoding, in both directions.
 ///
 /// `dir` is a filesystem path — provider crates pass
-/// `Path::new(env!("CARGO_MANIFEST_DIR")).join("cas/<env>")`.
+/// `Path::new(env!("CARGO_MANIFEST_DIR")).join("cas/<name>")`.
 pub fn check_generator_inputs(dir: &Path, cbor: &[u8]) -> Vec<String> {
     let cert_source = match load_store(cbor) {
         Ok(cert_source) => cert_source,
@@ -817,7 +837,7 @@ pub fn check_generator_inputs(dir: &Path, cbor: &[u8]) -> Vec<String> {
 /// directions.
 ///
 /// `dir` is a filesystem path — provider crates pass
-/// `Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/<env>")` alongside the
+/// `Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/<name>")` alongside the
 /// matching entry's `roots`.
 pub fn check_root_inputs(dir: &Path, roots: &[&[u8]]) -> Vec<String> {
     let (on_disk, mut failures) = match read_der_dir(dir) {
@@ -961,25 +981,28 @@ mod tests {
     static DUPLICATE_ROOTS: &[&[u8]] = &[NOT_A_CERT, NOT_A_CERT];
 
     #[test]
-    fn entry_shape_catches_unusable_labels_and_missing_anchors() {
+    fn entry_shape_catches_missing_and_empty_anchors() {
         let failures = check_entry_shape(&fake(|| {
             vec![
                 StoreEntry {
-                    env: " NIPR",
+                    id: "nipr",
+                    label: "Test",
                     roots: NO_ROOTS,
                     cert_store_cbor: None,
                     published: None,
                     collected: None,
                 },
                 StoreEntry {
-                    env: "DEV",
+                    id: "dev",
+                    label: "Test",
                     roots: EMPTY_ROOT,
                     cert_store_cbor: None,
                     published: None,
                     collected: None,
                 },
                 StoreEntry {
-                    env: "DEV",
+                    id: "dev_2",
+                    label: "Test",
                     roots: EMPTY_ROOT,
                     cert_store_cbor: None,
                     published: None,
@@ -987,7 +1010,100 @@ mod tests {
                 },
             ]
         }));
-        assert_eq!(failures.len(), 5, "{failures:#?}");
+        assert_eq!(failures.len(), 3, "{failures:#?}");
+    }
+
+    /// Each provider is well formed on its own, so the only thing they collide on is
+    /// the id -- which is the case a per-provider check cannot see.
+    #[test]
+    fn two_providers_claiming_one_id_are_reported() {
+        let one = fake(|| {
+            vec![StoreEntry {
+                id: "dod_nipr_prod",
+                label: "Test",
+                roots: ROOTS_ONE_BAD,
+                cert_store_cbor: None,
+                published: None,
+                collected: None,
+            }]
+        });
+        let two = fake(|| {
+            vec![StoreEntry {
+                id: "dod_nipr_prod",
+                label: "Test",
+                roots: ROOTS_ONE_BAD,
+                cert_store_cbor: None,
+                published: None,
+                collected: None,
+            }]
+        });
+        let failures = check_providers_compose(&[&one, &two]);
+        assert_eq!(failures.len(), 1, "{failures:#?}");
+        assert!(failures[0].contains("both claim id"), "{failures:#?}");
+    }
+
+    /// `ROOTS_ONE_BAD` for the same reason as below: the identifiers are what is
+    /// under test, and every environment label here is distinct so that a duplicate
+    /// reported is a duplicate *id*.
+    #[test]
+    fn entry_shape_catches_unusable_identifiers() {
+        let failures = check_entry_shape(&fake(|| {
+            vec![
+                StoreEntry {
+                    // Reads fine to a person and survives nothing else: a space in a
+                    // URL path, a capital in a case-sensitive lookup.
+                    id: "DoD NIPR",
+                    label: "Test",
+                    roots: ROOTS_ONE_BAD,
+                    cert_store_cbor: None,
+                    published: None,
+                    collected: None,
+                },
+                StoreEntry {
+                    id: " dev",
+                    label: "Test",
+                    roots: ROOTS_ONE_BAD,
+                    cert_store_cbor: None,
+                    published: None,
+                    collected: None,
+                },
+                StoreEntry {
+                    id: "dev",
+                    label: "",
+                    roots: ROOTS_ONE_BAD,
+                    cert_store_cbor: None,
+                    published: None,
+                    collected: None,
+                },
+                StoreEntry {
+                    id: "dev",
+                    label: "Test",
+                    roots: ROOTS_ONE_BAD,
+                    cert_store_cbor: None,
+                    published: None,
+                    collected: None,
+                },
+            ]
+        }));
+        assert_eq!(failures.len(), 4, "{failures:#?}");
+        assert!(
+            failures.iter().any(|f| f.contains("not lowercase ASCII")),
+            "{failures:#?}"
+        );
+        assert!(
+            failures.iter().any(|f| f.contains("leading or trailing")),
+            "{failures:#?}"
+        );
+        assert!(
+            failures.iter().any(|f| f.contains("empty label")),
+            "{failures:#?}"
+        );
+        assert!(
+            failures
+                .iter()
+                .any(|f| f.contains(r#"id "dev" is carried by more than one entry"#)),
+            "{failures:#?}"
+        );
     }
 
     /// `ROOTS_ONE_BAD` so neither entry trips the anchor checks: what is under test
@@ -997,7 +1113,8 @@ mod tests {
         let failures = check_entry_shape(&fake(|| {
             vec![
                 StoreEntry {
-                    env: "DEV",
+                    id: "dev",
+                    label: "Test",
                     roots: ROOTS_ONE_BAD,
                     cert_store_cbor: None,
                     // The trailing newline an `include_str!` of a generated file brings
@@ -1006,7 +1123,8 @@ mod tests {
                     collected: None,
                 },
                 StoreEntry {
-                    env: "NIPR",
+                    id: "nipr",
+                    label: "Test",
                     roots: ROOTS_ONE_BAD,
                     cert_store_cbor: None,
                     published: Some("2026-09-11"),
@@ -1029,7 +1147,8 @@ mod tests {
     fn roots_that_do_not_parse_are_reported() {
         let failures = check_roots_parse(&fake(|| {
             vec![StoreEntry {
-                env: "DEV",
+                id: "dev",
+                label: "Test",
                 roots: ROOTS_ONE_BAD,
                 cert_store_cbor: None,
                 published: None,
@@ -1043,7 +1162,8 @@ mod tests {
     fn a_root_included_twice_is_reported() {
         let failures = check_roots_parse(&fake(|| {
             vec![StoreEntry {
-                env: "DEV",
+                id: "dev",
+                label: "Test",
                 roots: DUPLICATE_ROOTS,
                 cert_store_cbor: None,
                 published: None,
@@ -1058,7 +1178,8 @@ mod tests {
     fn a_corrupt_cert_store_is_reported() {
         let failures = check_cert_stores_load(&fake(|| {
             vec![StoreEntry {
-                env: "DEV",
+                id: "dev",
+                label: "Test",
                 roots: NO_ROOTS,
                 cert_store_cbor: Some(b"\x00truncated"),
                 published: None,
@@ -1075,7 +1196,8 @@ mod tests {
         let cbor = store(vec![buffer("orphan.der")], vec![]);
         let failures = check_partial_paths(&fake(move || {
             vec![StoreEntry {
-                env: "DEV",
+                id: "dev",
+                label: "Test",
                 roots: NO_ROOTS,
                 cert_store_cbor: Some(cbor),
                 published: None,
@@ -1102,7 +1224,8 @@ mod tests {
         let cbor = store(vec![buffer("covered.der"), buffer("orphan.der")], paths);
         let failures = check_partial_paths(&fake(move || {
             vec![StoreEntry {
-                env: "DEV",
+                id: "dev",
+                label: "Test",
                 roots: NO_ROOTS,
                 cert_store_cbor: Some(cbor),
                 published: None,
@@ -1133,7 +1256,8 @@ mod tests {
         let cbor = store(vec![buffer("a.der"), buffer("b.der")], paths);
         let failures = check_partial_paths(&fake(move || {
             vec![StoreEntry {
-                env: "DEV",
+                id: "dev",
+                label: "Test",
                 roots: NO_ROOTS,
                 cert_store_cbor: Some(cbor),
                 published: None,

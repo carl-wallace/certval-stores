@@ -11,13 +11,20 @@ static DEV_ROOTS: &[&[u8]] = &[
 /// Trust-store provider for the Purebred development environment.
 pub struct PbDevStores;
 
+/// Store id for the Purebred development store, to pass to `prepare_certval_environment`
+/// or `serialize_environment` rather than spelling it out: the parameter is a
+/// `&str`, so a stale literal compiles and fails at run time.
+#[cfg(feature = "dev")]
+pub const PUREBRED_DEV: &str = "dod_purebred_dev";
+
 impl TrustStoreProvider for PbDevStores {
     #[allow(unused_mut, clippy::vec_init_then_push)]
     fn entries(&self) -> Vec<StoreEntry> {
         let mut entries = Vec::new();
         #[cfg(feature = "dev")]
         entries.push(StoreEntry {
-            env: "DEV",
+            id: PUREBRED_DEV,
+            label: "U.S. DoD (Purebred development)",
             roots: DEV_ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/dev/dev.cbor")),
             // The development PKI publishes nothing anywhere, so there is no publication

@@ -22,7 +22,8 @@ rendered rustdoc.
 
 ```rust,ignore
 pub struct StoreEntry {
-    pub env: &'static str,                       // provider-defined: "NIPR", "DEV", "FPKI", …
+    pub id: &'static str,                        // the store's name: "dod_nipr_prod", "webpki"
+    pub label: &'static str,                     // what a person choosing a store reads
     pub roots: &'static [&'static [u8]],         // trust-anchor DERs
     pub cert_store_cbor: Option<&'static [u8]>,  // serialized certval CertSource (CBOR)
     pub published: Option<&'static str>,         // the source's own date, YYYY-MM-DD
@@ -35,6 +36,14 @@ pub trait TrustStoreProvider {
 ```
 
 Each provider crate exposes `provider() -> &'static dyn TrustStoreProvider`.
+
+`id` is the store's name. It is the key that `prepare_certval_environment`
+matches, and the name used to identify a store everywhere else. For example, a
+consumer that embeds a serialized copy and a service that hosts a copy recognize
+each other's copy as the same store based on the `id`. A configuration file or
+command line may identify a store by `id`. Each provider exports its ids as
+constants. Changing an `id` renames a store; `label` values, which are
+descriptive only, are free to change.
 
 **The two dates answer different questions, and both are optional.** `published`
 is the publisher's own statement — an InstallRoot stream's `signingTime`, a CCADB
@@ -58,10 +67,10 @@ label, which `check_providers_compose` enforces.
 The three entry points the former `pb_pki` crate offered, now taking a
 `&[&dyn TrustStoreProvider]`, plus a serializer:
 
-- `prepare_certval_environment(providers, pe, ta_store, env)` — env-selected;
-  `Err(Error::Unrecognized)` if no provider serves `env`.
+- `prepare_certval_environment(providers, pe, ta_store, id)` — id-selected;
+  `Err(Error::Unrecognized)` if no provider carries that store.
 - `get_roots(providers)` — every trust-anchor DER across the providers.
-- `serialize_environment(providers, env)` — the same material as `ta_cbor` /
+- `serialize_environment(providers, id)` — the same material as `ta_cbor` /
   `ca_cbor`, for consumers that fetch artifacts rather than link a provider
   crate (a wasm frontend, where embedding the bytes is not an option). The CA
   half is a passthrough, since `cert_store_cbor` is already serialized; the
@@ -160,8 +169,8 @@ without a copy of the logic in a private repository.
   certval poisons such a key identifier across every registered source and
   refuses to anchor on it, so a collision disables *both* anchors — including
   across providers a consumer happens to load together.
-- No anchor is embedded twice, and every `env` label is usable verbatim as the
-  match key `prepare_certval_environment` compares against.
+- No anchor is embedded twice, and every `id` is usable verbatim as the match key
+  `prepare_certval_environment` compares against.
 
 **CA stores.** An entry may carry none (an anchors-only provider, e.g. a
 webpki-style root list, or `certval_stores_fpki`'s retired G1 environment). One
@@ -199,7 +208,7 @@ RSA-signed, which is why each provider crate's dev-dependency reads
 `certval = { …, features = ["std", "rsa"] }`.
 
 **Composition.** Providers are combined by the consumer, so each must also be
-usable *beside* the others: no environment label claimed by two providers, and
+usable *beside* the others: no id claimed by two providers, and
 no anchor key-identifier collision across the family. `check_providers_compose`
 covers this, and `certval_stores_core/tests/composition.rs` runs it over every
 public provider — add a new one to that list.
@@ -211,8 +220,9 @@ Freshness is a separate question, answered by each store's refresh procedure.
 
 ## Adding a provider
 
-1. Implement `TrustStoreProvider`, returning one `StoreEntry` per environment,
-   and expose `provider() -> &'static dyn TrustStoreProvider`.
+1. Implement `TrustStoreProvider`, returning one `StoreEntry` per store, expose
+   `provider() -> &'static dyn TrustStoreProvider`, and export each store's id as
+   a public constant for callers to pass.
 2. Add the harness and assert conformance:
 
    ```toml

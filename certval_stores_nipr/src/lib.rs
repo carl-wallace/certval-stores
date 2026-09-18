@@ -35,13 +35,26 @@ const OM_NIPR_COLLECTED: &str = include_str!("../provenance/om/collected.txt").t
 /// Trust-store provider for the NIPR (DoD PKI) environments.
 pub struct NiprStores;
 
+/// Store id for the NIPR operational-test (JITC) store, to pass to `prepare_certval_environment`
+/// or `serialize_environment` rather than spelling it out: the parameter is a
+/// `&str`, so a stale literal compiles and fails at run time.
+#[cfg(feature = "om_nipr")]
+pub const NIPR_OM: &str = "dod_nipr_om";
+
+/// Store id for the NIPR production store, to pass to `prepare_certval_environment`
+/// or `serialize_environment` rather than spelling it out: the parameter is a
+/// `&str`, so a stale literal compiles and fails at run time.
+#[cfg(feature = "nipr")]
+pub const NIPR_PROD: &str = "dod_nipr_prod";
+
 impl TrustStoreProvider for NiprStores {
     #[allow(unused_mut, clippy::vec_init_then_push)]
     fn entries(&self) -> Vec<StoreEntry> {
         let mut entries = Vec::new();
         #[cfg(feature = "om_nipr")]
         entries.push(StoreEntry {
-            env: "OM_NIPR",
+            id: NIPR_OM,
+            label: "U.S. DoD (JITC)",
             roots: OM_NIPR_ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/om/om.cbor")),
             published: Some(OM_NIPR_PUBLISHED),
@@ -49,7 +62,8 @@ impl TrustStoreProvider for NiprStores {
         });
         #[cfg(feature = "nipr")]
         entries.push(StoreEntry {
-            env: "NIPR",
+            id: NIPR_PROD,
+            label: "U.S. DoD (NIPR)",
             roots: NIPR_ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/prod/prod.cbor")),
             published: Some(NIPR_PUBLISHED),

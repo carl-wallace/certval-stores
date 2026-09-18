@@ -43,12 +43,12 @@ fn load(cbor: &[u8]) -> CertSource {
 }
 
 #[cfg(any(feature = "nipr", feature = "om_nipr"))]
-fn entry(env: &str) -> certval_stores_core::StoreEntry {
+fn entry(id: &str) -> certval_stores_core::StoreEntry {
     certval_stores_nipr::PROVIDER
         .entries()
         .into_iter()
-        .find(|e| e.env == env)
-        .unwrap_or_else(|| panic!("the enabled features must yield a {env} entry"))
+        .find(|e| e.id == id)
+        .unwrap_or_else(|| panic!("the enabled features must yield a {id} entry"))
 }
 
 #[test]
@@ -59,7 +59,7 @@ fn provider_is_conformant() {
 #[test]
 #[cfg(feature = "nipr")]
 fn nipr_entry_carries_four_roots_and_a_ca_store() {
-    let nipr = entry("NIPR");
+    let nipr = entry(certval_stores_nipr::NIPR_PROD);
     assert_eq!(nipr.roots.len(), 4);
     let cert_source = load(nipr.cert_store_cbor.expect("NIPR must carry a CA store"));
     assert_eq!(cert_source.len(), EXPECTED_NIPR_INTERMEDIATES);
@@ -68,7 +68,7 @@ fn nipr_entry_carries_four_roots_and_a_ca_store() {
 #[test]
 #[cfg(feature = "om_nipr")]
 fn om_nipr_entry_carries_four_roots_and_a_ca_store() {
-    let om = entry("OM_NIPR");
+    let om = entry(certval_stores_nipr::NIPR_OM);
     assert_eq!(om.roots.len(), 4);
     let cert_source = load(om.cert_store_cbor.expect("OM_NIPR must carry a CA store"));
     assert_eq!(cert_source.len(), EXPECTED_OM_NIPR_INTERMEDIATES);
@@ -82,7 +82,7 @@ fn om_nipr_entry_carries_four_roots_and_a_ca_store() {
 #[test]
 #[cfg(feature = "nipr")]
 fn paths_filed_under_the_wrong_key_are_reported() {
-    let nipr = entry("NIPR");
+    let nipr = entry(certval_stores_nipr::NIPR_PROD);
     let cbor = nipr.cert_store_cbor.expect("NIPR CA store");
     // `conformance::RawStore` rather than `certval::BuffersAndPaths`, which is `#[readonly::make]`
     // and so cannot be edited from here -- and editing is the whole point.
@@ -100,7 +100,8 @@ fn paths_filed_under_the_wrong_key_are_reported() {
     impl TrustStoreProvider for Mangled {
         fn entries(&self) -> Vec<certval_stores_core::StoreEntry> {
             vec![certval_stores_core::StoreEntry {
-                env: "NIPR",
+                id: "dod_nipr_prod",
+                label: "Test",
                 roots: self.1,
                 cert_store_cbor: Some(self.0),
                 published: None,
@@ -136,7 +137,9 @@ fn get_roots_returns_every_advertised_anchor() {
 #[cfg(feature = "nipr")]
 fn nipr_generator_inputs_match_the_store() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("cas/prod");
-    let cbor = entry("NIPR").cert_store_cbor.expect("NIPR CA store");
+    let cbor = entry(certval_stores_nipr::NIPR_PROD)
+        .cert_store_cbor
+        .expect("NIPR CA store");
     let failures = conformance::check_generator_inputs(&dir, cbor);
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
@@ -145,7 +148,9 @@ fn nipr_generator_inputs_match_the_store() {
 #[cfg(feature = "om_nipr")]
 fn om_nipr_generator_inputs_match_the_store() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("cas/om");
-    let cbor = entry("OM_NIPR").cert_store_cbor.expect("OM_NIPR CA store");
+    let cbor = entry(certval_stores_nipr::NIPR_OM)
+        .cert_store_cbor
+        .expect("OM_NIPR CA store");
     let failures = conformance::check_generator_inputs(&dir, cbor);
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
@@ -158,7 +163,8 @@ fn om_nipr_generator_inputs_match_the_store() {
 #[cfg(feature = "nipr")]
 fn nipr_root_inputs_match_the_embedded_anchors() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/prod");
-    let failures = conformance::check_root_inputs(&dir, entry("NIPR").roots);
+    let failures =
+        conformance::check_root_inputs(&dir, entry(certval_stores_nipr::NIPR_PROD).roots);
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
@@ -166,7 +172,7 @@ fn nipr_root_inputs_match_the_embedded_anchors() {
 #[cfg(feature = "om_nipr")]
 fn om_nipr_root_inputs_match_the_embedded_anchors() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/om");
-    let failures = conformance::check_root_inputs(&dir, entry("OM_NIPR").roots);
+    let failures = conformance::check_root_inputs(&dir, entry(certval_stores_nipr::NIPR_OM).roots);
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
@@ -194,7 +200,7 @@ fn paths_validate_under_the_embedded_anchors() {
 #[test]
 #[cfg(feature = "nipr")]
 fn the_production_entry_carries_both_dates() {
-    let nipr = entry("NIPR");
+    let nipr = entry(certval_stores_nipr::NIPR_PROD);
     assert!(nipr.published.is_some(), "DoD.ir4 states a signingTime");
     assert!(nipr.collected.is_some());
 }
@@ -202,7 +208,7 @@ fn the_production_entry_carries_both_dates() {
 #[test]
 #[cfg(feature = "om_nipr")]
 fn the_operational_test_entry_carries_both_dates() {
-    let om = entry("OM_NIPR");
+    let om = entry(certval_stores_nipr::NIPR_OM);
     assert!(om.published.is_some(), "JITC.ir4 states a signingTime");
     assert!(om.collected.is_some());
 }

@@ -35,7 +35,7 @@ fn dev_entry_carries_two_roots_and_a_ca_store() {
     let entries = certval_stores_pbdev::PROVIDER.entries();
     let dev = entries
         .iter()
-        .find(|e| e.env == "DEV")
+        .find(|e| e.id == certval_stores_pbdev::PUREBRED_DEV)
         .expect("the dev feature must yield a DEV entry");
 
     assert_eq!(dev.roots.len(), 2);
@@ -72,7 +72,7 @@ fn dev_generator_inputs_match_the_store() {
     let entries = certval_stores_pbdev::PROVIDER.entries();
     let cbor = entries
         .iter()
-        .find(|e| e.env == "DEV")
+        .find(|e| e.id == certval_stores_pbdev::PUREBRED_DEV)
         .and_then(|e| e.cert_store_cbor)
         .expect("DEV CA store");
     let failures = conformance::check_generator_inputs(&dir, cbor);
@@ -90,7 +90,7 @@ fn dev_root_inputs_match_the_embedded_anchors() {
     let entries = certval_stores_pbdev::PROVIDER.entries();
     let roots = entries
         .iter()
-        .find(|e| e.env == "DEV")
+        .find(|e| e.id == certval_stores_pbdev::PUREBRED_DEV)
         .map(|e| e.roots)
         .expect("DEV anchors");
     let failures = conformance::check_root_inputs(&dir, roots);

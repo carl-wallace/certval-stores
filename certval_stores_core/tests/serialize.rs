@@ -7,13 +7,14 @@
 
 use certval::{CertSource, Error, TaSource};
 use certval_stores_core::{serialize_environment, TrustStoreProvider};
+use certval_stores_nipr::NIPR_PROD;
 
-/// Roots the provider advertises for `env`, as the emitter should have found them.
-fn advertised_roots(provider: &dyn TrustStoreProvider, env: &str) -> usize {
+/// Roots the provider advertises for `id`, as the emitter should have found them.
+fn advertised_roots(provider: &dyn TrustStoreProvider, id: &str) -> usize {
     provider
         .entries()
         .iter()
-        .filter(|e| e.env == env)
+        .filter(|e| e.id == id)
         .map(|e| e.roots.len())
         .sum()
 }
@@ -21,7 +22,7 @@ fn advertised_roots(provider: &dyn TrustStoreProvider, env: &str) -> usize {
 #[test]
 fn serialized_anchors_load_back_through_tasource() {
     let provider = certval_stores_nipr::provider();
-    let store = serialize_environment(&[provider], "NIPR").expect("NIPR must serialize");
+    let store = serialize_environment(&[provider], NIPR_PROD).expect("NIPR must serialize");
 
     let mut ta_source =
         TaSource::new_from_cbor(&store.ta_cbor).expect("emitted ta_cbor must deserialize");
@@ -35,7 +36,7 @@ fn serialized_anchors_load_back_through_tasource() {
     // an anchor lost in serialization.
     assert_eq!(
         ta_source.get_tas().len(),
-        advertised_roots(provider, "NIPR"),
+        advertised_roots(provider, NIPR_PROD),
         "anchors were lost between the provider and the serialized store"
     );
 }
@@ -43,12 +44,12 @@ fn serialized_anchors_load_back_through_tasource() {
 #[test]
 fn ca_store_is_passed_through_unchanged() {
     let provider = certval_stores_nipr::provider();
-    let store = serialize_environment(&[provider], "NIPR").expect("NIPR must serialize");
+    let store = serialize_environment(&[provider], NIPR_PROD).expect("NIPR must serialize");
 
     let embedded = provider
         .entries()
         .into_iter()
-        .find(|e| e.env == "NIPR")
+        .find(|e| e.id == NIPR_PROD)
         .and_then(|e| e.cert_store_cbor)
         .expect("the NIPR entry carries a CA store");
     assert_eq!(
@@ -71,7 +72,7 @@ fn ca_store_is_passed_through_unchanged() {
 #[test]
 fn an_anchors_only_environment_emits_no_ca_store() {
     let provider = certval_stores_fpki::provider();
-    let store = serialize_environment(&[provider], "FPKI_LEGACY")
+    let store = serialize_environment(&[provider], certval_stores_fpki::FPKI_LEGACY)
         .expect("the retired G1 environment must serialize");
     assert!(store.ca_cbor.is_none());
     assert!(!store.ta_cbor.is_empty());
@@ -91,8 +92,8 @@ fn an_unserved_environment_is_unrecognized() {
 #[test]
 fn serialization_is_deterministic() {
     let provider = certval_stores_nipr::provider();
-    let a = serialize_environment(&[provider], "NIPR").expect("NIPR must serialize");
-    let b = serialize_environment(&[provider], "NIPR").expect("NIPR must serialize");
+    let a = serialize_environment(&[provider], NIPR_PROD).expect("NIPR must serialize");
+    let b = serialize_environment(&[provider], NIPR_PROD).expect("NIPR must serialize");
     assert_eq!(a.ta_cbor, b.ta_cbor);
     assert_eq!(a.ca_cbor, b.ca_cbor);
 }
@@ -107,9 +108,9 @@ fn the_dates_survive_serialization() {
     let entry = provider
         .entries()
         .into_iter()
-        .find(|e| e.env == "NIPR")
+        .find(|e| e.id == NIPR_PROD)
         .expect("the provider serves NIPR");
-    let store = serialize_environment(&[provider], "NIPR").expect("NIPR must serialize");
+    let store = serialize_environment(&[provider], NIPR_PROD).expect("NIPR must serialize");
 
     assert_eq!(store.published, entry.published);
     assert_eq!(store.collected, entry.collected);

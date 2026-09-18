@@ -89,7 +89,11 @@ pub fn providers() -> Vec<&'static dyn TrustStoreProvider> {
 ```
 
 Call sites change from `pb_pki::prepare_certval_environment(pe, ta, env)` to
-`certval_stores_core::prepare_certval_environment(&providers(), pe, ta, env)`.
+`certval_stores_core::prepare_certval_environment(&providers(), pe, ta, id)`,
+where `id` names a store rather than a Purebred environment — `certval_stores_nipr::NIPR_PROD`
+rather than `"NIPR"`. A consumer that has an environment to start from maps it to
+a store id once, which is also what lets a store with no environment behind it
+(the Mozilla sets, the Federal PKI) be named the same way as the rest.
 
 The "at least one environment must be selected" guard (formerly a
 `compile_error!` in `pb_pki`) belongs in the consumer, since environment
