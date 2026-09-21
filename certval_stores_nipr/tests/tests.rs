@@ -118,8 +118,8 @@ fn paths_filed_under_the_wrong_key_are_reported() {
     assert!(failures[0].contains("DEADBEEF"), "{failures:#?}");
 }
 
-/// `get_roots` is what a consumer hands to a TLS client, so it must expose every
-/// anchor the provider advertises — no more (a duplicated `include_bytes!`) and
+/// `get_roots` is the provider's anchors as certval sees them, so it must expose
+/// every anchor the provider advertises — no more (a duplicated `include_bytes!`) and
 /// no fewer (an entry left out of the fold).
 #[test]
 fn get_roots_returns_every_advertised_anchor() {

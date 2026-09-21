@@ -30,9 +30,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use certval::{
-    get_leaf_rdn, hex_skid_from_cert, name_to_string, parse_cert, BuffersAndPaths, CertFile,
+    get_certificate_from_trust_anchor, get_leaf_rdn, get_subject_public_key_info_from_trust_anchor,
+    hex_skid_from_cert, hex_skid_from_ta, name_to_string, parse_cert, BuffersAndPaths, CertFile,
     CertSource, CertVector, CertificationPathResults, CertificationPathSettings, Error,
-    PkiEnvironment, TaSource, TimeOfInterest,
+    PDVTrustAnchorChoice, PkiEnvironment, TaSource, TimeOfInterest,
 };
 
 #[cfg(feature = "reqwest-client")]
@@ -214,11 +215,21 @@ pub fn check_roots_parse(provider: &dyn TrustStoreProvider) -> Vec<String> {
     for entry in provider.entries() {
         let id = entry.id;
         let mut seen: BTreeMap<&[u8], usize> = BTreeMap::new();
+        let mut decoded = 0usize;
+        let mut with_certificate = 0usize;
         for (i, root) in entry.roots.iter().enumerate() {
-            match parse_cert(root, id) {
-                Ok(_cert) => {
+            match PDVTrustAnchorChoice::try_from(*root) {
+                Ok(ta) => {
+                    decoded += 1;
+                    if get_certificate_from_trust_anchor(&ta.decoded_ta).is_some() {
+                        with_certificate += 1;
+                    }
+                    // Scoped to the `certificate` alternative, which is untagged
+                    // and so is the buffer itself. A certificate carried inside a
+                    // `taInfo` is not what reqwest is being handed, and rejecting
+                    // it here would fail a store for a shape the contract admits.
                     #[cfg(feature = "reqwest-client")]
-                    {
+                    if let Ok(_cert) = parse_cert(root, id) {
                         let label = get_leaf_rdn(_cert.decoded().tbs_certificate().subject());
                         if reqwest::Certificate::from_der(root).is_err() {
                             failures.push(format!(
@@ -227,14 +238,32 @@ pub fn check_roots_parse(provider: &dyn TrustStoreProvider) -> Vec<String> {
                         }
                     }
                 }
-                Err(e) => failures.push(format!("entry {id:?} root {i} failed to parse: {e:?}")),
+                Err(e) => failures.push(format!(
+                    "entry {id:?} root {i} failed to parse as a TrustAnchorChoice: {e:?}"
+                )),
             }
             if let Some(prev) = seen.insert(root, i) {
                 failures.push(format!(
-                    "entry {id:?} roots {prev} and {i} are the same certificate"
+                    "entry {id:?} roots {prev} and {i} are the same anchor"
                 ));
             }
         }
+        // Only with a client in the build: `tls_certs_only` takes the whole set
+        // and disables the platform roots, so a store contributing no certificate
+        // leaves such a client trusting nothing. Without the feature the same
+        // store is unremarkable — it simply anchors path building.
+        //
+        // Conditioned on anchors that decoded, so this speaks only for the case
+        // it exists for: a store whose anchors are well-formed and carry no
+        // certificate. Anchors that failed to decode are already reported once
+        // each above, and saying it again adds nothing.
+        #[cfg(feature = "reqwest-client")]
+        if decoded > 0 && with_certificate == 0 {
+            failures.push(format!(
+                "entry {id:?} has no anchor carrying a certificate, so a TLS client configured from it would trust nothing"
+            ));
+        }
+        let _ = (decoded, with_certificate);
     }
     failures
 }
@@ -470,11 +499,17 @@ pub fn check_anchors_are_usable(provider: &dyn TrustStoreProvider) -> Vec<String
             continue; // the load failure is reported by check_cert_stores_load
         };
         for (i, root) in entry.roots.iter().enumerate() {
-            let Ok(cert) = parse_cert(root, id) else {
+            let Ok(ta) = PDVTrustAnchorChoice::try_from(*root) else {
                 continue; // reported by check_roots_parse
             };
-            let hex_skid = hex_skid_from_cert(&cert);
-            let label = get_leaf_rdn(cert.decoded().tbs_certificate().subject());
+            // `hex_skid_from_ta` covers every alternative: the SKID extension of
+            // a certificate, a SHA-256 of its public key where it has none, and
+            // the mandatory key id of a `taInfo`.
+            let hex_skid = hex_skid_from_ta(&ta);
+            let label = match parse_cert(root, id) {
+                Ok(cert) => get_leaf_rdn(cert.decoded().tbs_certificate().subject()),
+                Err(_) => format!("root {i}"),
+            };
             if hex_skid.is_empty() {
                 failures.push(format!(
                     "entry {id:?} root {i} ({label}) has no computable key identifier, so certval cannot index it as an anchor"
@@ -715,7 +750,7 @@ pub fn check_client_builds(provider: &dyn TrustStoreProvider) -> Vec<String> {
 pub fn check_providers_compose(providers: &[&dyn TrustStoreProvider]) -> Vec<String> {
     let mut failures = vec![];
     let mut ids: BTreeMap<&str, usize> = BTreeMap::new();
-    let mut anchors: BTreeMap<String, (certval::PDVCertificate, String)> = BTreeMap::new();
+    let mut anchors: BTreeMap<String, (PDVTrustAnchorChoice, String)> = BTreeMap::new();
 
     for (p, provider) in providers.iter().enumerate() {
         for entry in provider.entries() {
@@ -732,22 +767,22 @@ pub fn check_providers_compose(providers: &[&dyn TrustStoreProvider]) -> Vec<Str
                 }
             }
             for root in entry.roots {
-                let Ok(cert) = parse_cert(root, entry.id) else {
+                let Ok(ta) = PDVTrustAnchorChoice::try_from(*root) else {
                     continue; // reported per-provider by check_roots_parse
                 };
-                let hex_skid = hex_skid_from_cert(&cert);
+                let hex_skid = hex_skid_from_ta(&ta);
                 if hex_skid.is_empty() {
                     continue; // reported per-provider by check_anchors_are_usable
                 }
-                let label = format!(
-                    "{:?} in {:?}",
-                    get_leaf_rdn(cert.decoded().tbs_certificate().subject()),
-                    entry.id
-                );
+                let name = match parse_cert(root, entry.id) {
+                    Ok(cert) => get_leaf_rdn(cert.decoded().tbs_certificate().subject()),
+                    Err(_) => "an anchor carrying no certificate".to_string(),
+                };
+                let label = format!("{name:?} in {:?}", entry.id);
                 match anchors.get(&hex_skid) {
                     Some((first, first_label)) => {
-                        if first.decoded().tbs_certificate().subject_public_key_info()
-                            != cert.decoded().tbs_certificate().subject_public_key_info()
+                        if get_subject_public_key_info_from_trust_anchor(&first.decoded_ta)
+                            != get_subject_public_key_info_from_trust_anchor(&ta.decoded_ta)
                         {
                             failures.push(format!(
                                 "anchors {first_label} and {label} share key identifier {hex_skid} but carry different public keys; certval refuses to anchor on such a key identifier, so composing these providers disables both"
@@ -755,7 +790,7 @@ pub fn check_providers_compose(providers: &[&dyn TrustStoreProvider]) -> Vec<Str
                         }
                     }
                     None => {
-                        anchors.insert(hex_skid, (cert, label));
+                        anchors.insert(hex_skid, (ta, label));
                     }
                 }
             }
