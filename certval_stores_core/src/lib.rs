@@ -43,13 +43,15 @@ use log::error;
 use reqwest::{Client, ClientBuilder, Identity};
 
 use certval::{
-    CertFile, CertSource, CertVector, CertificationPathBuilderFormats, Error, PDVTrustAnchorChoice,
-    PkiEnvironment, TaSource,
+    CertFile, CertSource, CertVector, CertificationPathBuilderFormats, Error, PkiEnvironment,
+    TaSource,
 };
-// Only the client narrows anchors to certificates; without it this would be an
-// unused import, which CI treats as an error.
-#[cfg(feature = "reqwest-client")]
-use certval::get_certificate_from_trust_anchor;
+
+// Re-exported because both are part of this crate's public surface: the first is
+// the type [`get_roots`] returns, and the second is how a caller narrows that to
+// certificates. A consumer that depends on this crate alone -- which every
+// provider does, and some downstreams too -- could otherwise name neither.
+pub use certval::{get_certificate_from_trust_anchor, PDVTrustAnchorChoice};
 
 /// Trust material for a single environment, carried by a [`TrustStoreProvider`].
 ///
