@@ -62,6 +62,8 @@ jobs:
       - run: cargo build -p certval_stores_eca --no-default-features --features eca --target wasm32-unknown-unknown
       - run: cargo build -p certval_stores_fpki --no-default-features --features fpki --target wasm32-unknown-unknown
       - run: cargo build -p certval_stores_pbdev --no-default-features --features dev --target wasm32-unknown-unknown
+      # No environment feature to name: this crate has one store and it is unconditional.
+      - run: cargo build -p certval_stores_webpki_root_certs --no-default-features --target wasm32-unknown-unknown
 
   # Without the client the icu crates leave the graph, and with them the rustc 1.86
   # floor they impose — this configuration holds certval's own 1.85 MSRV. The

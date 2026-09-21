@@ -1,0 +1,37 @@
+[package]
+name = "certval_stores_webpki_root_certs"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+description = "Mozilla TLS server root certificates for certval, taken from the webpki-root-certs crate"
+
+[dependencies]
+certval_stores_core = { path = "../certval_stores_core", default-features = false }
+# The material itself, as a dependency rather than as vendored bytes. This crate
+# carries no certificates of its own, so the roots move when this version moves
+# and there is no refresh procedure to run. The upstream data is
+# CDLA-Permissive-2.0; see NOTICE.
+#
+# Not optional, and the store is not behind a feature: this crate has one
+# environment and that dependency is the whole of it, so a build without it
+# would advertise nothing. Sibling crates gate their environments because they
+# carry several, or because the gate drops embedded bytes; neither applies here,
+# and a gate would only give `default-features = false` a way to silently yield
+# an empty provider.
+webpki-root-certs = "1.0.9"
+
+[features]
+default = ["reqwest-client"]
+# Forwards the core crate's client switch, and the only knob this crate has.
+# Without the forwarding a consumer could not turn the HTTP stack off: features
+# are additive, so this crate enabling the core default would re-enable it
+# however the consumer configured core.
+reqwest-client = ["certval_stores_core/reqwest-client"]
+
+[dev-dependencies]
+# default-features = false for the same reason as the core crate: certval's
+# defaults pull reqwest, and a dev-dependency taking them puts the HTTP stack
+# back into the test graph however `reqwest-client` is configured, so a
+# --no-default-features test run would not build the shape it claims to.
+certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, features = ["std", "rsa"], branch = "main" }
+certval_stores_core = { path = "../certval_stores_core", default-features = false, features = ["test-util"] }
