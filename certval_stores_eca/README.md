@@ -41,13 +41,20 @@ one — its entries are structurally `add`, but each shares a public key with a
 `remove` elsewhere in the same file, so reading it would install exactly the
 certificates being withdrawn.
 
-**Signatures are not verified yet.** Requiring a good signature belongs in
-generation, where the anchors are already in hand, and it is not built. Until it
-is, treat the stream as material of stated rather than proven provenance.
+**The stream is verified at generation**, where the anchors are already in hand:
+the member signatures, the timestamps over them, the signer's chain to a pinned DoD
+root under the code-signing EKU, and the revocation status of that chain from the OCSP
+responses the stream staples — all at the time those timestamps establish, which is when
+those responses were current. One bad member refuses the whole stream. Your build fetches
+nothing; the timestamp authority's own status is asked of a responder by `verify --stream`,
+which CI runs on these committed bytes. Note whose root that is — `ECA.ir4` is signed by a
+DISA code-signing certificate chaining to **DoD** Root CA 3, not to an ECA root,
+which is why the anchors are pinned in the generator rather than taken from the crate
+being generated.
 
 `provenance/prod/published.txt` and `provenance/prod/collected.txt` carry the dates
-the entry reports — the `signingTime` on the InstallRoot messages read, and the day
-`ECA.ir4` was fetched. Both are written by the generator, so a refresh moves them
+the entry reports — the verified timestamp on the InstallRoot messages read, and the
+day `ECA.ir4` was fetched. Both are written by the generator, so a refresh moves them
 with the material rather than leaving them to a hand edit.
 
 The generated DER ships beside the `.cbor` in `cas/prod/`, and

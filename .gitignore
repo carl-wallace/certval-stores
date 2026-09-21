@@ -1,3 +1,8 @@
 /target
 **/target
-Cargo.lock
+
+# The build-script refresh sentinel. Never committed: a git dependency is a checkout of this
+# repository, so a committed sentinel would put every consumer's build on the refresh path.
+# Create it in a working tree (`touch certval_stores_<x>/refresh-inputs`) to let `cargo build`
+# re-fetch the InstallRoot streams and regenerate.
+refresh-inputs

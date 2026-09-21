@@ -1,0 +1,97 @@
+[package]
+name = "certval-store-gen"
+version = "0.1.0"
+edition = "2021"
+# 1.86 rather than certval's 1.85: reqwest's graph (url -> idna_adapter -> icu 2.2.0) sets it, and
+# certval's revocation fetching is worth one release. Stable is twelve ahead of it.
+rust-version = "1.86"
+description = "Offline generator for certval CBOR trust-anchor and intermediate-CA stores (Web PKI, DoD TAMP, FPKI PKCS#7)"
+license = "MIT OR Apache-2.0"
+publish = false  # until the move to a public repo settles
+
+[dependencies]
+# certval provides the shared generation core: partial-path building and CBOR
+# (BuffersAndPaths) serialization. The outputs are loaded verbatim by pittv3 and
+# pittv3-wasm via TaSource::new_from_cbor / CertSource::new_from_cbor, so the store
+# format is whatever certval emits.
+#
+# Taken by git rather than by path, and it has to be: every other member of this
+# workspace takes certval from this same source, and cargo treats a path dep and a git
+# dep as *different crates*. Mixing them would put two certvals in one graph, and the
+# x509-cert types would stop matching across the boundary.
+#
+# Versions of the shared ASN.1 crates below are pinned to match certval's so the
+# x509-cert / der / cms types unify across the crate boundary.
+certval = { git = "https://github.com/carl-wallace/rust-pki.git", branch = "main", default-features = false, features = [
+    "std",
+    "webpki",
+    "rsa",
+    "eddsa",
+    # Published bundles still carry SHA-1 signed roots; without this they cannot be verified and are
+    # filed as intermediates.
+    "sha1_sig",
+    # certval as it lies: `remote` is its default, and taking it means the revocation ladder here
+    # is the one certval ships rather than a second one assembled around it. It carries `revocation`
+    # (the stapled OCSP an InstallRoot stream ships) and reqwest (what settles a chain nothing
+    # staples -- the timestamp authority's). The cost is that reqwest's own graph sets the floor for
+    # building this crate, and so for building a provider crate from source: rustc 1.86 rather than
+    # certval's 1.85, one release apart and a dozen behind stable. Pinning a year-old icu to dodge
+    # that is not worth the maintenance.
+    "remote",
+] }
+
+# RFC 5934 / RFC 4073 syntax for the InstallRoot adapter. Taken by git for the same
+# reason as certval: a path dep out of the workspace cannot be resolved by anyone who
+# clones this repository.
+rfc5934 = { git = "https://github.com/carl-wallace/rfc5934.git", branch = "main" }
+
+x509-cert = { version = "0.3.0", default-features = false, features = ["pem"] }
+# For reading the CertIDs of the OCSP responses a stream staples, so each one can be filed against
+# the certificate it answers about. Version tracked to certval's so the types are the same ones it
+# works with.
+x509-ocsp = { version = "0.3.0-pre", default-features = false }
+cms = "0.3.0-pre.2"
+der = { version = "0.8.1", features = ["alloc", "derive", "oid", "pem"] }
+const-oid = { version = "0.10.2", features = ["db"] }
+# The store's own CBOR codec, for reading a store back and rewriting it. certval serializes with
+# ciborium, so this reads exactly what it writes; the version matches certval's.
+ciborium = { version = "0.2.2", default-features = false, features = ["std"] }
+
+# certval's remote revocation checking is async, and a build script and a CLI are both synchronous
+# callers, so one current-thread runtime is built to drive it. Taken unconditionally because the
+# checks it serves are not optional; reqwest already puts tokio in the graph.
+tokio = { version = "1", features = ["rt"] }
+
+walkdir = "2.5"
+csv = "1"
+base64ct = { version = "1.8.3", features = ["alloc"] }
+# Version tracked to certval's so the digest types are the same ones it works with.
+sha2 = "0.11.0"
+anyhow = "1"
+log = "0.4"
+# Behind `cli` so a build script depending on this crate for the library takes neither.
+clap = { version = "4.5", features = ["derive"], optional = true }
+env_logger = { version = "0.11", optional = true }
+# Behind `fetch`. ureq rather than reqwest deliberately: this runs from a provider crate's
+# build script, so whatever it pulls is compiled by everyone who depends on that crate even
+# though the fetch itself is gated to source checkouts. reqwest would bring tokio, hyper and
+# url -> idna -> icu for one blocking GET.
+ureq = { version = "3", optional = true }
+
+[features]
+# On by default so `cargo run`/`cargo install` still build the binary unchanged. A
+# consumer that wants only the generation core takes `default-features = false`.
+default = ["cli"]
+# `fetch` too: the CLI is the maintainer-facing tool, and refreshing or crawling is most of what
+# a maintainer runs it for. A build script takes `fetch` alone and so takes neither clap nor
+# env_logger.
+cli = ["dep:clap", "dep:env_logger", "fetch"]
+# Refreshing a committed generator input from the URL it was collected from. Off by default:
+# a consumer generating from material already in hand needs no HTTP stack, and a provider
+# crate's build script is the only caller that does.
+fetch = ["dep:ureq"]
+
+[[bin]]
+name = "certval-store-gen"
+required-features = ["cli"]
+

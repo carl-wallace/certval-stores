@@ -62,16 +62,27 @@ silently.
 
 `provenance/<env>/published.txt` and `provenance/<env>/collected.txt` carry the two
 dates the entries report, written by the generator from the stream itself:
-`published` is the `signingTime` on the InstallRoot messages read, and `collected`
+`published` is `TSTInfo.genTime` from the verified RFC 3161 timestamp on the
+InstallRoot messages read — DoD asserts no `signingTime` of its own — and `collected`
 the day the stream was fetched. They are files rather than literals in `src/lib.rs`
 so that a refresh moves them with the material. The gap between them is the point —
 `JITC.ir4` was signed **2025-02-03** and fetched **2026-09-11**, so a consumer told
 only when the store was built would read nineteen months of DoD anchor changes as
 freshness.
 
-**Signatures are not verified yet.** Requiring a good signature belongs in
-generation, where the anchors are already in hand, and it is not built. Until it
-is, treat the streams as material of stated rather than proven provenance.
+**The streams are verified at generation**, where the anchors are already in hand:
+each member's signature, the timestamp over that signature, the signer's chain
+to a DoD root pinned in `certval-store-gen/anchors/` under the code-signing EKU, and
+the revocation status of every certificate in that chain, read from the OCSP responses
+the stream staples — all at the time the timestamp establishes, which is when those
+responses were current.
+
+Your build fetches nothing: the timestamp authority's own chain, which nothing staples,
+is checked against a responder only by `verify --stream` and by a source checkout that is
+already refreshing its inputs. CI runs that gate on these committed bytes. A member that fails refuses the whole stream, so
+what these stores carry is material of proven rather than stated provenance.
+`cargo run -p certval-store-gen -- verify --stream inputs/*.ir4` re-runs those checks
+against the committed files on their own, and CI does.
 
 The generated DER ships beside each `.cbor` (`cas/prod/`, `cas/om/`), and
 `conformance::check_generator_inputs` asserts it still matches what the store
