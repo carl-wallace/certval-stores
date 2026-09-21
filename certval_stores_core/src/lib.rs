@@ -43,9 +43,13 @@ use log::error;
 use reqwest::{Client, ClientBuilder, Identity};
 
 use certval::{
-    CertFile, CertSource, CertVector, CertificationPathBuilderFormats, Error, PkiEnvironment,
-    TaSource,
+    CertFile, CertSource, CertVector, CertificationPathBuilderFormats, Error, PDVTrustAnchorChoice,
+    PkiEnvironment, TaSource,
 };
+// Only the client narrows anchors to certificates; without it this would be an
+// unused import, which CI treats as an error.
+#[cfg(feature = "reqwest-client")]
+use certval::get_certificate_from_trust_anchor;
 
 /// Trust material for a single environment, carried by a [`TrustStoreProvider`].
 ///
@@ -81,17 +85,25 @@ pub struct StoreEntry {
     /// Free text, and expected to change as wording improves — unlike
     /// [`id`](StoreEntry::id), nothing keys on it.
     pub label: &'static str,
-    /// Trust anchors, DER-encoded.
+    /// Trust anchors, each a DER-encoded RFC 5914 `TrustAnchorChoice`.
     ///
-    /// These reach `TaSource`, which parses each buffer as an RFC 5914
-    /// `TrustAnchorChoice`, so any of its three alternatives would decode. They
-    /// must nonetheless be the `certificate` alternative — a bare `Certificate`
-    /// — because the same bytes are handed to `reqwest::Certificate::from_der`
-    /// under the `reqwest-client` feature, and that takes only this one. Since
-    /// the call logs and continues, a `taInfo` anchor would build paths normally
-    /// while silently dropping out of every TLS client this crate configures.
-    /// The constraint holds whether or not that feature is enabled: a consumer
-    /// that builds without the client today may add one tomorrow.
+    /// All three alternatives are admitted. Note that `certificate` is the
+    /// untagged one, so a bare DER `Certificate` already is a conformant
+    /// `TrustAnchorChoice` and needs nothing done to it — which is what every
+    /// provider ships today.
+    ///
+    /// What an alternative costs is reach, not correctness. `TaSource` accepts
+    /// all of them and builds paths from any, but only a certificate can
+    /// configure a TLS client: [`get_reqwest_client`] hands reqwest what it
+    /// finds via `get_certificate_from_trust_anchor`, so an anchor carrying no
+    /// certificate — a `taInfo` with no `certPath` certificate — is in the
+    /// trust store and not in the TLS trust set. That is reported rather than
+    /// silent, and `conformance::check_roots_parse` fails a store in which no
+    /// anchor at all yields a certificate, since `tls_certs_only` would then
+    /// leave a client trusting nothing.
+    ///
+    /// `tbsCert` decodes and certval does not use it: it is indexed under no
+    /// key identifier, so it is unusable as an anchor.
     pub roots: &'static [&'static [u8]],
     /// Serialized certval [`CertSource`] (CBOR: intermediate CAs + partial
     /// paths), or `None` for anchors-only providers (e.g. webpki-style roots).
@@ -182,14 +194,30 @@ pub fn prepare_certval_environment(
     }
 }
 
-/// Return every trust-anchor DER carried by `providers` (across all
-/// environments they were built with). Makes no attempt to parse the values.
-pub fn get_roots(providers: &[&dyn TrustStoreProvider]) -> Vec<Vec<u8>> {
+/// Return every trust anchor carried by `providers` (across all environments
+/// they were built with), decoded as an RFC 5914 `TrustAnchorChoice`.
+///
+/// Decoded rather than handed back as bytes because a caller cannot tell from a
+/// buffer which alternative it holds, and the alternatives are not
+/// interchangeable — see [`StoreEntry::roots`]. A caller wanting certificates
+/// narrows the result itself with `get_certificate_from_trust_anchor`, which is
+/// what [`get_reqwest_client`] does.
+///
+/// An anchor that does not decode is logged and skipped, so a provider shipping
+/// one loses that anchor rather than the whole set;
+/// `conformance::check_roots_parse` is where that becomes a test failure.
+pub fn get_roots(providers: &[&dyn TrustStoreProvider]) -> Vec<PDVTrustAnchorChoice> {
     let mut retval = vec![];
     for provider in providers {
         for entry in provider.entries() {
             for der in entry.roots {
-                retval.push(der.to_vec());
+                match PDVTrustAnchorChoice::try_from(*der) {
+                    Ok(ta) => retval.push(ta),
+                    Err(e) => error!(
+                        "Skipping a {} anchor that is not a TrustAnchorChoice: {e:?}",
+                        entry.id
+                    ),
+                }
             }
         }
     }
@@ -403,6 +431,30 @@ pub fn get_reqwest_client(
     for provider in providers {
         for entry in provider.entries() {
             for der in entry.roots {
+                // Decode as a TrustAnchorChoice first so the three outcomes are
+                // distinguishable. Handing the buffer straight to reqwest made a
+                // certificate-less anchor indistinguishable from corrupt DER,
+                // and both merely shrank the trust set `tls_certs_only` installs.
+                let ta = match PDVTrustAnchorChoice::try_from(*der) {
+                    Ok(ta) => ta,
+                    Err(e) => {
+                        error!(
+                            "Skipping a {} root that is not a TrustAnchorChoice: {e:?}",
+                            entry.id
+                        );
+                        continue;
+                    }
+                };
+                if get_certificate_from_trust_anchor(&ta.decoded_ta).is_none() {
+                    error!(
+                        "A {} anchor carries no certificate, so it is a trust anchor here and not in the TLS trust set",
+                        entry.id
+                    );
+                    continue;
+                }
+                // `certificate` is the untagged alternative, so for it the buffer
+                // is already the certificate DER. A certificate carried inside a
+                // `taInfo` is not, and reqwest reports that itself.
                 match reqwest::Certificate::from_der(der) {
                     Ok(cert) => certs.push(cert),
                     Err(e) => error!("Failed to parse a {} root: {e:?}", entry.id),
