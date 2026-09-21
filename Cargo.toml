@@ -6,6 +6,7 @@ members = [
     "certval_stores_fpki",
     "certval_stores_nipr",
     "certval_stores_pbdev",
+    "certval_stores_webpki_root_certs",
 ]
 
 # `certval` and its RustCrypto dependencies are consumed from git, so the patch
