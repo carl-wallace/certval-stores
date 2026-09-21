@@ -18,11 +18,8 @@ says which it wants.
 |--------|-----|---------|----------------|
 | DoD WCF Root CA 1 | RSA 2048, sha256 | 2030-12-30 | 11 |
 
-**The store is two deep, and it is the only one in the family that is.** Both
-`certval_stores_nipr` and `certval_stores_eca` are flat — every CA issued
-directly by a root, so every serialized partial path is a single certificate.
-Here the root issues one intermediate, `DoD WCF Intermediate CA 2`, and that
-intermediate issues all ten signing CAs:
+**The store is two deep.** The root issues one intermediate,
+`DoD WCF Intermediate CA 2`, and that intermediate issues all ten signing CAs:
 
 ```text
 DoD WCF Root CA 1                       (anchor, expires 2030-12-30)
@@ -31,8 +28,12 @@ DoD WCF Root CA 1                       (anchor, expires 2030-12-30)
 ```
 
 So the store carries 11 buffers and 11 paths: one of a single certificate and
-ten of two. `Intermediate CA 1` is not published and neither is `Signing CA`
-anything above 10 — what the stream carries is what is here.
+ten of two. `certval_stores_eca` and `certval_stores_nipr`'s `nipr` and `om`
+environments are flat by contrast — every CA issued directly by a root — while
+nipr's interoperability environments each carry 35 two-certificate paths and
+`certval_stores_fpki`'s mesh runs to four. `Intermediate CA 1` is not published
+and neither is `Signing CA` anything above 10 — what the stream carries is what
+is here.
 
 The signing CAs expire within a year of each other in June 2027, which is worth
 knowing before a refresh: a consumer that pins this crate and does not update it

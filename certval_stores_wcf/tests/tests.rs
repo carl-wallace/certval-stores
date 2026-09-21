@@ -61,11 +61,11 @@ fn wcf_entry_carries_one_root_and_a_ca_store() {
     assert_eq!(cert_source.len(), EXPECTED_INTERMEDIATES);
 }
 
-/// The store is two deep, which no other provider in the family is: the root
-/// issues one intermediate and that intermediate issues every signing CA. The
-/// serialized partial paths have to show that, because a consumer building a path
-/// offline gets only what is serialized — a signing CA filed with a one-
-/// certificate path would be a path that does not reach the anchor.
+/// The store is two deep: the root issues one intermediate and that intermediate
+/// issues every signing CA. The serialized partial paths have to show that,
+/// because a consumer building a path offline gets only what is serialized — a
+/// signing CA filed with a one-certificate path would be a path that does not
+/// reach the anchor.
 ///
 /// Asserted as a distribution rather than per certificate so a re-issue that
 /// renumbers the CAs does not need this edited, while adding a *third* level or
