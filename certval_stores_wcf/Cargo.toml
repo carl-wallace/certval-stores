@@ -1,0 +1,42 @@
+[package]
+name = "certval_stores_wcf"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+description = "DoD WCF PKI trust store for certval"
+# `refresh-inputs` marks a working tree where `build.rs` may re-fetch the InstallRoot stream and
+# rewrite the generated material. It is gitignored and never committed: a git dependency is a
+# checkout of this repository, so a committed sentinel would put every consumer's build on the
+# refresh path. `exclude` keeps it out of a published `.crate` too, for the day one is published.
+exclude = ["refresh-inputs"]
+
+[dependencies]
+certval_stores_core = { path = "../certval_stores_core", default-features = false }
+
+[features]
+default = ["wcf", "reqwest-client"]
+# Forwards the core crate's client switch. Without this a consumer could not
+# turn the HTTP stack off: features are additive, so this crate enabling the
+# core default would re-enable it however the consumer configured core.
+reqwest-client = ["certval_stores_core/reqwest-client"]
+# The WCF PKI as published today: DoD WCF Root CA 1, the intermediate beneath it
+# and the signing CAs beneath that. The crate's only environment, so it is on by
+# default — as in certval_stores_eca, and unlike certval_stores_nipr, where a
+# consumer has to say which of two it wants.
+wcf = []
+
+[build-dependencies]
+# `fetch` for the stream refresh in build.rs. It is compiled unconditionally and run only in a
+# source checkout; see `certval_store_gen::build_refresh` for why the gate is a file, not a feature.
+certval-store-gen = { path = "../certval-store-gen", default-features = false, features = [
+    "fetch",
+] }
+log = "0.4"
+
+[dev-dependencies]
+# default-features = false for the same reason as the core crate: certval's
+# defaults pull reqwest, and a dev-dependency taking them puts the HTTP stack
+# back into the test graph however `reqwest-client` is configured, so a
+# --no-default-features test run would not build the shape it claims to.
+certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, features = ["std", "rsa"], branch = "main" }
+certval_stores_core = { path = "../certval_stores_core", default-features = false, features = ["test-util"] }

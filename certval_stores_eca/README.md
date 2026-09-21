@@ -41,13 +41,20 @@ one — its entries are structurally `add`, but each shares a public key with a
 `remove` elsewhere in the same file, so reading it would install exactly the
 certificates being withdrawn.
 
-**Signatures are not verified yet.** Requiring a good signature belongs in
-generation, where the anchors are already in hand, and it is not built. Until it
-is, treat the stream as material of stated rather than proven provenance.
+**The stream is verified at generation**, where the anchors are already in hand:
+the member signatures, the timestamps over them, the signer's chain to a pinned DoD
+root under the code-signing EKU, and the revocation status of that chain from the OCSP
+responses the stream staples — all at the time those timestamps establish, which is when
+those responses were current. One bad member refuses the whole stream. Your build fetches
+nothing; the timestamp authority's own status is asked of a responder by `verify --stream`,
+which CI runs on these committed bytes. Note whose root that is — `ECA.ir4` is signed by a
+DISA code-signing certificate chaining to **DoD** Root CA 3, not to an ECA root,
+which is why the anchors are pinned in the generator rather than taken from the crate
+being generated.
 
 `provenance/prod/published.txt` and `provenance/prod/collected.txt` carry the dates
-the entry reports — the `signingTime` on the InstallRoot messages read, and the day
-`ECA.ir4` was fetched. Both are written by the generator, so a refresh moves them
+the entry reports — the verified timestamp on the InstallRoot messages read, and the
+day `ECA.ir4` was fetched. Both are written by the generator, so a refresh moves them
 with the material rather than leaving them to a hand edit.
 
 The generated DER ships beside the `.cbor` in `cas/prod/`, and
@@ -70,9 +77,22 @@ consumer needs to validate ECA test certificates — `certval_stores_fpki`'s
 
 ## Refreshing
 
-Replace the stream in `inputs/` with a freshly downloaded one and regenerate.
-Both `roots/prod/` and `cas/prod/` are output, so nothing there is edited by
-hand:
+`build.rs` does it on a plain `cargo build`, but only when `refresh-inputs` is present beside
+`Cargo.toml`. That file is gitignored and never committed — a git dependency is a checkout of
+this repository, so a committed sentinel would put every consumer's build on the refresh path —
+so create it once in a fresh clone:
+
+```sh
+touch refresh-inputs
+```
+
+With it there, a build re-fetches the stream, replaces `inputs/ECA.ir4` when the
+publisher's own date is newer, regenerates `roots/`, `cas/` and `provenance/`, and reports what
+moved as `cargo::warning=`. What it leaves behind is an ordinary source change to review and
+commit. Delete the file to build from the committed material without touching the network.
+
+To do it by hand instead, replace the stream in `inputs/` with a freshly downloaded one and
+regenerate. Both `roots/prod/` and `cas/prod/` are output, so nothing there is edited by hand:
 
 ```sh
 # redhound/certval-store-gen

@@ -159,12 +159,12 @@ fn paths_validate_under_the_embedded_anchors() {
     );
 }
 
-/// Generated from `inputs/ECA.ir4`, which states a `signingTime`, so both dates are
-/// knowable. See the same test in `certval_stores_nipr`.
+/// Generated from `inputs/ECA.ir4`, whose members carry a verified RFC 3161 timestamp, so
+/// both dates are knowable. See the same test in `certval_stores_nipr`.
 #[test]
 #[cfg(feature = "eca")]
 fn the_eca_entry_carries_both_dates() {
     let eca = entry(certval_stores_eca::ECA);
-    assert!(eca.published.is_some(), "ECA.ir4 states a signingTime");
+    assert!(eca.published.is_some(), "ECA.ir4 is timestamped");
     assert!(eca.collected.is_some());
 }

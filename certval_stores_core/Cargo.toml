@@ -53,3 +53,4 @@ certval_stores_eca = { path = "../certval_stores_eca", default-features = false,
 certval_stores_fpki = { path = "../certval_stores_fpki", default-features = false, features = ["fpki", "fpki_legacy"] }
 certval_stores_nipr = { path = "../certval_stores_nipr", default-features = false, features = ["nipr", "om_nipr"] }
 certval_stores_pbdev = { path = "../certval_stores_pbdev", default-features = false, features = ["dev"] }
+certval_stores_wcf = { path = "../certval_stores_wcf", default-features = false, features = ["wcf"] }

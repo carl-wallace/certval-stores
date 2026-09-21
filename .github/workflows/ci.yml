@@ -62,19 +62,23 @@ jobs:
       - run: cargo build -p certval_stores_eca --no-default-features --features eca --target wasm32-unknown-unknown
       - run: cargo build -p certval_stores_fpki --no-default-features --features fpki --target wasm32-unknown-unknown
       - run: cargo build -p certval_stores_pbdev --no-default-features --features dev --target wasm32-unknown-unknown
+      - run: cargo build -p certval_stores_wcf --no-default-features --features wcf --target wasm32-unknown-unknown
       # No environment feature to name: this crate has one store and it is unconditional.
       - run: cargo build -p certval_stores_webpki_root_certs --no-default-features --target wasm32-unknown-unknown
 
-  # Without the client the icu crates leave the graph, and with them the rustc 1.86
-  # floor they impose — this configuration holds certval's own 1.85 MSRV. The
-  # default-feature build deliberately has no MSRV leg (see the note above).
+  # Without the client the icu crates leave the *library* graph, but not the build-script
+  # one: certval-store-gen takes certval's `remote` feature so revocation checking is
+  # certval's own, and reqwest carries icu 2.2.0 into every provider's build script, which
+  # no library feature can turn off. So this leg holds 1.86 rather than certval's 1.85 —
+  # one release apart, a dozen behind stable, and the price of not running a second
+  # revocation implementation beside certval's.
   build-msrv-no-client:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.85.0 # certval's MSRV
+          toolchain: 1.86.0 # what certval-store-gen's graph needs; certval itself is 1.85
       - run: cargo build -p certval_stores_nipr --no-default-features --features nipr
 
   # Lints run on stable only. The pre-commit hook in each clone runs the same
@@ -101,3 +105,29 @@ jobs:
       # one that covers that shape.
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  # The gate on what may enter the repository: every committed InstallRoot stream must
+  # verify. This is what lets the build scripts stay tolerant — `build_check` reports a
+  # stream it cannot parse as a skip rather than a failure, which is right for a consumer
+  # building a published crate and would be wrong as the only line of defence. A stream
+  # that reaches main has been checked here, so a consumer's build never has to decide
+  # what to do about one that has not.
+  #
+  # Runs on every pull request. Almost all of it is local -- a stream carries its own signer's
+  # certificate and the OCSP responses that settle its chain -- but this is the gate that also
+  # asks Sectigo about the timestamp authority, which nothing staples and which is validated as
+  # of today. So it needs egress to ocsp.sectigo.com, and a responder outage fails it: that is
+  # the intended reading, since it is here rather than in a consumer's build that a status must
+  # be determined. The drift check against DISA is a different case and belongs on a schedule.
+  #
+  # Population-independent by design — `verify` takes no --population, since a signature
+  # covers a member and not one of the PKIs a stream happens to carry.
+  inputs-verified:
+    name: committed streams verify
+    runs-on: ubuntu-latest
+    env:
+      RUST_LOG: info
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo run -p certval-store-gen -- verify --stream certval_stores_*/inputs/*.ir4

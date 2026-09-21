@@ -19,6 +19,7 @@ material by trust community so the sensitive members can live in separate
 | [`certval_stores_fpki`](certval_stores_fpki/README.md)  | public `carl-wallace/certval-stores` | `fpki`, `fpki_legacy` (Federal PKI) |
 | [`certval_stores_nipr`](certval_stores_nipr/README.md)  | public `carl-wallace/certval-stores` | `om_nipr`, `nipr` (DoD PKI) |
 | [`certval_stores_pbdev`](certval_stores_pbdev/README.md) | public `carl-wallace/certval-stores` | `dev` (Purebred development) |
+| [`certval_stores_wcf`](certval_stores_wcf/README.md)    | public `carl-wallace/certval-stores` | `wcf` (DoD WCF PKI) |
 | `certval_stores_sipr`  | **private** `RedHoundSoftware/certval_store_sipr` | `om_sipr`, `sipr` (NSS PKI) |
 
 Each provider crate's README records what material it carries, where that
@@ -26,8 +27,9 @@ material came from, and how to refresh it. `certval_stores_fpki` is the one whos
 material is a dated snapshot rather than a constant: the FPKI mesh is republished
 by the FPKI crawler whenever it changes.
 
-`certval_stores_nipr` and `certval_stores_eca` keep the DoD InstallRoot stream
-they are generated from, in `inputs/*.ir4`. The stream is a set of signed RFC 5934
+`certval_stores_nipr`, `certval_stores_eca` and `certval_stores_wcf` keep the DoD
+InstallRoot stream they are generated from, in `inputs/*.ir4` — one per published
+stream: `DoD.ir4` and `JITC.ir4`, `ECA.ir4`, `WCF.ir4`. The stream is a set of signed RFC 5934
 messages, so it records what DoD published rather than what someone collected, and
 regenerating from it is how those crates are refreshed.
 

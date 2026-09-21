@@ -116,10 +116,10 @@ pub struct StoreEntry {
     /// Separate from [`collected`](StoreEntry::collected) because the two answer
     /// different questions and can be far apart: a DoD InstallRoot stream signed
     /// in February and fetched in September is nine months of anchor changes the
-    /// fetch date would hide. This is the publisher's own statement — an
-    /// InstallRoot stream's `signingTime`, a CCADB report date, the publication
-    /// date of a crawler bundle — so it is the one that says how current the
-    /// material is.
+    /// fetch date would hide. This is what the source itself establishes — the
+    /// verified RFC 3161 timestamp on an InstallRoot stream, a CCADB report date,
+    /// the publication date of a crawler bundle — so it is the one that says how
+    /// current the material is.
     ///
     /// Optional because most publishers state nothing: a provider that cannot
     /// answer honestly says nothing rather than offering a plausible-looking

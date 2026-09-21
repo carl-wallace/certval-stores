@@ -8,8 +8,8 @@ static ECA_ROOTS: &[&[u8]] = &[
     include_bytes!("../roots/prod/ECA_Root_CA_5.der"),
 ];
 
-// Written by `certval-store-gen` from `inputs/ECA.ir4`: `published` is the `signingTime`
-// of the InstallRoot messages read, `collected` the day the stream was fetched. See the
+// Written by `certval-store-gen` from `inputs/ECA.ir4`: `published` is the verified RFC 3161
+// timestamp on the InstallRoot messages read, `collected` the day the stream was fetched. See the
 // same pair in `certval_stores_nipr` for why they are files rather than literals.
 #[cfg(feature = "eca")]
 const ECA_PUBLISHED: &str = include_str!("../provenance/prod/published.txt").trim_ascii_end();
