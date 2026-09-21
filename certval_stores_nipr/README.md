@@ -112,9 +112,22 @@ is rewritten with them.
 
 ## Refreshing
 
-Replace the stream in `inputs/` with a freshly downloaded one and regenerate.
-Both `roots/<env>/` and `cas/<env>/` are output, so nothing there is edited by
-hand:
+`build.rs` does it on a plain `cargo build`, but only when `refresh-inputs` is present beside
+`Cargo.toml`. That file is gitignored and never committed — a git dependency is a checkout of
+this repository, so a committed sentinel would put every consumer's build on the refresh path —
+so create it once in a fresh clone:
+
+```sh
+touch refresh-inputs
+```
+
+With it there, a build re-fetches each stream, replaces `inputs/DoD.ir4` or `inputs/JITC.ir4`
+when the publisher's own date is newer, regenerates `roots/`, `cas/` and `provenance/`, and reports what
+moved as `cargo::warning=`. What it leaves behind is an ordinary source change to review and
+commit. Delete the file to build from the committed material without touching the network.
+
+To do it by hand instead, replace the stream in `inputs/` with a freshly downloaded one and
+regenerate. Both `roots/<env>/` and `cas/<env>/` are output, so nothing there is edited by hand:
 
 ```sh
 # redhound/certval-store-gen

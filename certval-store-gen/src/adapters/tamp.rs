@@ -25,9 +25,11 @@
 //! stream staples for exactly this purpose. The third is what makes the first mean something: the
 //! anchor comes from here, never from the stream's own `Root` message.
 //!
-//! A stream is self-contained by design, and the checks are correspondingly offline: the signer's
-//! certificate, its chain, the timestamp and the revocation status of every position all travel in
-//! the file. Nothing is fetched to verify one.
+//! A stream is close to self-contained, and the checks follow that: the signer's certificate, its
+//! chain, the timestamp and the revocation status of every position in that chain all travel in the
+//! file, so all of it is settled without a network. The one thing no stream carries is the status of
+//! the timestamp authority that dated it, and whether a responder is asked about that is the
+//! caller's `verify::Revocation` -- a maintainer and CI ask, a consumer's build does not.
 //!
 //! The stream's publication date comes out of that same verified timestamp, so the date a store
 //! reports is one a timestamp authority attested rather than one the file asserts about itself.

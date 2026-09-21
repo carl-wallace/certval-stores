@@ -8,8 +8,9 @@
 //! reported. The result is an ordinary source change: a person reviews the certificate diff and
 //! commits it, so what ships is still what someone looked at.
 //!
-//! **Anywhere else** the sentinel is absent, so nothing is fetched and nothing in the source tree
-//! is written -- which matters more than it sounds, since a checkout sits under `~/.cargo` beside
+//! **Anywhere else** the sentinel is absent, so nothing is fetched -- verification runs under
+//! `verify::Revocation::Stapled`, which settles every status from what the streams carry -- and
+//! nothing in the source tree is written -- which matters more than it sounds, since a checkout sits under `~/.cargo` beside
 //! a `.cargo-checksum.json` that writing to it would invalidate. The consumer gets the committed
 //! material and the checks.
 //!
