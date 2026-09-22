@@ -63,6 +63,10 @@ jobs:
       - run: cargo build -p certval_stores_fpki --no-default-features --features fpki --target wasm32-unknown-unknown
       - run: cargo build -p certval_stores_pbdev --no-default-features --features dev --target wasm32-unknown-unknown
       - run: cargo build -p certval_stores_wcf --no-default-features --features wcf --target wasm32-unknown-unknown
+      # msft_all alone: the other five environments are subsets of it over the same roots/,
+      # so a wasm break in one is a wasm break in all of them.
+      - run: cargo build -p certval_stores_msft --no-default-features --features msft_all --target wasm32-unknown-unknown
+      - run: cargo build -p certval_stores_tpm --no-default-features --features tpm --target wasm32-unknown-unknown
       # No environment feature to name: this crate has one store and it is unconditional.
       - run: cargo build -p certval_stores_webpki_root_certs --no-default-features --target wasm32-unknown-unknown
 
@@ -105,6 +109,38 @@ jobs:
       # one that covers that shape.
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  # The shapes between "nothing" and "everything", which neither clippy run above reaches.
+  #
+  # `--all-features` hides code that is dead without a feature, and the default run only covers
+  # the default shape -- but a provider crate's build script asks for a *subset*: an InstallRoot
+  # provider takes `fetch` and not `authroot`, and that combination is the one that had
+  # `fetch_if_modified` sitting unused behind no gate. Every combination a real consumer can
+  # request is built here, with warnings fatal, so dead code has nowhere left to hide.
+  #
+  # Only certval-store-gen: it is the one crate whose features compose, since a provider crate
+  # names environments rather than capabilities and the wasm job already builds each of those.
+  generator-feature-shapes:
+    name: generator, each feature shape
+    runs-on: ubuntu-latest
+    strategy:
+      # Every shape reports, rather than stopping at the first: knowing that three combinations
+      # fail and which three is the whole value of a matrix here.
+      fail-fast: false
+      matrix:
+        features:
+          - "--no-default-features"
+          - "--no-default-features --features fetch"
+          - "--no-default-features --features cab"
+          - "--no-default-features --features cab,fetch"
+          - "--no-default-features --features authroot"
+          - "--no-default-features --features cli"
+          - "--all-features"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: clippy }
+      - run: cargo clippy -p certval-store-gen --all-targets ${{ matrix.features }} -- -D warnings
 
   # The gate on what may enter the repository: every committed InstallRoot stream must
   # verify. This is what lets the build scripts stay tolerant — `build_check` reports a

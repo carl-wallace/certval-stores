@@ -4,14 +4,16 @@ members = [
     "certval_stores_core",
     "certval_stores_eca",
     "certval_stores_fpki",
+    "certval_stores_msft",
     "certval_stores_nipr",
     "certval_stores_pbdev",
+    "certval_stores_tpm",
     "certval_stores_wcf",
     "certval_stores_webpki_root_certs",
     "certval-store-gen",
 ]
 
-# `certval` and its RustCrypto dependencies are consumed from git, so the patch
+# `certval` and some RustCrypto dependencies are consumed from git, so the patch
 # table below is required for these crates to build *standalone* (e.g. their own
 # CI). When these crates are consumed by a larger workspace (e.g. pbyk), that
 # top-level workspace's own [patch] table governs and this one is ignored.
@@ -22,3 +24,28 @@ members = [
 [patch.crates-io]
 cms        = { git = "https://github.com/RustCrypto/formats.git" }
 x509-ocsp  = { git = "https://github.com/RustCrypto/formats.git" }
+
+# Reached only under certval-store-gen's `cab` feature, by way of tpm_cab_verify, which verifies an
+# RFC 3161 timestamp with x509-tsp. The 0.2.0-pre line is not on crates.io (0.1.0 is), and it pulls
+# cmpv2, which in turn pulls crmf. tpm_cab_verify patches these in its own workspace, and a patch
+# table does not travel with a git dependency, so they are repeated here.
+#
+# Only these three: `pkcs1` is patched there too and must NOT be here. The git line of pkcs1 wants
+# a newer spki and der than this graph resolves (`spki::AsAlgorithmIdentifierRef`,
+# `der::asn1::AsUintRef`), so patching it fails to compile, while the crates.io release builds
+# against the versions certval pins.
+cmpv2      = { git = "https://github.com/RustCrypto/formats.git" }
+crmf       = { git = "https://github.com/RustCrypto/formats.git" }
+x509-tsp   = { git = "https://github.com/RustCrypto/formats.git" }
+
+# Only reached under certval-store-gen's `cab` feature, by way of tpm_cab_verify. That crate
+# patches authenticode to this fork in its own workspace, and a patch table does not travel with a
+# git dependency -- so without this line a cabinet would be verified against upstream authenticode
+# rather than the code tpm_cab_verify is written and tested against. Inert for every member that
+# does not enable `cab`.
+#
+# The fork is a dependency bump and nothing else: cms 0.2 -> 0.3.0-pre.2, der 0.7 -> 0.8.1,
+# x509-cert 0.2 -> 0.3.0 and the accessor-method change that forced, with no change to the crate's
+# own source. It is offered upstream, and this line is written on the assumption that it lands --
+# a safe assumption while nothing depending on it is published. 
+authenticode = { git = "https://github.com/carl-wallace/authenticode-rs.git", branch = "updates" }

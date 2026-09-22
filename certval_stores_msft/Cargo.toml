@@ -1,0 +1,71 @@
+[package]
+name = "certval_stores_msft"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+description = "Microsoft root program trust stores for certval, split by the purposes the program grants"
+# `refresh-inputs` marks a working tree where `build.rs` may re-fetch the trust list and rewrite the
+# generated material. It is gitignored and never committed: a git dependency is a checkout of this
+# repository, so a committed sentinel would put every consumer's build on the refresh path.
+exclude = ["refresh-inputs"]
+
+[dependencies]
+certval_stores_core = { path = "../certval_stores_core", default-features = false }
+
+[features]
+# `msft_all` rather than nothing, because unlike certval_stores_nipr there is a sensible default
+# here: every other environment is a subset of it, so a consumer who has not chosen gets the
+# program rather than an arbitrary slice of it.
+default = ["msft_all", "reqwest-client"]
+# Forwards the core crate's client switch. Without this a consumer could not turn the HTTP stack
+# off: features are additive, so this crate enabling the core default would re-enable it however
+# the consumer configured core.
+reqwest-client = ["certval_stores_core/reqwest-client"]
+
+# The six environments are views over one list, not six collections: every root comes from the
+# same signed trust list, and what differs is the purposes Microsoft grants it. A root granted
+# five purposes appears in five of these, and the certificate itself is stored once.
+#
+# Every root in the program, whatever it is trusted for.
+msft_all = []
+# Roots granted id-kp-serverAuth. The comparison store against `mozilla_tls` and certval's own
+# webpki-roots: three programs answering the same question, which is worth being able to see.
+msft_tls = []
+# Roots granted id-kp-clientAuth.
+msft_client_auth = []
+# Roots granted id-kp-emailProtection.
+msft_email = []
+# Roots granted id-kp-codeSigning. No other provider in this family covers code signing, and no
+# other root program publishes a set for it.
+msft_code_signing = []
+# Roots granted id-kp-timeStamping, which is what an Authenticode countersignature chains to.
+msft_timestamping = []
+
+[build-dependencies]
+# `authroot` for the trust-list refresh in build.rs. It is compiled unconditionally and run only in
+# a source checkout; see `certval_store_gen::build_refresh` for why the gate is a file, not a
+# feature.
+certval-store-gen = { path = "../certval-store-gen", default-features = false, features = [
+    "authroot",
+] }
+log = "0.4"
+
+[dev-dependencies]
+# default-features = false for the same reason as the core crate: certval's defaults pull reqwest,
+# and a dev-dependency taking them puts the HTTP stack back into the test graph however
+# `reqwest-client` is configured.
+certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, features = [
+    "std",
+    "rsa",
+    # A third of the program is signed with SHA-1 and two roots with MD2. Without this the tests
+    # cannot even read what the crate ships.
+    "sha1_sig",
+], branch = "main" }
+certval_stores_core = { path = "../certval_stores_core", default-features = false, features = [
+    "test-util",
+] }
+# For the test that every file's name is the SHA-1 of its own contents, which is the same check
+# the generator makes when admitting a certificate.
+sha1 = "0.11.0"
+x509-cert = { version = "0.3.0", default-features = false }
+der = { version = "0.8.1", features = ["alloc"] }

@@ -77,6 +77,33 @@ pub fn diff(dir: &Path, generated: &[CertFile]) -> Result<Diff> {
     })
 }
 
+/// Whether an environment keeps its intermediates as loose DER beside the CBOR store.
+///
+/// The DER is for review and nothing reads it back: the crate embeds the roots and loads the
+/// store, so this decides what a regeneration's diff looks like, not what ships.
+pub enum Intermediates {
+    /// Written as files as well as into the store, so a refresh shows which certificates changed.
+    /// Right where a publisher has dozens.
+    AsFiles,
+    /// Only in the store. Right where a publisher has thousands: `TrustedTpm.cab` yields 2,480,
+    /// and committing them loose means ten megabytes of the same certificates twice over, in a
+    /// diff no one can read. What replaces the review is the check that regenerates the store from
+    /// the committed cabinet and compares -- stronger than reading DER, and it runs in CI.
+    InStoreOnly,
+}
+
+/// One generated environment's material, as it goes to disk.
+///
+/// Grouped rather than passed as four more parameters: they travel together, and every call site
+/// writes exactly one environment's worth.
+pub struct Material<'a> {
+    pub anchors: &'a [CertFile],
+    pub intermediates: &'a [CertFile],
+    /// Whether the intermediates are also written as loose DER for review.
+    pub loose: Intermediates,
+    pub store: &'a GeneratedStore,
+}
+
 /// Write the roots, the intermediates and the CBOR store into the provider layout, replacing any
 /// DER already there.
 ///
@@ -87,16 +114,25 @@ pub fn write(
     crate_dir: &Path,
     env: &str,
     store_name: &str,
-    anchors: &[CertFile],
-    intermediates: &[CertFile],
-    store: &GeneratedStore,
+    material: Material<'_>,
     provenance: &Provenance,
 ) -> Result<()> {
+    let Material {
+        anchors,
+        intermediates,
+        loose,
+        store,
+    } = material;
     let roots_dir = crate_dir.join("roots").join(env);
     let cas_dir = crate_dir.join("cas").join(env);
 
     write_der_dir(&roots_dir, anchors, true)?;
-    write_der_dir(&cas_dir, intermediates, false)?;
+    match loose {
+        Intermediates::AsFiles => write_der_dir(&cas_dir, intermediates, false)?,
+        // Still swept: switching an environment to this mode has to remove the files it wrote
+        // before, or the crate ships a directory of certificates nothing generated.
+        Intermediates::InStoreOnly => write_der_dir(&cas_dir, &[], false)?,
+    }
 
     match &store.ca_cbor {
         Some(bytes) => {

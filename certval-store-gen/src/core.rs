@@ -14,11 +14,13 @@
 //! path pittv3 `--generate` drives), so the outputs drop straight into the pittv3
 //! store fetch path with no format special-casing.
 
+use std::collections::BTreeSet;
+
 use anyhow::{anyhow, Result};
 
 use certval::{
-    CertFile, CertSource, CertVector, CertificationPathBuilderFormats, CertificationPathSettings,
-    PkiEnvironment, TaSource, TimeOfInterest,
+    BuffersAndPaths, CertFile, CertSource, CertVector, CertificationPathBuilderFormats,
+    CertificationPathSettings, PkiEnvironment, TaSource, TimeOfInterest,
 };
 
 /// Normalized adapter output: the raw material for a store pair.
@@ -132,6 +134,71 @@ pub fn generate(inputs: &StoreInputs) -> Result<GeneratedStore> {
     };
 
     Ok(GeneratedStore { ta_cbor, ca_cbor })
+}
+
+/// Drop intermediates that reach no trust anchor, and report which.
+///
+/// A store records what a PKI published, so this is not a judgement about the certificates: it is
+/// that `conformance::check_partial_paths` requires every CA in a store to appear in some path,
+/// and a CA that chains to nothing cannot. Carrying it would ship a store that fails its own
+/// checks, and the alternative -- relaxing the check -- would give up the property that catches a
+/// genuinely broken generation.
+///
+/// The publisher is not always wrong to publish one. `TrustedTpm.cab` carries thirty-odd AMD
+/// intermediates whose issuers it does not include, and whose AIA URIs serve a self-signed
+/// certificate rather than the issuer; those CAs are real, but this TA set simply cannot root
+/// them. That is why the names come back rather than being logged and forgotten: a provider crate
+/// records them, so the count is reviewable and a publisher fixing it shows up as a change.
+///
+/// Costs a generation pass, since which buffers are in a path is only knowable after the graph is
+/// built. Matching is by certificate bytes rather than by index: `generate` deduplicates, so
+/// buffer positions do not correspond to input positions.
+pub fn prune_unrooted(inputs: &StoreInputs) -> Result<(StoreInputs, Vec<String>)> {
+    if inputs.intermediates.is_empty() {
+        return Ok((inputs.clone(), vec![]));
+    }
+    let Some(cbor) = generate(inputs)?.ca_cbor else {
+        return Ok((inputs.clone(), vec![]));
+    };
+    let bap: BuffersAndPaths = ciborium::de::from_reader(cbor.as_slice())
+        .map_err(|e| anyhow!("the generated CA store did not read back: {e}"))?;
+
+    let mut in_a_path = vec![false; bap.buffers.len()];
+    for row in bap.partial_paths.iter() {
+        for paths in row.values() {
+            for path in paths {
+                for i in path {
+                    if let Some(seen) = in_a_path.get_mut(*i) {
+                        *seen = true;
+                    }
+                }
+            }
+        }
+    }
+    let rooted: BTreeSet<&[u8]> = bap
+        .buffers
+        .iter()
+        .zip(&in_a_path)
+        .filter(|(_, seen)| **seen)
+        .map(|(buffer, _)| buffer.bytes.as_slice())
+        .collect();
+
+    let mut kept = vec![];
+    let mut dropped = vec![];
+    for cf in &inputs.intermediates {
+        match rooted.contains(cf.bytes.as_slice()) {
+            true => kept.push(cf.clone()),
+            false => dropped.push(cf.filename.clone()),
+        }
+    }
+    dropped.sort();
+    Ok((
+        StoreInputs {
+            intermediates: kept,
+            ..inputs.clone()
+        },
+        dropped,
+    ))
 }
 
 /// Return a copy of `certs` with each `filename` reduced to its basename, so no absolute

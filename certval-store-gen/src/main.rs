@@ -457,9 +457,14 @@ fn write_provider(
         dir,
         env,
         env,
-        &inputs.trust_anchors,
-        &inputs.intermediates,
-        store,
+        provider::Material {
+            anchors: &inputs.trust_anchors,
+            intermediates: &inputs.intermediates,
+            // The CLI generates the environments a person curates by hand, which have dozens of
+            // intermediates at most, so their diffs stay certificate by certificate.
+            loose: provider::Intermediates::AsFiles,
+            store,
+        },
         provenance,
     )?;
     log::info!(

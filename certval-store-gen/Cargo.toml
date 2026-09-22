@@ -77,6 +77,19 @@ env_logger = { version = "0.11", optional = true }
 # certval's `remote` feature brings it for revocation checking -- so this is about the shape of the
 # call rather than about keeping the stack out.
 ureq = { version = "3", optional = true }
+# Behind `cab`, for the two publishers that ship inside a Microsoft cabinet: the root program
+# (`authrootstl.cab`) and the TPM vendor roots (`TrustedTpm.cab`). `cab` reads the container --
+# including MSZIP, whose blocks cannot be decompressed independently -- and `tpm_cab_verify`
+# checks the Authenticode signature over it against the Microsoft roots it carries, at the
+# timestamped signing time. Taken by git for the same reason certval is: it takes certval from
+# that same source, and a path or crates.io copy would put two certvals in one graph.
+cab = { version = "0.6", optional = true }
+tpm_cab_verify = { git = "https://github.com/carl-wallace/tpm_cab_verify.git", branch = "main", optional = true }
+# Behind `authroot`: Microsoft addresses each root in its trust list by SHA-1 thumbprint, and
+# checking that a served certificate matches the one the signed list asked for is that adapter's
+# whole trust argument. Version tracked to certval's so the digest types are the same ones it
+# works with.
+sha1 = { version = "0.11.0", optional = true }
 
 [features]
 # On by default so `cargo run`/`cargo install` still build the binary unchanged. A
@@ -90,6 +103,18 @@ cli = ["dep:clap", "dep:env_logger", "fetch"]
 # a consumer generating from material already in hand needs no HTTP stack, and a provider
 # crate's build script is the only caller that does.
 fetch = ["dep:ureq"]
+# Reading a signed Microsoft cabinet. Off by default and not implied by `fetch`: verification
+# brings `tpm_cab_verify` and the `authenticode` fork, which a provider refreshing an InstallRoot
+# stream has no use for. Only an adapter for a CAB-published source asks for it.
+cab = ["dep:cab", "dep:tpm_cab_verify"]
+# The Microsoft root program: a signed cabinet, a certificate trust list inside it, and one HTTP
+# GET per root. `cab` to verify the cabinet, `fetch` for the ~562 certificate fetches, `sha1` for
+# the thumbprint check that binds them to the list.
+authroot = ["cab", "fetch", "dep:sha1"]
+# The TPM vendor roots: one Authenticode-signed cabinet that *is* the material, rather than an
+# index of it. `cab` to verify the cabinet -- route 1, where the cabinet vouches for its members --
+# and `fetch` to pull it.
+tpm = ["cab", "fetch"]
 
 [[bin]]
 name = "certval-store-gen"

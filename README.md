@@ -17,9 +17,11 @@ material by trust community so the sensitive members can live in separate
 | [`certval_stores_core`](certval_stores_core/README.md)  | public `carl-wallace/certval-stores` | — (the provider trait + plumbing) |
 | [`certval_stores_eca`](certval_stores_eca/README.md)    | public `carl-wallace/certval-stores` | `eca` (DoD External Certification Authority) |
 | [`certval_stores_fpki`](certval_stores_fpki/README.md)  | public `carl-wallace/certval-stores` | `fpki`, `fpki_legacy` (Federal PKI) |
+| [`certval_stores_msft`](certval_stores_msft/README.md)  | public `carl-wallace/certval-stores` | `msft_all`, `msft_tls`, `msft_client_auth`, `msft_email`, `msft_code_signing`, `msft_timestamping` (Microsoft root program) |
 | [`certval_stores_nipr`](certval_stores_nipr/README.md)  | public `carl-wallace/certval-stores` | `om_nipr`, `nipr` (DoD PKI) |
 | [`certval_stores_pbdev`](certval_stores_pbdev/README.md) | public `carl-wallace/certval-stores` | `dev` (Purebred development) |
 | [`certval_stores_wcf`](certval_stores_wcf/README.md)    | public `carl-wallace/certval-stores` | `wcf` (DoD WCF PKI) |
+| [`certval_stores_tpm`](certval_stores_tpm/README.md)    | public `carl-wallace/certval-stores` | `tpm` (TPM vendor roots, from `TrustedTpm.cab`) |
 | `certval_stores_sipr`  | **private** `RedHoundSoftware/certval_store_sipr` | `om_sipr`, `sipr` (NSS PKI) |
 
 Each provider crate's README records what material it carries, where that

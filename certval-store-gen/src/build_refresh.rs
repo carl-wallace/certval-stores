@@ -170,9 +170,12 @@ fn regenerate(env: &Env) {
         Path::new("."),
         env.name,
         env.name,
-        &inputs.trust_anchors,
-        &inputs.intermediates,
-        &store,
+        provider::Material {
+            anchors: &inputs.trust_anchors,
+            intermediates: &inputs.intermediates,
+            loose: provider::Intermediates::AsFiles,
+            store: &store,
+        },
         &provenance,
     )
     .unwrap_or_else(|e| panic!("writing the {} environment failed: {e}", env.name));
