@@ -23,7 +23,26 @@ mod env_tls;
 // Written by `certval-store-gen` from the trust list itself: `published` is the CTL's own
 // `thisUpdate`, `collected` the day the list was fetched. Files rather than literals so a refresh
 // carries the dates with the material instead of leaving them to a hand edit.
+// Gated on there being an environment to state them for. Every entry is behind its own feature,
+// so with none enabled this crate serves nothing and these have no users -- a shape neither the
+// default build nor --all-features reaches, and one CI builds.
+#[cfg(any(
+    feature = "msft_all",
+    feature = "msft_tls",
+    feature = "msft_client_auth",
+    feature = "msft_email",
+    feature = "msft_code_signing",
+    feature = "msft_timestamping"
+))]
 const PUBLISHED: &str = include_str!("../provenance/published.txt").trim_ascii_end();
+#[cfg(any(
+    feature = "msft_all",
+    feature = "msft_tls",
+    feature = "msft_client_auth",
+    feature = "msft_email",
+    feature = "msft_code_signing",
+    feature = "msft_timestamping"
+))]
 const COLLECTED: &str = include_str!("../provenance/collected.txt").trim_ascii_end();
 
 /// Trust-store provider for the Microsoft root program.

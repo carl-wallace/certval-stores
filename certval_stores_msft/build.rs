@@ -1,61 +1,63 @@
-//! Keeps this crate's committed material in step with the Microsoft trust list it comes from.
+//! Checks this crate's committed material on every build.
 //!
-//! What the two halves do, and why the gate is a file rather than a feature, is in
-//! `certval_store_gen::build_refresh`. This is the table it runs on.
+//! Every file in `roots/` must hash to its own name. That is the same comparison that admitted the
+//! certificate in the first place: Microsoft's trust list is signed and the certificates it names
+//! are not, so what binds them is the SHA-1 the list gave for each. A few hundred digests over
+//! half a megabyte, and `sha1` is the only build dependency this crate has.
 //!
-//! Unlike the InstallRoot providers next door, a refresh here is a conditional request first:
-//! the list changes about monthly, so all but roughly one build a month ends at a 304 without
-//! reading or writing anything.
+//! **Refreshing is not here.** It is `certval-store-gen authroot --crate certval_stores_msft`,
+//! run by a maintainer or by the scheduled job that opens a pull request. It needs
+//! `tpm_cab_verify`, the `authenticode` fork and a pre-release ASN.1 stack, whose patch-table
+//! entries do not travel with a git dependency -- so a build script that could refresh would make
+//! every consumer resolve them to embed a store it never refreshes.
 
-use certval_store_gen::authroot_refresh::{run, Env};
-use certval_store_gen::build_log;
+use std::path::Path;
 
-/// Created by hand in a working tree to allow a refresh, and never committed, so no checkout of
-/// this repository carries it.
-const REFRESH_SENTINEL: &str = "refresh-inputs";
-
-/// Where Microsoft publishes the list this crate generates from. Recorded here rather than only
-/// in the generator because it is this crate's provenance: a reader asking where the material
-/// came from should find the answer beside the material.
-const PUBLISHED_AT: &str =
-    "http://ctldl.windowsupdate.com/msdownload/update/v3/static/trustedr/en/authrootstl.cab";
-
-/// The environments, and the purpose each one filters the list by. `None` takes every root the
-/// program still trusts.
-///
-/// The generator applies the two exclusions -- expired, and restricted past their disallowed
-/// date -- to every environment alike, so they are not repeated here: they are properties of what
-/// this crate carries at all, not of any one view over it.
-const ENVS: &[Env] = &[
-    Env {
-        name: "all",
-        eku: None,
-    },
-    Env {
-        name: "tls",
-        eku: Some("1.3.6.1.5.5.7.3.1"),
-    },
-    Env {
-        name: "client_auth",
-        eku: Some("1.3.6.1.5.5.7.3.2"),
-    },
-    Env {
-        name: "email",
-        eku: Some("1.3.6.1.5.5.7.3.4"),
-    },
-    Env {
-        name: "code_signing",
-        eku: Some("1.3.6.1.5.5.7.3.3"),
-    },
-    Env {
-        name: "timestamping",
-        eku: Some("1.3.6.1.5.5.7.3.8"),
-    },
-];
+use sha1::{Digest, Sha1};
 
 fn main() {
-    // The generator narrates through `log` and picks no destination; this is what makes it reach
-    // a person building the crate.
-    build_log::init(log::LevelFilter::Warn).ok();
-    run(REFRESH_SENTINEL, PUBLISHED_AT, ENVS);
+    println!("cargo::rerun-if-changed=build.rs");
+    println!("cargo::rerun-if-changed=roots");
+
+    if let Err(e) = check_committed() {
+        panic!("this crate's committed material does not check out: {e}");
+    }
+}
+
+/// Every file in `roots/` hashes to its own name.
+fn check_committed() -> Result<(), String> {
+    let dir = Path::new("roots");
+    let entries = std::fs::read_dir(dir).map_err(|e| format!("roots/ could not be read: {e}"))?;
+    let mut checked = 0;
+    for entry in entries {
+        let path = entry
+            .map_err(|e| format!("roots/ holds an unreadable entry: {e}"))?
+            .path();
+        if path.extension().and_then(|e| e.to_str()) != Some("der") {
+            continue;
+        }
+        let name = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default()
+            .to_ascii_uppercase();
+        let bytes =
+            std::fs::read(&path).map_err(|e| format!("{} is unreadable: {e}", path.display()))?;
+        let digest: String = Sha1::digest(&bytes)
+            .iter()
+            .map(|b| format!("{b:02X}"))
+            .collect();
+        if digest != name {
+            return Err(format!(
+                "{} does not hash to its own name ({digest}); it is not the certificate the \
+                 trust list named",
+                path.display()
+            ));
+        }
+        checked += 1;
+    }
+    match checked {
+        0 => Err("roots/ holds no certificates".to_string()),
+        _ => Ok(()),
+    }
 }

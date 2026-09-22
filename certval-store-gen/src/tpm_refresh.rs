@@ -36,40 +36,22 @@ use crate::provider;
 /// transient proxy failure should not end a refresh that is otherwise ready to run.
 const RETRIES: usize = 3;
 
-/// Run the refresh a sentinel allows, and regenerate what changed.
+/// Refresh a provider crate from the published cabinet.
 ///
-/// `env` names the directories under `roots/`, `cas/` and `provenance/`, and the CBOR store inside
-/// `cas/<env>/`. Panics only when a write that was decided on then failed; every other unhappy
-/// path keeps the committed material and says why, for the reason [`crate::refresh`] gives.
-pub fn run(sentinel: &str, env: &str) {
-    println!("cargo::rerun-if-changed=build.rs");
-    println!("cargo::rerun-if-changed={sentinel}");
-    println!("cargo::rerun-if-changed=provenance/{env}/published.txt");
-
-    if !Path::new(sentinel).exists() {
-        return;
-    }
-    match refresh(env) {
-        Ok(Outcome::Current { published }) => {
-            log::info!("the committed cabinet is current (published {published})")
-        }
-        Ok(Outcome::Kept { why }) => log::warn!("keeping the committed TPM material: {why}"),
-        Ok(Outcome::Regenerated {
-            published,
-            anchors,
-            intermediates,
-            dropped,
-        }) => log::warn!(
-            "TPM material regenerated from a cabinet published {published}: {anchors} roots, \
-             {intermediates} intermediates, {dropped} intermediate(s) dropped for reaching no \
-             root. Review the diff before committing."
-        ),
-        Err(e) => panic!("rewriting the TPM material failed: {e:#}"),
-    }
+/// Returns what happened rather than deciding what to do about it; see
+/// [`crate::authroot_refresh::refresh_crate`], which follows the same rule about what is an
+/// outcome and what is an error.
+pub fn refresh_crate(crate_dir: &Path, env: &str) -> Result<Outcome> {
+    let previous = std::env::current_dir().context("the working directory could not be read")?;
+    std::env::set_current_dir(crate_dir)
+        .with_context(|| format!("{} could not be entered", crate_dir.display()))?;
+    let outcome = refresh(env);
+    std::env::set_current_dir(previous).context("the working directory could not be restored")?;
+    outcome
 }
 
 /// What a refresh did.
-enum Outcome {
+pub enum Outcome {
     /// The publisher's cabinet is the one already committed, by its own date.
     Current { published: String },
     /// Nothing usable came back, or what did was older than what is in hand.

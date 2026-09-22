@@ -75,12 +75,30 @@ after that signature was timestamped. `msft_code_signing` cannot do that today. 
 
 ## Refreshing
 
-`build.rs` refreshes only in a working tree carrying a `refresh-inputs` sentinel, which is
-gitignored and never committed, so no consumer's build fetches anything. A refresh is a
-conditional `GET` of the cabinet — 304 on all but roughly one day a month, since the list changes
-about monthly — and on a change it re-fetches every listed certificate, verifies each thumbprint,
-then rewrites `roots/` and the generated `src/env_*.rs` indexes wholesale. Nothing is written and
-nothing is deleted unless every entry is satisfied, so a failed fetch leaves what is committed.
+Refreshing is a tool, not a build script:
+
+```text
+cargo run -p certval-store-gen --features cli,authroot,tpm -- authroot
+```
+
+It is a conditional `GET` of the cabinet — 304 on all but roughly one day a month, since the list
+changes about monthly — and on a change it re-fetches every listed certificate, verifies each
+thumbprint, then rewrites `roots/` and the generated `src/env_*.rs` indexes wholesale. Nothing is
+written and nothing deleted unless every entry is satisfied, so a failed fetch leaves what is
+committed.
+
+**Why not a build script.** Refreshing needs `tpm_cab_verify`, the `authenticode` fork and a
+pre-release ASN.1 stack; their patch-table entries do not travel with a git dependency, so a build
+script able to refresh would make every consumer resolve all of it to embed a store it never
+refreshes. This crate's only build dependency is `sha1`, for the thumbprint check it runs on every
+build.
+
+**What keeps it current** is `.github/workflows/refresh.yml`, which runs the command weekly and
+opens a pull request when the publisher has moved. That pull request arrives with failing tests by
+design: the counts below are pinned, so a change names itself and a person reads the certificate
+diff before it lands.
+
+`certval-store-gen authroot --check-only` verifies the committed material and fetches nothing.
 
 `provenance/` records what the copy is: `published.txt` (the list's own `thisUpdate`),
 `collected.txt`, `sequence_number.txt` and `last_modified.txt` — the last two so a refresh can

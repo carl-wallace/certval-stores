@@ -134,7 +134,12 @@ jobs:
           - "--no-default-features --features cab"
           - "--no-default-features --features cab,fetch"
           - "--no-default-features --features authroot"
+          - "--no-default-features --features tpm"
           - "--no-default-features --features cli"
+          # The CLI offers a command per source, each gated on the feature that source needs, so
+          # these two are where a command referring to a module that is not there shows up.
+          - "--no-default-features --features cli,authroot"
+          - "--no-default-features --features cli,tpm"
           - "--all-features"
     steps:
       - uses: actions/checkout@v4

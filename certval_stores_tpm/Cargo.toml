@@ -21,11 +21,6 @@ default = ["tpm", "reqwest-client"]
 reqwest-client = ["certval_stores_core/reqwest-client"]
 tpm = []
 
-[build-dependencies]
-# `tpm` for the cabinet refresh in build.rs. Compiled unconditionally and run only in a source
-# checkout; see `certval_store_gen::tpm_refresh` for why the gate is a file, not a feature.
-certval-store-gen = { path = "../certval-store-gen", default-features = false, features = ["tpm"] }
-log = "0.4"
 
 [dev-dependencies]
 certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, features = [

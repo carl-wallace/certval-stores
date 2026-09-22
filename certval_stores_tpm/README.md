@@ -75,9 +75,20 @@ than one certificate, which is why 2,209 members yield 2,480 intermediates. Ther
 
 ## Refreshing
 
-`build.rs` refreshes only in a working tree carrying a `refresh-inputs` sentinel, gitignored and
-never committed, so no consumer's build fetches anything. A refresh fetches the cabinet, verifies
-its signature, and regenerates `roots/tpm`, `cas/tpm` and `provenance/tpm` wholesale.
+Refreshing is a tool, not a build script — this crate has no build script at all:
+
+```text
+cargo run -p certval-store-gen --features cli,authroot,tpm -- tpm
+```
+
+It fetches the cabinet, verifies its Authenticode signature, and regenerates `roots/tpm`,
+`cas/tpm` and `provenance/tpm` wholesale. Refreshing needs `tpm_cab_verify`, the `authenticode`
+fork and a pre-release ASN.1 stack, whose patch-table entries do not travel with a git dependency —
+so keeping it out of the build means a consumer embedding this store resolves none of it.
+
+**What keeps it current** is `.github/workflows/refresh.yml`, weekly, opening a pull request when
+the cabinet changes. It arrives with failing tests by design: the counts here are pinned, so a
+change names itself and a person reads the diff before it lands.
 
 **The rollback guard**: `version.txt` states when the contents last changed, and a cabinet dated
 earlier than the committed one is refused as a stale mirror rather than accepted as an update.

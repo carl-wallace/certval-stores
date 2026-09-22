@@ -353,10 +353,8 @@ name = "certval_stores_msft"
 version = "0.1.0"
 dependencies = [
  "certval",
- "certval-store-gen",
  "certval_stores_core",
  "der",
- "log",
  "sha1",
  "x509-cert",
 ]
@@ -386,7 +384,6 @@ dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
- "log",
 ]
 
 [[package]]

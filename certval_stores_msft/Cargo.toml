@@ -41,14 +41,12 @@ msft_code_signing = []
 # Roots granted id-kp-timeStamping, which is what an Authenticode countersignature chains to.
 msft_timestamping = []
 
+
 [build-dependencies]
-# `authroot` for the trust-list refresh in build.rs. It is compiled unconditionally and run only in
-# a source checkout; see `certval_store_gen::build_refresh` for why the gate is a file, not a
-# feature.
-certval-store-gen = { path = "../certval-store-gen", default-features = false, features = [
-    "authroot",
-] }
-log = "0.4"
+# The thumbprint check every build runs, consumer or not: each file in roots/ must hash to its own
+# name. sha1 alone, deliberately -- it is on crates.io, needs no patch, and keeps the one check a
+# consumer benefits from out of the heavy half below.
+sha1 = "0.11.0"
 
 [dev-dependencies]
 # default-features = false for the same reason as the core crate: certval's defaults pull reqwest,

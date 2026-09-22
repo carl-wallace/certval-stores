@@ -56,44 +56,76 @@ pub struct Env {
     pub eku: Option<&'static str>,
 }
 
-/// Refresh the list if the sentinel allows it, regenerate what changed, and check what ships.
+/// The environments a Microsoft root program crate carries, and the purpose each filters the list
+/// by. `None` takes every root the program still trusts.
 ///
-/// Call from a provider crate's `build.rs`.
-///
-/// **Reaching the publisher is not something a build can depend on.** An unreachable CDN, a
-/// cabinet that will not verify, a list that will not parse, a certificate that does not arrive --
-/// every one of those ends in [`Outcome::Kept`] and a warning, because the committed material is
-/// still good and a build that failed over DISA-style downtime would be worse than one that ships
-/// last month's anchors. It is the same rule `crate::refresh` states for the InstallRoot streams.
-///
-/// Panics for two things only: a write that was decided on and then failed, which leaves the crate
-/// half-rewritten, and committed material that does not check out.
-pub fn run(sentinel: &str, published_at: &str, envs: &[Env]) {
-    println!("cargo::rerun-if-changed=build.rs");
-    println!("cargo::rerun-if-changed={sentinel}");
-    println!("cargo::rerun-if-changed=provenance/sequence_number.txt");
+/// Here rather than in the CLI because it is a property of the material: these are the purposes
+/// the program grants, and a crate's features name the same six. The exclusions -- expired, and
+/// restricted past their disallowed date -- apply to all of them alike and are not repeated.
+pub const ENVIRONMENTS: &[Env] = &[
+    Env {
+        name: "all",
+        eku: None,
+    },
+    Env {
+        name: "tls",
+        eku: Some("1.3.6.1.5.5.7.3.1"),
+    },
+    Env {
+        name: "client_auth",
+        eku: Some("1.3.6.1.5.5.7.3.2"),
+    },
+    Env {
+        name: "email",
+        eku: Some("1.3.6.1.5.5.7.3.4"),
+    },
+    Env {
+        name: "code_signing",
+        eku: Some("1.3.6.1.5.5.7.3.3"),
+    },
+    Env {
+        name: "timestamping",
+        eku: Some("1.3.6.1.5.5.7.3.8"),
+    },
+];
 
-    if Path::new(sentinel).exists() {
-        match refresh(published_at, envs) {
-            Ok(Outcome::Unchanged(why)) => log::info!("trust list unchanged: {why}"),
-            Ok(Outcome::Kept { why }) => {
-                log::warn!("keeping the committed trust material: {why}")
-            }
-            Ok(Outcome::Rewritten { carried, listed }) => log::warn!(
-                "trust list changed: {carried} of {listed} entries carried. Review the diff under \
-                 roots/ and src/ before committing."
-            ),
-            Err(e) => panic!("rewriting the Microsoft trust material failed: {e:#}"),
-        }
-    }
+/// Refresh a provider crate from the published trust list.
+///
+/// Returns what happened rather than deciding what to do about it: the CLI prints it, and a
+/// scheduled job turns a rewrite into a pull request for a person to read.
+///
+/// **Reaching the publisher is not something to fail over.** An unreachable CDN, a cabinet that
+/// will not verify, a list that will not parse, a certificate that does not arrive -- every one of
+/// those is [`Outcome::Kept`], because the committed material is still good. `Err` is reserved for
+/// a write that was decided on and then failed, which is the one case that leaves a crate
+/// half-rewritten.
+pub fn refresh_crate(crate_dir: &Path, published_at: &str, envs: &[Env]) -> Result<Outcome> {
+    // The writers underneath address everything relative to the crate root, which is what a build
+    // script's working directory used to be. Entering it keeps those paths as they are and makes
+    // the crate an argument, which is what lets one command refresh any of them.
+    let previous = std::env::current_dir().context("the working directory could not be read")?;
+    std::env::set_current_dir(crate_dir)
+        .with_context(|| format!("{} could not be entered", crate_dir.display()))?;
+    let outcome = refresh(published_at, envs);
+    std::env::set_current_dir(previous).context("the working directory could not be restored")?;
+    outcome
+}
 
-    if let Err(e) = check_committed(envs) {
-        panic!("this crate's committed material does not check out: {e:#}");
-    }
+/// Check a provider crate's committed material: every file in `roots/` hashes to its own name.
+///
+/// The same comparison that admitted each certificate -- the list is signed and the certificates
+/// it names are not, so the SHA-1 the list gave is what binds them.
+pub fn check_crate(crate_dir: &Path, envs: &[Env]) -> Result<()> {
+    let previous = std::env::current_dir().context("the working directory could not be read")?;
+    std::env::set_current_dir(crate_dir)
+        .with_context(|| format!("{} could not be entered", crate_dir.display()))?;
+    let checked = check_committed(envs);
+    std::env::set_current_dir(previous).context("the working directory could not be restored")?;
+    checked
 }
 
 /// What a refresh did, which is almost always nothing.
-enum Outcome {
+pub enum Outcome {
     /// The publisher has nothing newer.
     Unchanged(String),
     /// The publisher could not be reached, or what came back could not be used. The committed
