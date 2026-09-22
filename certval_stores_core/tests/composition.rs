@@ -20,8 +20,10 @@ fn providers() -> Vec<&'static dyn TrustStoreProvider> {
     vec![
         certval_stores_eca::provider(),
         certval_stores_fpki::provider(),
+        certval_stores_msft::provider(),
         certval_stores_nipr::provider(),
         certval_stores_pbdev::provider(),
+        certval_stores_tpm::provider(),
         certval_stores_wcf::provider(),
     ]
 }

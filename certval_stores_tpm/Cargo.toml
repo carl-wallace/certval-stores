@@ -1,0 +1,35 @@
+[package]
+name = "certval_stores_tpm"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+description = "TPM vendor trust store for certval, from Microsoft's TrustedTpm.cab"
+# `refresh-inputs` marks a working tree where `build.rs` may re-fetch the cabinet and rewrite the
+# generated material. It is gitignored and never committed: a git dependency is a checkout of this
+# repository, so a committed sentinel would put every consumer's build on the refresh path.
+exclude = ["refresh-inputs"]
+
+[dependencies]
+certval_stores_core = { path = "../certval_stores_core", default-features = false }
+
+[features]
+# One environment, on by default, following certval_stores_eca rather than certval_stores_nipr:
+# nipr's are opt-in because a consumer must choose between two, and there is nothing to choose
+# here. The vendors inside are one trust set, not a menu -- an attestation key chains to whichever
+# vendor made the part.
+default = ["tpm", "reqwest-client"]
+reqwest-client = ["certval_stores_core/reqwest-client"]
+tpm = []
+
+
+[dev-dependencies]
+certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, features = [
+    "std",
+    "rsa",
+    "sha1_sig",
+], branch = "main" }
+certval_stores_core = { path = "../certval_stores_core", default-features = false, features = [
+    "test-util",
+] }
+# The regeneration test: unpack the committed cabinet and rebuild what ships from it.
+certval-store-gen = { path = "../certval-store-gen", default-features = false, features = ["tpm"] }

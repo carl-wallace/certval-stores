@@ -110,6 +110,34 @@ enum Command {
         #[arg(long, num_args = 1.., required = true)]
         stream: Vec<PathBuf>,
     },
+    /// Microsoft root program: fetch the signed trust list and regenerate a provider crate.
+    ///
+    /// Behind the `authroot` feature, like the adapter it drives: a build of this tool that does
+    /// not carry the cabinet machinery does not offer a command that needs it.
+    #[cfg(feature = "authroot")]
+    ///
+    /// Not a build script, deliberately: refreshing this source needs tpm_cab_verify, the
+    /// authenticode fork and a pre-release ASN.1 stack, whose patch entries do not travel with a
+    /// git dependency. Keeping it here means a consumer embedding the material never resolves any
+    /// of that.
+    Authroot {
+        /// Root of the certval_stores_msft crate to refresh.
+        #[arg(long, default_value = "certval_stores_msft")]
+        crate_dir: PathBuf,
+        /// Check the committed material and fetch nothing. What CI runs on a pull request.
+        #[arg(long)]
+        check_only: bool,
+    },
+    /// TPM vendor roots: fetch TrustedTpm.cab and regenerate a provider crate.
+    #[cfg(feature = "tpm")]
+    Tpm {
+        /// Root of the certval_stores_tpm crate to refresh.
+        #[arg(long, default_value = "certval_stores_tpm")]
+        crate_dir: PathBuf,
+        /// Names the directories under roots/, cas/ and provenance/.
+        #[arg(long, default_value = "tpm")]
+        env: String,
+    },
     /// DoD: an InstallRoot `.ir4` stream.
     Installroot {
         /// Path to the stream (e.g. DoD.ir4, JITC.ir4).
@@ -173,6 +201,22 @@ fn main() -> Result<()> {
     // rather than producing a store from them.
     if let Command::Verify { stream } = &cli.command {
         return verify_streams(&pe, stream);
+    }
+
+    // These two own their whole pipeline -- fetch, verify, classify, generate, write -- rather
+    // than producing StoreInputs for the shared path below, because what they fetch decides what
+    // they generate. They return here for the same reason `verify` does.
+    #[cfg(feature = "authroot")]
+    if let Command::Authroot {
+        crate_dir,
+        check_only,
+    } = &cli.command
+    {
+        return run_authroot(crate_dir, *check_only);
+    }
+    #[cfg(feature = "tpm")]
+    if let Command::Tpm { crate_dir, env } = &cli.command {
+        return run_tpm(crate_dir, env);
     }
 
     let mut inputs = match &cli.command {
@@ -256,6 +300,14 @@ fn main() -> Result<()> {
         // Handled above; the match has to name these to stay exhaustive.
         Command::Recode { .. } => unreachable!("recoding returns before this point"),
         Command::Verify { .. } => unreachable!("verification returns before this point"),
+        #[cfg(feature = "authroot")]
+        Command::Authroot { .. } => {
+            unreachable!("the cabinet-sourced commands return before this point")
+        }
+        #[cfg(feature = "tpm")]
+        Command::Tpm { .. } => {
+            unreachable!("the cabinet-sourced commands return before this point")
+        }
         Command::Installroot {
             stream, population, ..
         } => {
@@ -359,6 +411,53 @@ fn recode_stores(stores: &[PathBuf], dry_run: bool) -> Result<()> {
 /// Every stream is checked before anything is reported as failing, so one run names all the bad
 /// files. A check that stopped at the first would make a repository with two broken streams take
 /// two rounds to fix.
+/// Refresh, or check, the Microsoft root program crate.
+#[cfg(feature = "authroot")]
+fn run_authroot(crate_dir: &Path, check_only: bool) -> anyhow::Result<()> {
+    use certval_store_gen::authroot_refresh::{check_crate, refresh_crate, Outcome, ENVIRONMENTS};
+
+    if check_only {
+        check_crate(crate_dir, ENVIRONMENTS)?;
+        log::info!("{}: committed material checks out", crate_dir.display());
+        return Ok(());
+    }
+    match refresh_crate(
+        crate_dir,
+        certval_store_gen::adapters::authroot::CAB_URL,
+        ENVIRONMENTS,
+    )? {
+        Outcome::Unchanged(why) => log::info!("nothing to do: {why}"),
+        Outcome::Kept { why } => log::warn!("keeping the committed material: {why}"),
+        Outcome::Rewritten { carried, listed } => log::warn!(
+            "rewritten: {carried} of {listed} listed entries carried. Review the diff before \
+             committing."
+        ),
+    }
+    Ok(())
+}
+
+/// Refresh the TPM vendor crate.
+#[cfg(feature = "tpm")]
+fn run_tpm(crate_dir: &Path, env: &str) -> anyhow::Result<()> {
+    use certval_store_gen::tpm_refresh::{refresh_crate, Outcome};
+
+    match refresh_crate(crate_dir, env)? {
+        Outcome::Current { published } => log::info!("nothing to do: current as of {published}"),
+        Outcome::Kept { why } => log::warn!("keeping the committed material: {why}"),
+        Outcome::Regenerated {
+            published,
+            anchors,
+            intermediates,
+            dropped,
+        } => log::warn!(
+            "rewritten from a cabinet published {published}: {anchors} roots, {intermediates} \
+             intermediates, {dropped} dropped for reaching no root. Review the diff before \
+             committing."
+        ),
+    }
+    Ok(())
+}
+
 fn verify_streams(pe: &PkiEnvironment, streams: &[PathBuf]) -> Result<()> {
     let mut failures = vec![];
     for path in streams {
@@ -457,9 +556,14 @@ fn write_provider(
         dir,
         env,
         env,
-        &inputs.trust_anchors,
-        &inputs.intermediates,
-        store,
+        provider::Material {
+            anchors: &inputs.trust_anchors,
+            intermediates: &inputs.intermediates,
+            // The CLI generates the environments a person curates by hand, which have dozens of
+            // intermediates at most, so their diffs stay certificate by certificate.
+            loose: provider::Intermediates::AsFiles,
+            store,
+        },
         provenance,
     )?;
     log::info!(

@@ -1,0 +1,96 @@
+# Refreshing the cabinet-sourced providers, on a schedule.
+#
+# These two crates commit material a publisher keeps changing, and nothing in a consumer's build
+# fetches anything -- deliberately, since refreshing needs tpm_cab_verify, the authenticode fork
+# and a pre-release ASN.1 stack whose patch entries do not travel with a git dependency. So the
+# refresh lives here, where that patch table is, and runs whether or not anyone is building.
+#
+# The predecessor of tpm_roots rotted because keeping it current depended on someone remembering.
+# A schedule does not forget; the review still happens, as a pull request.
+#
+# **A refresh PR is expected to arrive red.** Each crate pins its counts -- 357 roots carried, 47
+# TPM roots, 42 dropped -- so when a publisher moves, the tests fail and name what changed. A
+# person reads the certificate diff, updates the constants, and merges. That failure is the
+# acknowledgement gate those constants exist for; a green one would mean nothing changed, and then
+# no pull request is opened at all.
+name: refresh providers
+
+on:
+  schedule:
+    # Weekly. Microsoft's trust list changes about monthly and the TPM cabinet less often, but a
+    # conditional GET costs 200 bytes, and what is worth catching quickly is not an addition --
+    # it is a root acquiring a disallowed date, which is a distrust event.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # Two jobs rather than one: the TPM refresh re-fetches 2.9 MB and spends two minutes building a
+  # path graph, and a timeout there must not hide a Microsoft trust list that moved.
+  refresh:
+    name: ${{ matrix.crate }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - crate: certval_stores_msft
+            command: authroot
+          - crate: certval_stores_tpm
+            command: tpm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Refresh from the publisher
+        env:
+          RUST_LOG: info
+        run: |
+          cargo run -p certval-store-gen --features cli,authroot,tpm -- \
+            ${{ matrix.command }} --crate-dir ${{ matrix.crate }} 2>&1 | tee refresh.log
+
+      - name: Open a pull request if the material moved
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(git status --porcelain ${{ matrix.crate }})" ]; then
+            echo "nothing changed"
+            exit 0
+          fi
+          branch="refresh/${{ matrix.crate }}-$(date -u +%Y%m%d)"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add ${{ matrix.crate }}
+          # The tool's own summary is the commit body: it states what was carried, what was
+          # dropped and what the publisher dated it, which is what a reviewer needs before
+          # opening a single certificate.
+          git commit -F - <<EOF
+          refresh ${{ matrix.crate }} from the publisher
+
+          $(grep -E 'rewritten|carried|dropped' refresh.log || true)
+          EOF
+          git push origin "$branch"
+          gh pr create \
+            --title "refresh ${{ matrix.crate }}" \
+            --body "$(cat <<'BODY'
+          Opened by the scheduled refresh. The material here came from the publisher and was
+          signature-checked before being written: the Microsoft trust list by its own CMS
+          signature against the pinned anchor, the TPM cabinet by its Authenticode signature.
+
+          **CI on this pull request is expected to fail.** Each crate pins the counts its material
+          had when it was last reviewed, so a change fails the tests and names itself. Read the
+          certificate diff, update the constants, and merge.
+
+          Worth looking at first:
+
+          - roots added or removed -- each is a trust decision by the publisher
+          - `provenance/*/dropped.txt`, where it exists: a count moving down means a publisher
+            started including an issuer, up means a vendor's root stopped being carried
+          - for the Microsoft list, roots that left because they acquired a disallowed date rather
+            than because they expired
+          BODY
+          )"

@@ -179,6 +179,73 @@ impl std::fmt::Display for FetchError {
     }
 }
 
+/// The body of a conditional GET and the validator to store for next time, or `None` when the
+/// server said nothing has changed.
+///
+/// Behind `authroot` rather than `fetch`, because that is where the only caller is: an InstallRoot
+/// stream is compared by the publication date inside it, so nothing else here asks a server
+/// whether it has anything new. A second caller arriving under `fetch` alone will fail to compile
+/// and can move this gate then, which is better than an `allow(dead_code)` that hides the day it
+/// stops being true.
+#[cfg(feature = "authroot")]
+pub(crate) type Conditional = Option<(Vec<u8>, Option<String>)>;
+
+/// GET `url` unless the server says it has not changed since `since`.
+///
+/// `Ok(None)` is a 304: the copy in hand is current, and the point of asking. A publisher that
+/// changes its material monthly answers this way on all but one request, which is what makes a
+/// refresh cheap enough to run on every build in a working tree.
+///
+/// `Ok(Some((bytes, last_modified)))` carries the validator to store for next time, where the
+/// server offers one. A server that offers none is not an error -- the caller then falls back to
+/// whatever the material states about itself, which is the stronger check anyway.
+#[cfg(feature = "authroot")]
+pub(crate) fn fetch_if_modified(url: &str, since: Option<&str>) -> Result<Conditional, FetchError> {
+    let mut request = ureq::get(url);
+    if let Some(since) = since {
+        request = request.header("If-Modified-Since", since);
+    }
+
+    let mut response = match request.call() {
+        // Not modified reaches here two ways depending on how the client is configured: as a
+        // status error below, and -- measured against this CDN -- as a perfectly ordinary response
+        // with status 304 and no body. Reading only the first leaves a caller holding zero bytes
+        // and calling them content, which is how a no-op refresh turns into "what the server sent
+        // is not a cabinet".
+        Ok(response) if response.status() == 304 => return Ok(None),
+        Ok(response) => response,
+        // Not modified is an answer, not a failure, and it arrives here as a status error because
+        // ureq treats every non-2xx that way. Checked before the 4xx/5xx split below, which would
+        // otherwise file it as unreachable.
+        Err(ureq::Error::StatusCode(304)) => return Ok(None),
+        Err(e) => {
+            let message = format!("{url} could not be fetched: {e}");
+            return Err(match &e {
+                ureq::Error::StatusCode(code) => match (400..500).contains(code) {
+                    true => FetchError::Absent(message),
+                    false => FetchError::Unreachable(message),
+                },
+                _ => FetchError::Unreachable(message),
+            });
+        }
+    };
+
+    let last_modified = response
+        .headers()
+        .get("last-modified")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_string);
+
+    let bytes = response
+        .body_mut()
+        .with_config()
+        .limit(MAX_STREAM_BYTES)
+        .read_to_vec()
+        .map_err(|e| FetchError::Unreachable(format!("{url} could not be read: {e}")))?;
+
+    Ok(Some((bytes, last_modified)))
+}
+
 /// GET `url` into memory, bounded by [`MAX_STREAM_BYTES`].
 pub(crate) fn fetch(url: &str) -> Result<Vec<u8>, FetchError> {
     let mut response = ureq::get(url).call().map_err(|e| {
