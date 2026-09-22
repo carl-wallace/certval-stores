@@ -5,6 +5,9 @@
 //! the agreement between the embedded root list and the files beside it, and the guarantee that
 //! what ships is what the committed cabinet generates.
 
+// Gated like every test that uses it: without the environment feature this crate serves nothing
+// and the file-reading tests are not compiled.
+#[cfg(feature = "tpm")]
 use std::path::Path;
 
 use certval_stores_core::conformance;
