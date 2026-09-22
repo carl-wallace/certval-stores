@@ -29,6 +29,16 @@ const EXPECTED_CODE_SIGNING: usize = 143;
 #[cfg(feature = "msft_timestamping")]
 const EXPECTED_TIMESTAMPING: usize = 162;
 
+/// Gated like the tests that call it: with no environment feature enabled this crate serves
+/// nothing, so there is no entry to look up.
+#[cfg(any(
+    feature = "msft_all",
+    feature = "msft_tls",
+    feature = "msft_client_auth",
+    feature = "msft_email",
+    feature = "msft_code_signing",
+    feature = "msft_timestamping"
+))]
 fn entry(id: &str) -> certval_stores_core::StoreEntry {
     certval_stores_msft::provider()
         .entries()
