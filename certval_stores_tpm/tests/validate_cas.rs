@@ -1,3 +1,9 @@
+//! Without the `tpm` feature this crate serves no environment, so the whole file compiles to
+//! nothing -- which is what `cargo test --no-default-features` builds in CI. Note that it then
+//! reports zero tests rather than failing, so a gate that is wrong in the other direction is
+//! silent; the feature-on run is what proves these execute.
+#![cfg(feature = "tpm")]
+
 //! Per-vendor path validation over the fixtures this crate ships.
 //!
 //! Moved here from `tpm_roots` when the material did: these build and validate real certification
