@@ -18,11 +18,19 @@ use certval_stores_core::conformance;
 #[cfg(feature = "tpm")]
 const EXPECTED_ROOTS: usize = 47;
 #[cfg(feature = "tpm")]
-const EXPECTED_INTERMEDIATES: usize = 2480;
-/// Intermediates the cabinet publishes that reach no root in it, listed in
-/// `provenance/tpm/dropped.txt`. Mostly AMD fTPM CAs whose issuers it does not include.
+const EXPECTED_INTERMEDIATES: usize = 2112;
+/// Intermediates the cabinet publishes that the store does not carry, listed with their reasons in
+/// `provenance/tpm/dropped.txt`: 36 that reach no root in it (mostly AMD fTPM CAs whose issuers it
+/// does not include), 6 that do not decode (STMicro, a non-canonical INTEGER), 366 that had already
+/// expired when the cabinet was published, and 2 Qualcomm CAs the cabinet dates a month *after* it
+/// was published, which is the same contradiction read the other way.
+///
+/// The expired majority is the deliberate part. Carrying material a publisher had already outlived
+/// costs 698 KB in a store that ships baked into a browser, and this crate's consumers validate
+/// attestations from parts in service rather than historical ones. A store of everything the
+/// cabinet holds would be a separate crate, not a flag on this one.
 #[cfg(feature = "tpm")]
-const EXPECTED_DROPPED: usize = 42;
+const EXPECTED_DROPPED: usize = 410;
 
 #[cfg(feature = "tpm")]
 fn entry() -> certval_stores_core::StoreEntry {
@@ -120,8 +128,13 @@ fn the_dropped_intermediates_are_recorded() {
 fn the_store_is_what_the_committed_cabinet_generates() {
     let cab = std::fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join("inputs/TrustedTpm.cab"))
         .expect("the committed cabinet must be readable");
-    let (inputs, dropped) =
-        certval_store_gen::tpm_refresh::regenerate_from(&cab).expect("the cabinet must regenerate");
+    // The same reference date the committed store was generated with. Absent means the cabinet's
+    // own publication date, which is the default; present means a maintainer chose one, and the
+    // store has to be measured against that rather than against a date it never saw.
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let as_of = certval_store_gen::tpm_refresh::recorded_as_of(dir, "tpm");
+    let (inputs, dropped) = certval_store_gen::tpm_refresh::regenerate_from(&cab, as_of.as_deref())
+        .expect("the cabinet must regenerate");
 
     assert_eq!(
         inputs.trust_anchors.len(),
@@ -147,4 +160,124 @@ fn the_store_is_what_the_committed_cabinet_generates() {
 fn the_environment_prepares() {
     let failures = conformance::check_prepare_environment(certval_stores_tpm::provider());
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// Every intermediate in the store builds a path to one of the embedded anchors and validates it.
+///
+/// `partial_paths_cover_every_ca` establishes that each CA is *reachable*: discovery indexes by
+/// name and key identifier and verifies no signature, so a certificate can appear in a partial
+/// path without being issued by the CA the path names. This is the stronger claim, and it is the
+/// check `tpm_roots` ran in its build script before shipping a CA -- build the paths, validate
+/// them, keep only the certificates for which one validates. `prune_unrooted` does not replace it,
+/// and says so itself: it is not a judgement about the certificates.
+///
+/// Validated as of the cabinet's own publication date, which is the generator's postcondition
+/// rather than a choice this test makes: `prune_unvalidated` drops what does not validate at that
+/// time, so this asserts what generation is supposed to have left behind. Not `now` -- the nine
+/// intermediates that have lapsed since July are legitimately carried, and a test that failed as
+/// the calendar moved would be measuring the wrong thing. Not disabled either, which would pass
+/// over an expired certificate the generator was meant to have removed. Nothing is exempt: a
+/// certificate the cabinet dates after its own publication is dropped by the generator and so is
+/// absent here too.
+///
+/// Nothing here reaches the network: this crate builds certval without `revocation`.
+#[test]
+#[cfg(feature = "tpm")]
+fn every_intermediate_validates_to_a_root() {
+    use certval::{
+        CertFile, CertSource, CertVector, CertificationPath, CertificationPathResults,
+        CertificationPathSettings, PDVCertificate, PkiEnvironment, TaSource, TimeOfInterest,
+    };
+
+    let entry = entry();
+    let as_of = certval_store_gen::core::published_as_time_of_interest(
+        entry
+            .published
+            .expect("the tpm entry states a publication date"),
+    )
+    .expect("the publication date must convert");
+    let mut cps = CertificationPathSettings::new();
+    cps.set_time_of_interest(as_of);
+
+    let mut pe = PkiEnvironment::default();
+    pe.populate_5280_pki_environment();
+
+    let mut ta_store = TaSource::new();
+    for (i, der) in entry.roots.iter().enumerate() {
+        ta_store.push(CertFile {
+            filename: format!("{} anchor #{i}", entry.id),
+            bytes: der.to_vec(),
+        });
+    }
+    ta_store.initialize().expect("the anchors must initialize");
+    pe.add_trust_anchor_source(Box::new(ta_store));
+
+    let mut cert_source =
+        CertSource::new_from_cbor(entry.cert_store_cbor.expect("the tpm store carries CAs"))
+            .expect("the CA store must load");
+    // Discovery stays untimed for the reason `prune_unvalidated` gives: a time-gated discovery
+    // yields no path for an expired certificate, which would report it as unrooted instead of
+    // expired and hide the thing this test is for.
+    let mut discovery = CertificationPathSettings::new();
+    discovery.set_time_of_interest(TimeOfInterest::disabled());
+    cert_source
+        .initialize(&discovery)
+        .expect("the CA store must initialize");
+    cert_source.find_all_partial_paths(&pe, &discovery);
+    let buffers = cert_source.get_buffers();
+    pe.add_certificate_source(Box::new(cert_source));
+
+    // Asserted before the loop so this cannot pass by validating nothing: an empty or
+    // short-loaded store would otherwise leave the failure list empty and the test green.
+    assert_eq!(buffers.len(), EXPECTED_INTERMEDIATES);
+
+    let mut unvalidated = vec![];
+    for cf in &buffers {
+        let cert = match PDVCertificate::try_from(cf.bytes.as_slice()) {
+            Ok(cert) => cert,
+            Err(e) => {
+                unvalidated.push(format!("{}: did not parse: {e:?}", cf.filename));
+                continue;
+            }
+        };
+
+        let mut paths: Vec<CertificationPath> = vec![];
+        if let Err(e) = pe.get_paths_for_target(&cert, &mut paths, 0, TimeOfInterest::disabled()) {
+            unvalidated.push(format!("{}: path building failed: {e:?}", cf.filename));
+            continue;
+        }
+        if paths.is_empty() {
+            unvalidated.push(format!("{}: no path to an anchor", cf.filename));
+            continue;
+        }
+
+        // One validating path is enough -- a CA cross-certified by several issuers needs only the
+        // one a relying party would actually use.
+        let mut errors = vec![];
+        let validated = paths.iter().any(|path| {
+            let mut cpr = CertificationPathResults::new();
+            match pe.validate_path(&pe, &cps, path, &mut cpr) {
+                Ok(()) => true,
+                Err(e) => {
+                    errors.push(e);
+                    false
+                }
+            }
+        });
+        if !validated {
+            unvalidated.push(format!(
+                "{}: {} path(s), none validated: {errors:?}",
+                cf.filename,
+                paths.len()
+            ));
+        }
+    }
+
+    assert!(
+        unvalidated.is_empty(),
+        "{} of {} intermediates do not validate to an embedded anchor:\n{}",
+        unvalidated.len(),
+        buffers.len(),
+        unvalidated.join("\n")
+    );
 }

@@ -53,8 +53,9 @@ const INTERMEDIATE_SEGMENT: &str = r"\IntermediateCA\";
 
 /// What a cabinet held, once classified.
 pub struct Contents {
-    /// Anchors and intermediates, ready for [`crate::core::generate`] -- but not yet pruned of
-    /// intermediates that reach no anchor; see [`crate::core::prune_unrooted`].
+    /// Anchors and intermediates as the cabinet held them, before pruning: everything the
+    /// publisher shipped, including CAs that reach no anchor in it and CAs it had already
+    /// outlived. See [`crate::core::prune_unvalidated`], which decides what the store carries.
     pub inputs: StoreInputs,
     /// Members that named a certificate location and did not yield one, with the reason. Never
     /// silently discarded: a vendor folder that stops parsing is how a store quietly shrinks.

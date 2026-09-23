@@ -137,6 +137,15 @@ enum Command {
         /// Names the directories under roots/, cas/ and provenance/.
         #[arg(long, default_value = "tpm")]
         env: String,
+        /// Regenerate from the cabinet already committed under inputs/ and fetch nothing. For when
+        /// this tool's rules change rather than the publisher's material.
+        #[arg(long)]
+        from_committed: bool,
+        /// Validate the intermediates as of this date (YYYY-MM-DD) instead of the cabinet's own
+        /// publication date. Recorded in provenance/<env>/as_of.txt so the crate's regeneration
+        /// test uses the same date; omit it to go back to the cabinet's.
+        #[arg(long)]
+        as_of: Option<String>,
     },
     /// DoD: an InstallRoot `.ir4` stream.
     Installroot {
@@ -215,8 +224,14 @@ fn main() -> Result<()> {
         return run_authroot(crate_dir, *check_only);
     }
     #[cfg(feature = "tpm")]
-    if let Command::Tpm { crate_dir, env } = &cli.command {
-        return run_tpm(crate_dir, env);
+    if let Command::Tpm {
+        crate_dir,
+        env,
+        from_committed,
+        as_of,
+    } = &cli.command
+    {
+        return run_tpm(crate_dir, env, *from_committed, as_of.as_deref());
     }
 
     let mut inputs = match &cli.command {
@@ -438,10 +453,15 @@ fn run_authroot(crate_dir: &Path, check_only: bool) -> anyhow::Result<()> {
 
 /// Refresh the TPM vendor crate.
 #[cfg(feature = "tpm")]
-fn run_tpm(crate_dir: &Path, env: &str) -> anyhow::Result<()> {
+fn run_tpm(
+    crate_dir: &Path,
+    env: &str,
+    from_committed: bool,
+    as_of: Option<&str>,
+) -> anyhow::Result<()> {
     use certval_store_gen::tpm_refresh::{refresh_crate, Outcome};
 
-    match refresh_crate(crate_dir, env)? {
+    match refresh_crate(crate_dir, env, from_committed, as_of)? {
         Outcome::Current { published } => log::info!("nothing to do: current as of {published}"),
         Outcome::Kept { why } => log::warn!("keeping the committed material: {why}"),
         Outcome::Regenerated {
@@ -451,8 +471,8 @@ fn run_tpm(crate_dir: &Path, env: &str) -> anyhow::Result<()> {
             dropped,
         } => log::warn!(
             "rewritten from a cabinet published {published}: {anchors} roots, {intermediates} \
-             intermediates, {dropped} dropped for reaching no root. Review the diff before \
-             committing."
+             intermediates, {dropped} dropped for reaching no root or not validating as of that \
+             date. Review the diff before committing."
         ),
     }
     Ok(())
