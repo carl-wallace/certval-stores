@@ -432,3 +432,80 @@ fn the_cceb_interop_store_carries_the_doubled_dod_roots() {
         "{doubled:?}"
     );
 }
+
+/// What ships is what the committed `.ir4` stream generates.
+///
+/// The check `build.rs` ran on every build, moved to where it costs a consumer nothing. It is
+/// strictly stronger than `*_generator_inputs_match_the_store` above: that compares the loose
+/// `cas/<env>/*.der` files against the store, and the generator wrote both, so they agree even
+/// when neither matches the stream. This regenerates from `inputs/<stream>` -- the signed
+/// artifact of record -- and compares the certificate sets.
+///
+/// `Skipped` fails here where a build script tolerated it. A build could not know whether a
+/// crate ships an input at all; these four do, so nothing to inspect means something is missing.
+#[cfg(any(
+    feature = "nipr",
+    feature = "om_nipr",
+    feature = "nipr_interop",
+    feature = "nipr_cceb_interop"
+))]
+fn assert_store_matches_stream(stream: &str, extra_roots: &[&str], extra_cas: &[&str], env: &str) {
+    use certval_store_gen::build_check::{tamp_store_with, Verdict};
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let abs_roots: Vec<String> = extra_roots
+        .iter()
+        .map(|p| dir.join(p).display().to_string())
+        .collect();
+    let abs_cas: Vec<String> = extra_cas
+        .iter()
+        .map(|p| dir.join(p).display().to_string())
+        .collect();
+    let roots: Vec<&str> = abs_roots.iter().map(String::as_str).collect();
+    let cas: Vec<&str> = abs_cas.iter().map(String::as_str).collect();
+
+    let verdict = tamp_store_with(
+        &dir.join("inputs").join(stream),
+        "dod",
+        &roots,
+        &cas,
+        &dir.join(format!("cas/{env}/{env}.cbor")),
+    );
+    match verdict {
+        Verdict::Match { .. } => {}
+        other => panic!("{env} does not match what {stream} generates: {other:?}"),
+    }
+}
+
+#[test]
+#[cfg(feature = "nipr")]
+fn nipr_store_is_what_the_committed_stream_generates() {
+    assert_store_matches_stream("DoD.ir4", &[], &[], "prod");
+}
+
+#[test]
+#[cfg(feature = "om_nipr")]
+fn om_nipr_store_is_what_the_committed_stream_generates() {
+    assert_store_matches_stream("JITC.ir4", &[], &[], "om");
+}
+
+#[test]
+#[cfg(feature = "nipr_interop")]
+fn nipr_interop_store_is_what_the_committed_stream_generates() {
+    assert_store_matches_stream(
+        "DoD.ir4",
+        &["inputs/DoD_Interoperability_Root_CA_2.der"],
+        &["inputs/DODINTEROPERABILITYROOTCA2_IB.p7c"],
+        "interop",
+    );
+}
+
+#[test]
+#[cfg(feature = "nipr_cceb_interop")]
+fn nipr_cceb_interop_store_is_what_the_committed_stream_generates() {
+    assert_store_matches_stream(
+        "DoD.ir4",
+        &["inputs/US_DoD_CCEB_Interoperability_Root_CA_2.der"],
+        &["inputs/USDODCCEBINTEROPERABILITYROOTCA2_IB.p7c"],
+        "cceb_interop",
+    );
+}

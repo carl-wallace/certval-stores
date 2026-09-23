@@ -72,8 +72,8 @@ log = "0.4"
 # Behind `cli` so a build script depending on this crate for the library takes neither.
 clap = { version = "4.5", features = ["derive"], optional = true }
 env_logger = { version = "0.11", optional = true }
-# Behind `fetch`, and synchronous: fetching a stream is one blocking GET from a build script, so
-# ureq is the whole HTTP client this crate needs of its own. reqwest is in the graph regardless --
+# Behind `fetch`, and synchronous: fetching a stream is one blocking GET from a synchronous caller,
+# so ureq is the whole HTTP client this crate needs of its own. reqwest is in the graph regardless --
 # certval's `remote` feature brings it for revocation checking -- so this is about the shape of the
 # call rather than about keeping the stack out.
 ureq = { version = "3", optional = true }

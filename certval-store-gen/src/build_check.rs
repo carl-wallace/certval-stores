@@ -22,6 +22,7 @@ use crate::core::generate;
 use crate::verify::Revocation;
 
 /// What a check found.
+#[derive(Debug)]
 pub enum Verdict {
     /// The committed store holds exactly the certificates the input produces.
     Match { certificates: usize },

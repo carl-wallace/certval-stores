@@ -1,6 +1,6 @@
 //! The build-script driver a provider crate generated from `TrustedTpm.cab` runs.
 //!
-//! Same sentinel as [`crate::build_refresh`] and [`crate::authroot_refresh`]: **in a working tree
+//! Same sentinel as [`crate::authroot_refresh`]: **in a working tree
 //! with it present** the cabinet is re-fetched, verified, and -- if the publisher has something
 //! newer -- the crate's material is regenerated for a person to review; **anywhere else** nothing
 //! is fetched and nothing is written.

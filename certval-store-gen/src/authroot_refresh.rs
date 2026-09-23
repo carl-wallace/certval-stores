@@ -1,6 +1,6 @@
 //! The build-script driver a provider crate generated from the Microsoft trust list runs.
 //!
-//! Same two halves as [`crate::build_refresh`], and the same sentinel: **in a working tree with
+//! Same two halves as [`crate::tpm_refresh`], and the same sentinel: **in a working tree with
 //! the sentinel present** the list is re-fetched and, when it has changed, the crate's material is
 //! rewritten for a person to review and commit; **anywhere else** nothing is fetched and nothing
 //! is written, and the consumer gets the committed material and the checks.

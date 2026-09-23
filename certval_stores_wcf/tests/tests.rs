@@ -210,3 +210,28 @@ fn the_wcf_entry_carries_both_dates() {
     assert!(wcf.published.is_some(), "WCF.ir4 is timestamped");
     assert!(wcf.collected.is_some());
 }
+
+/// What ships is what the committed `WCF.ir4` generates.
+///
+/// The check `build.rs` ran on every build, moved to where it costs a consumer nothing. Stronger
+/// than comparing the loose `cas/prod/*.der` files against the store, since the generator wrote
+/// both of those and they agree even when neither matches the stream. This regenerates from
+/// `inputs/WCF.ir4` -- the signed artifact of record.
+///
+/// `Skipped` fails here where a build script tolerated it: a build could not know whether a crate
+/// ships an input at all, and this one does.
+#[test]
+#[cfg(feature = "wcf")]
+fn the_store_is_what_the_committed_stream_generates() {
+    use certval_store_gen::build_check::{tamp_store, Verdict};
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let verdict = tamp_store(
+        &dir.join("inputs/WCF.ir4"),
+        "wcf",
+        &dir.join("cas/prod/prod.cbor"),
+    );
+    match verdict {
+        Verdict::Match { .. } => {}
+        other => panic!("the committed store does not match what WCF.ir4 generates: {other:?}"),
+    }
+}

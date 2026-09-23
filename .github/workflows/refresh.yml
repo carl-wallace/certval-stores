@@ -94,3 +94,99 @@ jobs:
             than because they expired
           BODY
           )"
+
+  # The InstallRoot streams, in two steps rather than one. Several environments can read the same
+  # stream -- NIPR's production store and both interoperability stores all come from DoD.ir4 -- so
+  # the publisher is asked once per stream and the generator run once per environment. This is the
+  # table that used to live in each crate's build.rs, moved here when those went: a consumer builds
+  # these crates without compiling certval or reqwest, and without a refresh it could not act on.
+  refresh-streams:
+    name: ${{ matrix.crate }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - crate: certval_stores_nipr
+            fetch: |
+              gen refresh --url $BASE/DoD.ir4  --into certval_stores_nipr/inputs/DoD.ir4  --population dod
+              gen refresh --url $BASE/JITC.ir4 --into certval_stores_nipr/inputs/JITC.ir4 --population dod
+            generate: |
+              gen installroot --stream certval_stores_nipr/inputs/DoD.ir4 --population dod \
+                --provider-dir certval_stores_nipr --env prod
+              gen installroot --stream certval_stores_nipr/inputs/JITC.ir4 --population dod \
+                --provider-dir certval_stores_nipr --env om
+              gen installroot --stream certval_stores_nipr/inputs/DoD.ir4 --population dod \
+                --provider-dir certval_stores_nipr --env interop \
+                --extra-roots certval_stores_nipr/inputs/DoD_Interoperability_Root_CA_2.der \
+                --extra-cas   certval_stores_nipr/inputs/DODINTEROPERABILITYROOTCA2_IB.p7c
+              gen installroot --stream certval_stores_nipr/inputs/DoD.ir4 --population dod \
+                --provider-dir certval_stores_nipr --env cceb_interop \
+                --extra-roots certval_stores_nipr/inputs/US_DoD_CCEB_Interoperability_Root_CA_2.der \
+                --extra-cas   certval_stores_nipr/inputs/USDODCCEBINTEROPERABILITYROOTCA2_IB.p7c
+          - crate: certval_stores_eca
+            fetch: |
+              gen refresh --url $BASE/ECA.ir4 --into certval_stores_eca/inputs/ECA.ir4 --population eca
+            generate: |
+              gen installroot --stream certval_stores_eca/inputs/ECA.ir4 --population eca \
+                --provider-dir certval_stores_eca --env prod
+          - crate: certval_stores_wcf
+            fetch: |
+              gen refresh --url $BASE/WCF.ir4 --into certval_stores_wcf/inputs/WCF.ir4 --population wcf
+            generate: |
+              gen installroot --stream certval_stores_wcf/inputs/WCF.ir4 --population wcf \
+                --provider-dir certval_stores_wcf --env prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Fetch the streams
+        env:
+          RUST_LOG: info
+          BASE: https://crl.gds.disa.mil/pke/config
+        run: |
+          gen() { cargo run -q -p certval-store-gen --features cli -- "$@"; }
+          ${{ matrix.fetch }}
+
+      - name: Regenerate the environments that read a stream that moved
+        env:
+          RUST_LOG: info
+        run: |
+          if git diff --quiet ${{ matrix.crate }}/inputs; then
+            echo "no stream moved; nothing to regenerate"
+            exit 0
+          fi
+          gen() { cargo run -q -p certval-store-gen --features cli -- "$@"; }
+          ${{ matrix.generate }}
+
+      - name: Open a pull request if the material moved
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(git status --porcelain ${{ matrix.crate }})" ]; then
+            echo "nothing changed"
+            exit 0
+          fi
+          branch="refresh/${{ matrix.crate }}-$(date -u +%Y%m%d)"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add ${{ matrix.crate }}
+          git commit -m "refresh ${{ matrix.crate }} from the publisher"
+          git push origin "$branch"
+          gh pr create \
+            --title "refresh ${{ matrix.crate }}" \
+            --body "$(cat <<'BODY'
+          Opened by the scheduled refresh. The stream was parsed as its population before it
+          replaced anything, and a stream published *older* than the committed one is refused as a
+          rollback rather than taken.
+
+          **CI on this pull request is expected to fail.** Each crate pins the counts its material
+          had when it was last reviewed, so a change fails the tests and names itself. Read the
+          certificate diff, update the constants, and merge.
+
+          `*_store_is_what_the_committed_stream_generates` is the test that matters here: it
+          regenerates from the committed `.ir4` and compares certificate sets, so a store that
+          drifted from its own input fails even when the counts still line up.
+          BODY
+          )"
