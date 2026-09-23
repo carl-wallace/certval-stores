@@ -41,11 +41,19 @@ const RETRIES: usize = 3;
 /// Returns what happened rather than deciding what to do about it; see
 /// [`crate::authroot_refresh::refresh_crate`], which follows the same rule about what is an
 /// outcome and what is an error.
-pub fn refresh_crate(crate_dir: &Path, env: &str) -> Result<Outcome> {
+pub fn refresh_crate(
+    crate_dir: &Path,
+    env: &str,
+    from_committed: bool,
+    as_of: Option<&str>,
+) -> Result<Outcome> {
     let previous = std::env::current_dir().context("the working directory could not be read")?;
     std::env::set_current_dir(crate_dir)
         .with_context(|| format!("{} could not be entered", crate_dir.display()))?;
-    let outcome = refresh(env);
+    let outcome = match from_committed {
+        true => regenerate_committed(env, as_of),
+        false => refresh(env, as_of),
+    };
     std::env::set_current_dir(previous).context("the working directory could not be restored")?;
     outcome
 }
@@ -64,16 +72,46 @@ pub enum Outcome {
     },
 }
 
-fn refresh(env: &str) -> Result<Outcome> {
+/// Where the cabinet being generated from came from, which decides what has to be checked.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Source {
+    /// Just fetched. Its signature has not been looked at and it may be a rollback.
+    Fetched,
+    /// The `inputs/TrustedTpm.cab` already committed beside the crate. Its signature was checked
+    /// when it was committed, and re-emitting it is the point, so neither the signature route nor
+    /// the rollback guard applies -- and re-verifying would reach a timestamp authority, which is
+    /// what `regenerate_from` avoids for the same reason.
+    Committed,
+}
+
+fn refresh(env: &str, as_of: Option<&str>) -> Result<Outcome> {
     let cab = match fetch_with_retries() {
         Ok(cab) => cab,
         Err(why) => return Ok(Outcome::Kept { why }),
     };
+    refresh_with(env, cab, Source::Fetched, as_of)
+}
 
+/// Re-emit a provider crate from the cabinet already committed beside it.
+///
+/// For when the *generator* changes rather than the material: the pruning rules move, and the
+/// committed store has to be brought back into agreement with what the committed input now yields
+/// -- which is the agreement `the_store_is_what_the_committed_cabinet_generates` asserts. Touches
+/// no network.
+pub fn regenerate_committed(env: &str, as_of: Option<&str>) -> Result<Outcome> {
+    let cab = fs::read("inputs/TrustedTpm.cab")
+        .context("inputs/TrustedTpm.cab could not be read; there is nothing to regenerate from")?;
+    refresh_with(env, cab, Source::Committed, as_of)
+}
+
+fn refresh_with(env: &str, cab: Vec<u8>, source: Source, as_of: Option<&str>) -> Result<Outcome> {
     // Route 1: this cabinet vouches for its members, and none of them is signed on its own.
     // Asserted rather than assumed -- an unsigned cabinet here would mean the publisher changed
     // how the material is authenticated, which is a decision, not a detail.
-    match crate::cab::is_signed(&cab) {
+    match match source {
+        Source::Committed => Ok(true),
+        Source::Fetched => crate::cab::is_signed(&cab),
+    } {
         Ok(true) => {}
         Ok(false) => {
             return Ok(Outcome::Kept {
@@ -88,7 +126,10 @@ fn refresh(env: &str) -> Result<Outcome> {
             })
         }
     }
-    let members = match crate::cab::open_verified(&cab) {
+    let members = match match source {
+        Source::Committed => crate::cab::members(&cab),
+        Source::Fetched => crate::cab::open_verified(&cab),
+    } {
         Ok(members) => members,
         Err(e) => {
             return Ok(Outcome::Kept {
@@ -116,7 +157,7 @@ fn refresh(env: &str) -> Result<Outcome> {
     let committed = fs::read_to_string(format!("provenance/{env}/published.txt"))
         .ok()
         .map(|s| s.trim().to_string());
-    if let Some(have) = &committed {
+    if let (Source::Fetched, Some(have)) = (source, &committed) {
         if published.as_str() < have.as_str() {
             return Ok(Outcome::Kept {
                 why: format!(
@@ -138,10 +179,20 @@ fn refresh(env: &str) -> Result<Outcome> {
         log::warn!("a cabinet member did not yield a certificate: {skipped}");
     }
 
-    // Intermediates that reach no root cannot be carried: a store's own conformance checks require
-    // every CA to appear in a path. The names are recorded beside the material rather than logged
-    // and lost, so the count is reviewable and a publisher fixing one shows as a change.
-    let (inputs, dropped) = core::prune_unrooted(&contents.inputs)?;
+    // What the cabinet published that this store will not carry, and why. Two reasons: a CA whose
+    // issuer the cabinet omits reaches no root, and a CA that had already lapsed when the cabinet
+    // was published is not material a consumer of *this* store has a use for. Validating at the
+    // publication date rather than at now is what keeps the output a function of the input alone.
+    // The names are recorded beside the material rather than logged and lost, so the count is
+    // reviewable and a publisher fixing one shows as a change.
+    // The override is written beside the material, not just applied: the store has to stay a
+    // function of what is committed, and a reference date a person chose is part of that input.
+    // `regenerate_from` reads the same file, so the crate's own regeneration test keeps agreeing
+    // with a store generated this way instead of failing against it.
+    let reference = as_of.unwrap_or(published.as_str());
+    let toi = core::published_as_time_of_interest(reference)?;
+    write_as_of(env, as_of)?;
+    let (inputs, dropped) = core::prune_unvalidated(&contents.inputs, toi)?;
     let store = core::generate(&inputs)?;
     provider::write(
         Path::new("."),
@@ -155,7 +206,7 @@ fn refresh(env: &str) -> Result<Outcome> {
         },
         &provider::Provenance {
             published: Some(published.clone()),
-            collected: provider::today(),
+            collected: collected_stamp(env, source),
         },
     )?;
     write_dropped(env, &dropped)?;
@@ -174,6 +225,53 @@ fn refresh(env: &str) -> Result<Outcome> {
         intermediates: inputs.intermediates.len(),
         dropped: dropped.len(),
     })
+}
+
+/// Record the reference date a person chose, or clear the record when they chose none.
+///
+/// Absent means "the cabinet's own publication date", which is the default and needs no file. A
+/// present file is part of the committed input: [`regenerate_from`] is handed it, so the provider's
+/// regeneration test measures the store against the same date that produced it rather than against
+/// a date the store was never generated with.
+fn write_as_of(env: &str, as_of: Option<&str>) -> Result<()> {
+    let dir = format!("provenance/{env}");
+    fs::create_dir_all(&dir).with_context(|| format!("{dir} could not be created"))?;
+    let path = format!("{dir}/as_of.txt");
+    match as_of {
+        None => {
+            let _ = fs::remove_file(&path);
+            Ok(())
+        }
+        Some(date) => {
+            fs::write(&path, date).with_context(|| format!("{path} could not be written"))
+        }
+    }
+}
+
+/// The reference date recorded beside a committed environment, if one was. `None` means the
+/// cabinet's own publication date was used, which is the default.
+pub fn recorded_as_of(crate_dir: &Path, env: &str) -> Option<String> {
+    fs::read_to_string(crate_dir.join(format!("provenance/{env}/as_of.txt")))
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
+/// When this material was obtained, which is not the same as when the generator last ran.
+///
+/// A fetch collected it today. A regeneration from the committed cabinet collected nothing, so the
+/// date already beside it still stands -- stamping the run's date there would claim a freshness the
+/// store does not have, and `collected` is shown to a user as precisely that. Falls back to today
+/// only where nothing is recorded yet, which is a crate being populated for the first time.
+fn collected_stamp(env: &str, source: Source) -> String {
+    match source {
+        Source::Fetched => provider::today(),
+        Source::Committed => fs::read_to_string(format!("provenance/{env}/collected.txt"))
+            .map(|s| s.trim().to_string())
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(provider::today),
+    }
 }
 
 /// Where the generated store lives, which is also what tells a refresh the material is present.
@@ -203,7 +301,7 @@ fn fetch_with_retries() -> std::result::Result<Vec<u8>, String> {
 /// A file rather than a log line because it is the part of a regeneration a reviewer has to look
 /// at: thirty-odd AMD CAs have been unrooted for years, and the number changing is the signal --
 /// downward when a publisher fixes one, upward when a vendor's root stops being carried.
-fn write_dropped(env: &str, dropped: &[String]) -> Result<()> {
+fn write_dropped(env: &str, dropped: &[core::Dropped]) -> Result<()> {
     let dir = format!("provenance/{env}");
     fs::create_dir_all(&dir).with_context(|| format!("{dir} could not be created"))?;
     let path = format!("{dir}/dropped.txt");
@@ -212,13 +310,23 @@ fn write_dropped(env: &str, dropped: &[String]) -> Result<()> {
         return Ok(());
     }
     let mut body = String::from(
-        "# Intermediate CAs in the cabinet that reach no root in it, so the store does not carry\n\
-         # them. Written by certval-store-gen; a change here is a change in what the publisher\n\
-         # ships, not in this crate.\n",
+        "# Intermediate CAs in the cabinet that this store does not carry, with the reason.\n\
+         # Written by certval-store-gen; a change here is a change in what the publisher ships,\n\
+         # not in this crate.\n\
+         #\n\
+         # unrooted     the cabinet includes the CA but not its issuer, so nothing roots it\n\
+         # unvalidated  a path to a root exists and none validated as of the publication date;\n\
+         #              an InvalidNotAfterDate here is a CA the publisher shipped already lapsed\n",
     );
-    for name in dropped {
-        body.push_str(name);
-        body.push('\n');
+    for d in dropped {
+        match &d.reason {
+            core::DropReason::Unrooted => {
+                body.push_str(&format!("unrooted     {}\n", d.name));
+            }
+            core::DropReason::Unvalidated(why) => {
+                body.push_str(&format!("unvalidated  {}  {why}\n", d.name));
+            }
+        }
     }
     fs::write(&path, body).with_context(|| format!("{path} could not be written"))
 }
@@ -230,7 +338,10 @@ fn write_dropped(env: &str, dropped: &[String]) -> Result<()> {
 /// verification reaches a timestamp authority for revocation, and a test that fails when a
 /// responder is down is a test nobody trusts. The signature is checked where the material enters
 /// the repository, which is the refresh above.
-pub fn regenerate_from(cab: &[u8]) -> Result<(core::StoreInputs, Vec<String>)> {
+pub fn regenerate_from(
+    cab: &[u8],
+    as_of: Option<&str>,
+) -> Result<(core::StoreInputs, Vec<core::Dropped>)> {
     let members = crate::cab::members(cab).context("the committed cabinet did not unpack")?;
     let contents = tpm::build(&members)?;
     if !contents.skipped.is_empty() {
@@ -240,5 +351,14 @@ pub fn regenerate_from(cab: &[u8]) -> Result<(core::StoreInputs, Vec<String>)> {
             contents.skipped
         );
     }
-    core::prune_unrooted(&contents.inputs)
+    let published = contents
+        .inputs
+        .published
+        .as_deref()
+        .ok_or_else(|| anyhow!("the cabinet states no publication date to validate against"))?;
+    let reference = as_of.unwrap_or(published);
+    core::prune_unvalidated(
+        &contents.inputs,
+        core::published_as_time_of_interest(reference)?,
+    )
 }

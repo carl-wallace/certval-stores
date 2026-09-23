@@ -33,3 +33,18 @@ certval_stores_core = { path = "../certval_stores_core", default-features = fals
 ] }
 # The regeneration test: unpack the committed cabinet and rebuild what ships from it.
 certval-store-gen = { path = "../certval-store-gen", default-features = false, features = ["tpm"] }
+
+# For the per-vendor path validation in tests/validate_cas.rs, carried over from tpm_roots with the
+# tests themselves. `rsa`/`sha1` are the SHA-1 RSA verification callback some vendor certificates
+# still need, `cab` reads the committed cabinet's folder list, and the PEM decoders handle fixtures
+# that do not respect RFC 7468 line lengths.
+base64ct = { version = "1.8.3", features = ["alloc"] }
+cab = "0.6.0"
+tpm_cab_verify = { git = "https://github.com/carl-wallace/tpm_cab_verify.git", branch = "main" }
+log = "0.4.33"
+pem-rfc7468 = { version = "1.0.0", features = ["alloc"] }
+rsa = { version = "0.10.0-rc.18", features = ["pkcs5", "encoding"] }
+sha1 = { version = "0.11.0", features = ["oid"] }
+tokio = { version = "1.52.4", features = ["macros", "rt-multi-thread"] }
+walkdir = "2.5.0"
+x509-cert = { version = "0.3.0", features = ["hazmat"] }

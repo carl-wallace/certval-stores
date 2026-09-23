@@ -1,45 +1,417 @@
-# Intermediate CAs in the cabinet that reach no root in it, so the store does not carry
-# them. Written by certval-store-gen; a change here is a change in what the publisher
-# ships, not in this crate.
-AMD_AMD-fTPM-ECC-ICA-AERFamily-6A668AE95CA8508559C3E1D872F2417D
-AMD_AMD-fTPM-ECC-ICA-CRDFamily-5B401A1127EA54E3685B06D275FE8399
-AMD_AMD-fTPM-ECC-ICA-GNFamily-403113170A425ABD6B04CE6BF21FD467
-AMD_AMD-fTPM-ECC-ICA-GNRFamily-842A9A2652E452CC63DBD8FA9C218ED4
-AMD_AMD-fTPM-ECC-ICA-HPTFamily-F21A726D76AF588151CA619A0596D812
-AMD_AMD-fTPM-ECC-ICA-KRKFamily-ACEB8D2B409157C74EB2EE08CED9B645
-AMD_AMD-fTPM-ECC-ICA-MDNFamily-87A9580E58935BBD40616CCF1820BEEF
-AMD_AMD-fTPM-ECC-ICA-PHX2Family-3887D9A52A04517246E45296FF1E2F8E
-AMD_AMD-fTPM-ECC-ICA-PHXFamily-3411EF15082F59EC465D7DEC188BB0A1
-AMD_AMD-fTPM-ECC-ICA-RMBFamily-D30EE6F7557055BA66AD1A1DD1157D2C
-AMD_AMD-fTPM-ECC-ICA-RPLFamily-5B8502F0A93A5B6E50D659FED374CF19
-AMD_AMD-fTPM-ECC-ICA-SHPFamily-EB7F6EC0482058DC50691212B414464A
-AMD_AMD-fTPM-ECC-ICA-STPFamily-DE88506F89845CC24D912DBA442CADCD
-AMD_AMD-fTPM-ECC-ICA-STXFamily-7C4760BD7AC95E2F5336A9D6028B1E10
-AMD_AMD-fTPM-ECC-ICA-STXHFamily-841ED9E18F875F705AFACAD1CEFAFE37
-AMD_AMD-fTPM-ECC-RNFamily
-AMD_AMD-fTPM-ECC-RVFamily
-AMD_AMD-fTPM-ECC-SSPFamily
-AMD_AMD-fTPM-RSA-ICA-AERFamily-CCB96594EB1D57D7560EFB6022F67275
-AMD_AMD-fTPM-RSA-ICA-CRDFamily-B7F5D6F2A3165E235FD1FFBE69F2BFA9
-AMD_AMD-fTPM-RSA-ICA-GNFamily-639A786220D457236F8C816E1555F565
-AMD_AMD-fTPM-RSA-ICA-GNRFamily-FE5429C191BE55C2613A0F7DC3360E89
-AMD_AMD-fTPM-RSA-ICA-HPTFamily-0B7F833A00D15BEB46BA18CCE36E0244
-AMD_AMD-fTPM-RSA-ICA-KRKFamily-C1C1ED276EC755E277AD88C79AAE8EE7
-AMD_AMD-fTPM-RSA-ICA-MDNFamily-D053AFB18A3059D86723CD7D018489D2
-AMD_AMD-fTPM-RSA-ICA-PHX2Family-D63C16CBD4705E5B5C91095FD728772B
-AMD_AMD-fTPM-RSA-ICA-PHXFamily-A993351137005452447E60D15764141E
-AMD_AMD-fTPM-RSA-ICA-RMBFamily-51ADE34A2F8253525E2321AD63F7B197
-AMD_AMD-fTPM-RSA-ICA-RPLFamily-1E34E7EF9C15FA479A9F398BC865D60
-AMD_AMD-fTPM-RSA-ICA-SHPFamily-56994D25E17B5ED968FDD36ABD64804E
-AMD_AMD-fTPM-RSA-ICA-STPFamily-E66DF8C15E99581D7EEFA04D9ECE369A
-AMD_AMD-fTPM-RSA-ICA-STXFamily-AC721D42534F54F84DBA160B17E1C920
-AMD_AMD-fTPM-RSA-ICA-STXHFamily-f9afd54db71d51bc482ed80e4a118f62
-AMD_AMD-fTPM-RSA-RNFamily
-AMD_AMD-fTPM-RSA-RVFamily
-AMD_AMD-fTPM-RSA-SSPFamily
-STMicro_STM TPM ECC Intermediate CA 01
-STMicro_STM TPM EK Intermediate CA 01
-STMicro_STM TPM EK Intermediate CA 02
-STMicro_STM TPM EK Intermediate CA 03
-STMicro_STM TPM EK Intermediate CA 04
-STMicro_STM TPM EK Intermediate CA 05
+# Intermediate CAs in the cabinet that this store does not carry, with the reason.
+# Written by certval-store-gen; a change here is a change in what the publisher ships,
+# not in this crate.
+#
+# unrooted     the cabinet includes the CA but not its issuer, so nothing roots it
+# unvalidated  a path to a root exists and none validated as of the publication date;
+#              an InvalidNotAfterDate here is a CA the publisher shipped already lapsed
+unrooted     AMD_AMD-fTPM-ECC-ICA-AERFamily-6A668AE95CA8508559C3E1D872F2417D
+unrooted     AMD_AMD-fTPM-ECC-ICA-CRDFamily-5B401A1127EA54E3685B06D275FE8399
+unrooted     AMD_AMD-fTPM-ECC-ICA-GNFamily-403113170A425ABD6B04CE6BF21FD467
+unrooted     AMD_AMD-fTPM-ECC-ICA-GNRFamily-842A9A2652E452CC63DBD8FA9C218ED4
+unrooted     AMD_AMD-fTPM-ECC-ICA-HPTFamily-F21A726D76AF588151CA619A0596D812
+unrooted     AMD_AMD-fTPM-ECC-ICA-KRKFamily-ACEB8D2B409157C74EB2EE08CED9B645
+unrooted     AMD_AMD-fTPM-ECC-ICA-MDNFamily-87A9580E58935BBD40616CCF1820BEEF
+unrooted     AMD_AMD-fTPM-ECC-ICA-PHX2Family-3887D9A52A04517246E45296FF1E2F8E
+unrooted     AMD_AMD-fTPM-ECC-ICA-PHXFamily-3411EF15082F59EC465D7DEC188BB0A1
+unrooted     AMD_AMD-fTPM-ECC-ICA-RMBFamily-D30EE6F7557055BA66AD1A1DD1157D2C
+unrooted     AMD_AMD-fTPM-ECC-ICA-RPLFamily-5B8502F0A93A5B6E50D659FED374CF19
+unrooted     AMD_AMD-fTPM-ECC-ICA-SHPFamily-EB7F6EC0482058DC50691212B414464A
+unrooted     AMD_AMD-fTPM-ECC-ICA-STPFamily-DE88506F89845CC24D912DBA442CADCD
+unrooted     AMD_AMD-fTPM-ECC-ICA-STXFamily-7C4760BD7AC95E2F5336A9D6028B1E10
+unrooted     AMD_AMD-fTPM-ECC-ICA-STXHFamily-841ED9E18F875F705AFACAD1CEFAFE37
+unrooted     AMD_AMD-fTPM-ECC-RNFamily
+unrooted     AMD_AMD-fTPM-ECC-RVFamily
+unrooted     AMD_AMD-fTPM-ECC-SSPFamily
+unrooted     AMD_AMD-fTPM-RSA-ICA-AERFamily-CCB96594EB1D57D7560EFB6022F67275
+unrooted     AMD_AMD-fTPM-RSA-ICA-CRDFamily-B7F5D6F2A3165E235FD1FFBE69F2BFA9
+unrooted     AMD_AMD-fTPM-RSA-ICA-GNFamily-639A786220D457236F8C816E1555F565
+unrooted     AMD_AMD-fTPM-RSA-ICA-GNRFamily-FE5429C191BE55C2613A0F7DC3360E89
+unrooted     AMD_AMD-fTPM-RSA-ICA-HPTFamily-0B7F833A00D15BEB46BA18CCE36E0244
+unrooted     AMD_AMD-fTPM-RSA-ICA-KRKFamily-C1C1ED276EC755E277AD88C79AAE8EE7
+unrooted     AMD_AMD-fTPM-RSA-ICA-MDNFamily-D053AFB18A3059D86723CD7D018489D2
+unrooted     AMD_AMD-fTPM-RSA-ICA-PHX2Family-D63C16CBD4705E5B5C91095FD728772B
+unrooted     AMD_AMD-fTPM-RSA-ICA-PHXFamily-A993351137005452447E60D15764141E
+unrooted     AMD_AMD-fTPM-RSA-ICA-RMBFamily-51ADE34A2F8253525E2321AD63F7B197
+unrooted     AMD_AMD-fTPM-RSA-ICA-RPLFamily-1E34E7EF9C15FA479A9F398BC865D60
+unrooted     AMD_AMD-fTPM-RSA-ICA-SHPFamily-56994D25E17B5ED968FDD36ABD64804E
+unrooted     AMD_AMD-fTPM-RSA-ICA-STPFamily-E66DF8C15E99581D7EEFA04D9ECE369A
+unrooted     AMD_AMD-fTPM-RSA-ICA-STXFamily-AC721D42534F54F84DBA160B17E1C920
+unrooted     AMD_AMD-fTPM-RSA-ICA-STXHFamily-f9afd54db71d51bc482ed80e4a118f62
+unrooted     AMD_AMD-fTPM-RSA-RNFamily
+unrooted     AMD_AMD-fTPM-RSA-RVFamily
+unrooted     AMD_AMD-fTPM-RSA-SSPFamily
+unvalidated  Infineon_IFX_TPM_EK_Intermediate_CA_01  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ATML-KEYID-16B341E381CD5C3E799AC838CA17F1F7F3F7431E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ATML-KEYID-277631D059FA7A9553FB59DFD6E85BC122300FF0_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ATML-KEYID-2D605CD882B2BD716CCE71C90BC774D3D5BCB1D4_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ATML-KEYID-35AEE736C9B4D2861309E7815C0FA4CE40D865F6_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ATML-KEYID-4666DE766204E74DD29BB4FDC58523A1403D6A32_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ATML-KEYID-55F4DA39CA65B6681F2B7711BC3EF208A8679D1E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ATML-KEYID-81B5D99CBFAC98C5D61A8EBF26A86A086BFA3ECE_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ATML-KEYID-A0854BD197F8212FACBA38991BFDDBF5D13CE9CE_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ATML-KEYID-CD3401AC6E1C6F93DDD869D46A518311B3747895_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ATML-KEYID-D6F56ECFCF7EDDB7FD87ED01E127EE009A463BC9_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ATML-KEYID-E0028D87CE6C67A8751CC4B5D74F57622E75E42A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ATML-KEYID-F761A3A1F408F1090797B87127C2A2397C0ACA24_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-11227AB228983289AD2E7EE6841321901EF592F6_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-128462F2A0D16CDE1946F1000544B055BC113D10_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-1BD645FC1F90827C283E6CB526859FFAB0E0C62B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-1DDE0F406D122C3E5A4F861F94876C9E1ACDD37E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-1FCDFB8ECE408675D963E5E5108D55C984DD797A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-22BF9BF4978F4F45A4E9DBF729D8A08ADCA0A82C_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-265CF32470FC4D93C7022FA34AB4C8087948454B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-2A4A698325A1B220464EF009B01892268B25F84F_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-2AD70EB90962C541A55E2D15B85BFAD286154F0D_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-3735DDC8E300B817AEBE03503A92EDDFDF1AC71A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-3FE3E3E0383ECB899118188F4E2B9644DBD39A3C_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-4AC90CEE68D4B5729DE4357D2C475884F409B7A6_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-6DED70AB841AE9C22A03647FC8D1482188D3DAE3_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-73ABB81A0225456337F02B25BD39E658B90F00FF_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-8E1F3B1E129D4ADED7631F5B4A2B75828AF28128_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-9532153BAA9D74482D275B1A3E475309D3CFE507_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-97E5D1CD8B0497C04B4655A869C8F30EFA89388D  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-97E5D1CD8B0497C04B4655A869C8F30EFA89388D_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-9A643BC48007E0824798430036B658419B70C077_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-A4384BEE3966533539CD0A736D1DD2C213538DBE_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-A4D18726364EA2E3B278464CDC7FAD968E015D4B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-B02981157B6D7CC3210016380B898950524350E6_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-B080359B59AA938800A4AEBFD10CC70CF01B1B37_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-B2D3CC08144C50808C289D119627479BFFC0E4A3_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-BD6C69C0759EAA95DD6D156EA64170C4B9B36C78_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-C0044E3B23F43B2854BB76AD4FDD79BC62986C55_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-C7EE1D9CF6A291A06E4F5B88CEB25CAEE12F827B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-C88C75FB06270BF7EA1244FB9C25DFD209B7ABCD_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-DA206EF5DA6CF79CAE93C5E472FFE9480172CC8E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-DF5D6DAB5102DF18A1F77113F4983C62CBAF7385_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-EFFEEC5E01610082C0E311CBD07A3204408B32B8_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-F53E4F475E0D3C6E2B3E56E3AE8ABB953122617F_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KEYID-F65C289B3D93B78F978AC8D017B7947DA93637A5_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KeyId-2583CADE368F69C80F58D34A48B2DE653DFEAF98_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KeyId-32C6E576663FEE80D64CDD7B18E5603863B3BC8A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KeyId-4A769EB5D93C833A5500F1F281324EEF03FBEB3D_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KeyId-65957CAE12EF1B1A875D951A9425B1BC1D2B3BD3_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KeyId-7026D09ED935DCDC44D84D7DA75CCF0ABC1FDE0A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KeyId-76FA7DF0C07733DC8CE24E8EFF196D27788668DA_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KeyId-78A409C457DE6926F6DF42C6114EB7E56A9B56E7_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-IFX-KeyId-8FFD47880E239A3A3A20DE13EDF101E882A9D21D_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-INTC-KEYID-14B8E7137FA99526C4717DFA881B24936BBC6BD0_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-INTC-KEYID-2CFCF43B16C8BFC78249CC971EE57324D639F079_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-INTC-KEYID-30B86F094DA6ABD52371043F2BF7668C783F0E66_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-INTC-KEYID-31734D6F8AEA913A0A31180B785CC0630894CC7B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-INTC-KEYID-51C73CBCDFC990AA677417CD5F78BA37D4A8D731_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-INTC-KEYID-5E73C89AA3E902B272B9F0741F7D8730E3EC724A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-INTC-KEYID-6CA9DF62A1AAE23E0FEB7C3F5EB8E61ECAC17CB7_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-INTC-KEYID-B99E979AAE48774EA2EFCA9BF9AD5B04040DC10A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-INTC-KEYID-D73CFE5A9E0180801181A1444DE36EFBF88BA16E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-INTC-KEYID-F99F207DFC8797BFF90D641D25FD5A45F76310B8_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-NTC-KEYID-08300F43A8F4B8C8E624A4F7060CF59E745015E7_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-NTC-KEYID-9FBB79AA0F526278BED150929A7171E96A35BEF7_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-NTC-KEYID-A0D737290E16CF2AE2BEE7100CF56B2F04C5F043_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-NTC-NAMEID-3E6C3B35EF144B0A76CDCFA4080B8B7BCA3CC8EE_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-NTC-NAMEID-770E974ACAF0DB9AE67E7B6F5D410F9ACE2FAD65_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-NTC-NAMEID-BCD3C503D39E51B0C50489E9228E984A7E63E303_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-NTC-NAMEID-D659BCF0AFFF2284AE8AC274C6D91215AED2B62F_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-NTC-NameId-91EBBB7C51FA7F78AA3D44D3425B1D5D23975CAF_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-Ntz-keyid-022cbeed5d77060f2833e9d5376ba8bc308cd9ba  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-Ntz-keyid-03d1cde438ea3db34d943181c1cd517d688062ef  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-Ntz-keyid-ebb2f4e312e6529c4ed0cdb68228580ae5203d45  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-STM-KEYID-08CBB05CA4510B2A73299184EDDC9CCE42911211  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-STM-KEYID-1ADB994AB58BE57A0CC9B900E7851E1A43C08660_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-STM-KEYID-662D8F1CECDFF147A8B6F0EA296AF7F24CADF9CF  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-STM-KEYID-6B2780800A941CB47EFBCABDD8D1F01D529BF36C  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-STM-KEYID-9DA5C72CA00BE14B85B3E535C8B07C83E85BDFF6  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-STM-KEYID-BD963E9AD574AAD94FAD6CBF416DD85B4A559942  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-STM-KEYID-CF23E59526E446C3FE4F13EB686F624D705305F2_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-STM-KEYID-FB17D70D734870E919C4E8E603975E664E0E43DE  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-amd-keyid-578b68616fe4dbf81ba4053348337b238c0818be  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-amd-keyid-94ae1a5e93b1a4511f01a38cefd45ef1d3b1246e  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-0d9969519b979d32ee4b803165664e9cc86f9d0d  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-18b1af70b93f991972f362556a9a3fbf4bb24e0d  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-263b744d85412bae6e13e94a53c235185ba4eeec_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-29fe69630e853a4cd3575f84392a9bed2d7e8ca2_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-2a77a0e342cbc6c72ee3fafc3b0a7bcea7c9ce4e  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-2f572bbadec4d18e0d91ff4375fb468c61b8c7af  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-347c93cabded6168c61fdc8740a7353e46751616  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-37ae346baa54c513cff0290bb321a22a34a4a8c4  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-37ae346baa54c513cff0290bb321a22a34a4a8c4_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-40b8682b8d18450a2b06849d9b5cd96f4cddf4be_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-46f26f96330691e561b72f7a63dce3a0517039fb  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-5c2920742179bc704db1d8c54c34ca94405617ca_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-5d0815951f5f60638a69e7252f3ec4becd7554b2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-69146ac3cfb3665c7ae78101cca5c14255ca2bc8_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-7cb4b78e688614be4421c5858f15b96d5eab51ee  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-8343bac2129d78299c4b513cc3de61037bfcc955  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-9c7df5a91c3d49bbe7378d4aba12ff8e78a2d75c  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-9c7df5a91c3d49bbe7378d4aba12ff8e78a2d75c_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-a26ceeac95fa33673219d0c2a77637102fb53ff2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-c2ef641c329cb0a9f2eae04bfb10c99b89c34614_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-ce77153b6e110ca4ae2971a09851ef499326202a  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ifx-keyid-d8a3f556085a68c8aa5d5fe079bcc6e9c6d37764_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-intc-keyid-17a00575d05e58e3881210bb98b1045bb4c30639  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-intc-keyid-9aaf591ee263caae10f57ba04fa8d1dd6613f9eb  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-intc-keyid-e7083f22152a7492ec59b0c4243437648b15dbb7  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ntc-keyid-1591d4b6eaf98d0104864b6903a48dd0026077d3_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ntc-keyid-23f4e22ad3be374a449772954aa283aed752572e  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ntc-keyid-23f4e22ad3be374a449772954aa283aed752572e_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ntc-keyid-882f047b87121cf9885f31160bc7bb5586af471b  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_EUS-ntc-keyid-882f047b87121cf9885f31160bc7bb5586af471b_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ATML-KEYID-16B341E381CD5C3E799AC838CA17F1F7F3F7431E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ATML-KEYID-277631D059FA7A9553FB59DFD6E85BC122300FF0_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ATML-KEYID-2D605CD882B2BD716CCE71C90BC774D3D5BCB1D4_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ATML-KEYID-35AEE736C9B4D2861309E7815C0FA4CE40D865F6_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ATML-KEYID-4666DE766204E74DD29BB4FDC58523A1403D6A32_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ATML-KEYID-55F4DA39CA65B6681F2B7711BC3EF208A8679D1E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ATML-KEYID-81B5D99CBFAC98C5D61A8EBF26A86A086BFA3ECE_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ATML-KEYID-A0854BD197F8212FACBA38991BFDDBF5D13CE9CE_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ATML-KEYID-CD3401AC6E1C6F93DDD869D46A518311B3747895_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ATML-KEYID-D6F56ECFCF7EDDB7FD87ED01E127EE009A463BC9_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ATML-KEYID-E0028D87CE6C67A8751CC4B5D74F57622E75E42A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ATML-KEYID-F761A3A1F408F1090797B87127C2A2397C0ACA24_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-11227AB228983289AD2E7EE6841321901EF592F6_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-128462F2A0D16CDE1946F1000544B055BC113D10_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-1BD645FC1F90827C283E6CB526859FFAB0E0C62B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-1DDE0F406D122C3E5A4F861F94876C9E1ACDD37E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-1FCDFB8ECE408675D963E5E5108D55C984DD797A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-22BF9BF4978F4F45A4E9DBF729D8A08ADCA0A82C_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-265CF32470FC4D93C7022FA34AB4C8087948454B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-2A4A698325A1B220464EF009B01892268B25F84F_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-2AD70EB90962C541A55E2D15B85BFAD286154F0D_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-3735DDC8E300B817AEBE03503A92EDDFDF1AC71A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-3FE3E3E0383ECB899118188F4E2B9644DBD39A3C_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-4AC90CEE68D4B5729DE4357D2C475884F409B7A6_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-6DED70AB841AE9C22A03647FC8D1482188D3DAE3_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-73ABB81A0225456337F02B25BD39E658B90F00FF_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-8E1F3B1E129D4ADED7631F5B4A2B75828AF28128_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-9532153BAA9D74482D275B1A3E475309D3CFE507_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-97E5D1CD8B0497C04B4655A869C8F30EFA89388D  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-97E5D1CD8B0497C04B4655A869C8F30EFA89388D_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-9A643BC48007E0824798430036B658419B70C077_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-A4384BEE3966533539CD0A736D1DD2C213538DBE_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-A4D18726364EA2E3B278464CDC7FAD968E015D4B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-B02981157B6D7CC3210016380B898950524350E6_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-B080359B59AA938800A4AEBFD10CC70CF01B1B37_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-B2D3CC08144C50808C289D119627479BFFC0E4A3_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-BD6C69C0759EAA95DD6D156EA64170C4B9B36C78_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-C0044E3B23F43B2854BB76AD4FDD79BC62986C55_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-C7EE1D9CF6A291A06E4F5B88CEB25CAEE12F827B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-C88C75FB06270BF7EA1244FB9C25DFD209B7ABCD_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-DA206EF5DA6CF79CAE93C5E472FFE9480172CC8E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-DF5D6DAB5102DF18A1F77113F4983C62CBAF7385_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-EFFEEC5E01610082C0E311CBD07A3204408B32B8_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-F53E4F475E0D3C6E2B3E56E3AE8ABB953122617F_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KEYID-F65C289B3D93B78F978AC8D017B7947DA93637A5_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KeyId-2583CADE368F69C80F58D34A48B2DE653DFEAF98_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KeyId-32C6E576663FEE80D64CDD7B18E5603863B3BC8A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KeyId-4A769EB5D93C833A5500F1F281324EEF03FBEB3D_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KeyId-65957CAE12EF1B1A875D951A9425B1BC1D2B3BD3_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KeyId-7026D09ED935DCDC44D84D7DA75CCF0ABC1FDE0A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KeyId-76FA7DF0C07733DC8CE24E8EFF196D27788668DA_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KeyId-78A409C457DE6926F6DF42C6114EB7E56A9B56E7_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-IFX-KeyId-8FFD47880E239A3A3A20DE13EDF101E882A9D21D_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-INTC-KEYID-14B8E7137FA99526C4717DFA881B24936BBC6BD0_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-INTC-KEYID-2CFCF43B16C8BFC78249CC971EE57324D639F079_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-INTC-KEYID-30B86F094DA6ABD52371043F2BF7668C783F0E66_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-INTC-KEYID-31734D6F8AEA913A0A31180B785CC0630894CC7B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-INTC-KEYID-51C73CBCDFC990AA677417CD5F78BA37D4A8D731_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-INTC-KEYID-5E73C89AA3E902B272B9F0741F7D8730E3EC724A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-INTC-KEYID-6CA9DF62A1AAE23E0FEB7C3F5EB8E61ECAC17CB7_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-INTC-KEYID-B99E979AAE48774EA2EFCA9BF9AD5B04040DC10A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-INTC-KEYID-D73CFE5A9E0180801181A1444DE36EFBF88BA16E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-INTC-KEYID-F99F207DFC8797BFF90D641D25FD5A45F76310B8_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-NTC-KEYID-08300F43A8F4B8C8E624A4F7060CF59E745015E7_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-NTC-KEYID-9FBB79AA0F526278BED150929A7171E96A35BEF7_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-NTC-KEYID-A0D737290E16CF2AE2BEE7100CF56B2F04C5F043_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-NTC-NAMEID-3E6C3B35EF144B0A76CDCFA4080B8B7BCA3CC8EE_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-NTC-NAMEID-770E974ACAF0DB9AE67E7B6F5D410F9ACE2FAD65_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-NTC-NAMEID-BCD3C503D39E51B0C50489E9228E984A7E63E303_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-NTC-NAMEID-D659BCF0AFFF2284AE8AC274C6D91215AED2B62F_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-NTC-NameId-91EBBB7C51FA7F78AA3D44D3425B1D5D23975CAF_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-Ntz-keyid-022cbeed5d77060f2833e9d5376ba8bc308cd9ba  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-Ntz-keyid-03d1cde438ea3db34d943181c1cd517d688062ef  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-Ntz-keyid-ebb2f4e312e6529c4ed0cdb68228580ae5203d45  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-STM-KEYID-08CBB05CA4510B2A73299184EDDC9CCE42911211  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-STM-KEYID-1ADB994AB58BE57A0CC9B900E7851E1A43C08660_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-STM-KEYID-662D8F1CECDFF147A8B6F0EA296AF7F24CADF9CF  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-STM-KEYID-6B2780800A941CB47EFBCABDD8D1F01D529BF36C  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-STM-KEYID-9DA5C72CA00BE14B85B3E535C8B07C83E85BDFF6  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-STM-KEYID-BD963E9AD574AAD94FAD6CBF416DD85B4A559942  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-STM-KEYID-CF23E59526E446C3FE4F13EB686F624D705305F2_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-STM-KEYID-FB17D70D734870E919C4E8E603975E664E0E43DE  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-amd-keyid-578b68616fe4dbf81ba4053348337b238c0818be  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-amd-keyid-94ae1a5e93b1a4511f01a38cefd45ef1d3b1246e  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-0d9969519b979d32ee4b803165664e9cc86f9d0d  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-18b1af70b93f991972f362556a9a3fbf4bb24e0d  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-263b744d85412bae6e13e94a53c235185ba4eeec_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-29fe69630e853a4cd3575f84392a9bed2d7e8ca2_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-2a77a0e342cbc6c72ee3fafc3b0a7bcea7c9ce4e  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-2f572bbadec4d18e0d91ff4375fb468c61b8c7af  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-347c93cabded6168c61fdc8740a7353e46751616  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-37ae346baa54c513cff0290bb321a22a34a4a8c4  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-37ae346baa54c513cff0290bb321a22a34a4a8c4_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-40b8682b8d18450a2b06849d9b5cd96f4cddf4be_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-46f26f96330691e561b72f7a63dce3a0517039fb  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-5c2920742179bc704db1d8c54c34ca94405617ca_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-5d0815951f5f60638a69e7252f3ec4becd7554b2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-69146ac3cfb3665c7ae78101cca5c14255ca2bc8_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-7cb4b78e688614be4421c5858f15b96d5eab51ee  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-8343bac2129d78299c4b513cc3de61037bfcc955  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-9c7df5a91c3d49bbe7378d4aba12ff8e78a2d75c  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-9c7df5a91c3d49bbe7378d4aba12ff8e78a2d75c_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-a26ceeac95fa33673219d0c2a77637102fb53ff2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-c2ef641c329cb0a9f2eae04bfb10c99b89c34614_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-ce77153b6e110ca4ae2971a09851ef499326202a  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ifx-keyid-d8a3f556085a68c8aa5d5fe079bcc6e9c6d37764_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-intc-keyid-17a00575d05e58e3881210bb98b1045bb4c30639  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-intc-keyid-9aaf591ee263caae10f57ba04fa8d1dd6613f9eb  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-intc-keyid-e7083f22152a7492ec59b0c4243437648b15dbb7  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ntc-keyid-1591d4b6eaf98d0104864b6903a48dd0026077d3_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ntc-keyid-23f4e22ad3be374a449772954aa283aed752572e  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ntc-keyid-23f4e22ad3be374a449772954aa283aed752572e_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ntc-keyid-882f047b87121cf9885f31160bc7bb5586af471b  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_NCU-ntc-keyid-882f047b87121cf9885f31160bc7bb5586af471b_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ATML-KEYID-16B341E381CD5C3E799AC838CA17F1F7F3F7431E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ATML-KEYID-277631D059FA7A9553FB59DFD6E85BC122300FF0_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ATML-KEYID-2D605CD882B2BD716CCE71C90BC774D3D5BCB1D4_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ATML-KEYID-35AEE736C9B4D2861309E7815C0FA4CE40D865F6_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ATML-KEYID-4666DE766204E74DD29BB4FDC58523A1403D6A32_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ATML-KEYID-55F4DA39CA65B6681F2B7711BC3EF208A8679D1E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ATML-KEYID-81B5D99CBFAC98C5D61A8EBF26A86A086BFA3ECE_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ATML-KEYID-A0854BD197F8212FACBA38991BFDDBF5D13CE9CE_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ATML-KEYID-CD3401AC6E1C6F93DDD869D46A518311B3747895_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ATML-KEYID-D6F56ECFCF7EDDB7FD87ED01E127EE009A463BC9_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ATML-KEYID-E0028D87CE6C67A8751CC4B5D74F57622E75E42A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ATML-KEYID-F761A3A1F408F1090797B87127C2A2397C0ACA24_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-11227AB228983289AD2E7EE6841321901EF592F6_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-128462F2A0D16CDE1946F1000544B055BC113D10_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-1BD645FC1F90827C283E6CB526859FFAB0E0C62B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-1DDE0F406D122C3E5A4F861F94876C9E1ACDD37E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-1FCDFB8ECE408675D963E5E5108D55C984DD797A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-22BF9BF4978F4F45A4E9DBF729D8A08ADCA0A82C_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-265CF32470FC4D93C7022FA34AB4C8087948454B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-2A4A698325A1B220464EF009B01892268B25F84F_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-2AD70EB90962C541A55E2D15B85BFAD286154F0D_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-3735DDC8E300B817AEBE03503A92EDDFDF1AC71A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-3893CDBDD873C4233315E1B13BA96A0D23CC10C7_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-3FE3E3E0383ECB899118188F4E2B9644DBD39A3C_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-43325AF5500406548930CDA9A67DC78067B97801_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-4AC90CEE68D4B5729DE4357D2C475884F409B7A6_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-4C4B4D648908E45BFE5A10D36387A688AEC1CF78_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-6DED70AB841AE9C22A03647FC8D1482188D3DAE3_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-73ABB81A0225456337F02B25BD39E658B90F00FF_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-7568FF26F37D11268567B6864EC72A08C818891E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-88B3C13F6105D104229F5AC0EB499564ACD473BD_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-8E1F3B1E129D4ADED7631F5B4A2B75828AF28128_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-9532153BAA9D74482D275B1A3E475309D3CFE507_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-97E5D1CD8B0497C04B4655A869C8F30EFA89388D  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-97E5D1CD8B0497C04B4655A869C8F30EFA89388D_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-9A643BC48007E0824798430036B658419B70C077_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-A0C9DEC08FD39A8B59C46BCBE87FD9948C55F970_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-A4384BEE3966533539CD0A736D1DD2C213538DBE_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-A4D18726364EA2E3B278464CDC7FAD968E015D4B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-B02981157B6D7CC3210016380B898950524350E6_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-B080359B59AA938800A4AEBFD10CC70CF01B1B37_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-B2D3CC08144C50808C289D119627479BFFC0E4A3_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-BBCF7CC184213166DAB5BE53A87014DDD348D8CC_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-BD6C69C0759EAA95DD6D156EA64170C4B9B36C78_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-C0044E3B23F43B2854BB76AD4FDD79BC62986C55_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-C6CB2A4DB7294BE911724F5041310B4C42F89BB2_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-C7EE1D9CF6A291A06E4F5B88CEB25CAEE12F827B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-C88C75FB06270BF7EA1244FB9C25DFD209B7ABCD_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-CA6970458673493A8AE1994EF1E29238F27F4518_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-DA206EF5DA6CF79CAE93C5E472FFE9480172CC8E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-DF5D6DAB5102DF18A1F77113F4983C62CBAF7385_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-EC3F8D4CC12ABE88A019064E8A62B7018FA2E359_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-EFFEEC5E01610082C0E311CBD07A3204408B32B8_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-F53E4F475E0D3C6E2B3E56E3AE8ABB953122617F_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KEYID-F65C289B3D93B78F978AC8D017B7947DA93637A5_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KeyId-2583CADE368F69C80F58D34A48B2DE653DFEAF98_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KeyId-32C6E576663FEE80D64CDD7B18E5603863B3BC8A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KeyId-4A769EB5D93C833A5500F1F281324EEF03FBEB3D_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KeyId-65957CAE12EF1B1A875D951A9425B1BC1D2B3BD3_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KeyId-7026D09ED935DCDC44D84D7DA75CCF0ABC1FDE0A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KeyId-76FA7DF0C07733DC8CE24E8EFF196D27788668DA_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KeyId-78A409C457DE6926F6DF42C6114EB7E56A9B56E7_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KeyId-8FFD47880E239A3A3A20DE13EDF101E882A9D21D_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KeyId-a75598b8026fa544affcbc4b9106c12f96d3f0b8_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-IFX-KeyId-e82669cd9f2098270297499eaeb8dfa7e68b3422_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-0FA7B495048126120E12731606776F3D68A037C0_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-14092B5F7814EC9B713E9A9B90A4C519DF08E688_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-145126D0FDB53E99907D6FC6FF1B90455B9E324A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-14B8E7137FA99526C4717DFA881B24936BBC6BD0_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-2CFCF43B16C8BFC78249CC971EE57324D639F079_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-30B86F094DA6ABD52371043F2BF7668C783F0E66_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-31734D6F8AEA913A0A31180B785CC0630894CC7B_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-4994C129F1A548D488586F22A2DF8603739B3BD3_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-51C73CBCDFC990AA677417CD5F78BA37D4A8D731_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-5E73C89AA3E902B272B9F0741F7D8730E3EC724A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-6CA9DF62A1AAE23E0FEB7C3F5EB8E61ECAC17CB7_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-8E1AD84693D5D89B1472CD8F999076EDC4115400_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-B99E979AAE48774EA2EFCA9BF9AD5B04040DC10A_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-BF9C5C6FBF80CDCE74ABCD0E0E6004EA022A6606_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-D73CFE5A9E0180801181A1444DE36EFBF88BA16E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-INTC-KEYID-F99F207DFC8797BFF90D641D25FD5A45F76310B8_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-NTC-KEYID-08300F43A8F4B8C8E624A4F7060CF59E745015E7_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-NTC-KEYID-9FBB79AA0F526278BED150929A7171E96A35BEF7_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-NTC-KEYID-A0D737290E16CF2AE2BEE7100CF56B2F04C5F043_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-NTC-NAMEID-3E6C3B35EF144B0A76CDCFA4080B8B7BCA3CC8EE_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-NTC-NAMEID-770E974ACAF0DB9AE67E7B6F5D410F9ACE2FAD65_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-NTC-NAMEID-BCD3C503D39E51B0C50489E9228E984A7E63E303_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-NTC-NAMEID-D659BCF0AFFF2284AE8AC274C6D91215AED2B62F_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-NTC-NameId-91EBBB7C51FA7F78AA3D44D3425B1D5D23975CAF_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-Ntz-keyid-022cbeed5d77060f2833e9d5376ba8bc308cd9ba  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-Ntz-keyid-03d1cde438ea3db34d943181c1cd517d688062ef  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-Ntz-keyid-ebb2f4e312e6529c4ed0cdb68228580ae5203d45  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-QCOM-KEYID-79100C2EA35C4FC14BDE159B56326FB731D1D512_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-STM-KEYID-0056A610D53D1B3B6DBD14094B2DCE7E1F756ED0_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-STM-KEYID-08CBB05CA4510B2A73299184EDDC9CCE42911211  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-STM-KEYID-1ADB994AB58BE57A0CC9B900E7851E1A43C08660_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-STM-KEYID-571F806B47CCE79BFA35947CED88B8D1005AE09E_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-STM-KEYID-662D8F1CECDFF147A8B6F0EA296AF7F24CADF9CF  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-STM-KEYID-6B2780800A941CB47EFBCABDD8D1F01D529BF36C  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-STM-KEYID-9DA5C72CA00BE14B85B3E535C8B07C83E85BDFF6  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-STM-KEYID-BD963E9AD574AAD94FAD6CBF416DD85B4A559942  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-STM-KEYID-CF23E59526E446C3FE4F13EB686F624D705305F2_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-STM-KEYID-F3C91574A6E773FF13BF0C6BAD7A7B65CF1C7820_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-STM-KEYID-FB17D70D734870E919C4E8E603975E664E0E43DE  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-WEC-NAMEID-19BCC8BF66E8EB3575C1E83ADB8D4E1612B56B0F_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-amd-keyid-578b68616fe4dbf81ba4053348337b238c0818be  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-amd-keyid-94ae1a5e93b1a4511f01a38cefd45ef1d3b1246e  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-0d9969519b979d32ee4b803165664e9cc86f9d0d  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-18b1af70b93f991972f362556a9a3fbf4bb24e0d  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-263b744d85412bae6e13e94a53c235185ba4eeec_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-29fe69630e853a4cd3575f84392a9bed2d7e8ca2_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-2a77a0e342cbc6c72ee3fafc3b0a7bcea7c9ce4e  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-2f572bbadec4d18e0d91ff4375fb468c61b8c7af  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-347c93cabded6168c61fdc8740a7353e46751616  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-37ae346baa54c513cff0290bb321a22a34a4a8c4  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-37ae346baa54c513cff0290bb321a22a34a4a8c4_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-40b8682b8d18450a2b06849d9b5cd96f4cddf4be_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-46f26f96330691e561b72f7a63dce3a0517039fb  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-5c2920742179bc704db1d8c54c34ca94405617ca_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-5d0815951f5f60638a69e7252f3ec4becd7554b2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-69146ac3cfb3665c7ae78101cca5c14255ca2bc8_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-7cb4b78e688614be4421c5858f15b96d5eab51ee  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-8343bac2129d78299c4b513cc3de61037bfcc955  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-9c7df5a91c3d49bbe7378d4aba12ff8e78a2d75c  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-9c7df5a91c3d49bbe7378d4aba12ff8e78a2d75c_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-a26ceeac95fa33673219d0c2a77637102fb53ff2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-c2ef641c329cb0a9f2eae04bfb10c99b89c34614_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-ce77153b6e110ca4ae2971a09851ef499326202a  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ifx-keyid-d8a3f556085a68c8aa5d5fe079bcc6e9c6d37764_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-intc-keyid-17a00575d05e58e3881210bb98b1045bb4c30639  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-intc-keyid-9aaf591ee263caae10f57ba04fa8d1dd6613f9eb  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-intc-keyid-e7083f22152a7492ec59b0c4243437648b15dbb7  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ntc-keyid-1591d4b6eaf98d0104864b6903a48dd0026077d3_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ntc-keyid-23f4e22ad3be374a449772954aa283aed752572e  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ntc-keyid-23f4e22ad3be374a449772954aa283aed752572e_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ntc-keyid-882f047b87121cf9885f31160bc7bb5586af471b  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_WUS-ntc-keyid-882f047b87121cf9885f31160bc7bb5586af471b_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Microsoft_qcom-keyid-5c1cb66d3f8cc68bead0ae9bfe74ec64ff69d118  Some(PathValidation(InvalidNotBeforeDate))
+unvalidated  Microsoft_qcom-keyid-5c1cb66d3f8cc68bead0ae9bfe74ec64ff69d118-v2  Some(PathValidation(InvalidNotBeforeDate))
+unvalidated  STMicro_STM TPM ECC Intermediate CA 01  did not decode: Error { kind: Noncanonical { tag: Tag(0x02: INTEGER) }, position: None }
+unvalidated  STMicro_STM TPM EK Intermediate CA 01  did not decode: Error { kind: Noncanonical { tag: Tag(0x02: INTEGER) }, position: None }
+unvalidated  STMicro_STM TPM EK Intermediate CA 02  did not decode: Error { kind: Noncanonical { tag: Tag(0x02: INTEGER) }, position: None }
+unvalidated  STMicro_STM TPM EK Intermediate CA 03  did not decode: Error { kind: Noncanonical { tag: Tag(0x02: INTEGER) }, position: None }
+unvalidated  STMicro_STM TPM EK Intermediate CA 04  did not decode: Error { kind: Noncanonical { tag: Tag(0x02: INTEGER) }, position: None }
+unvalidated  STMicro_STM TPM EK Intermediate CA 05  did not decode: Error { kind: Noncanonical { tag: Tag(0x02: INTEGER) }, position: None }
