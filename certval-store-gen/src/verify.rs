@@ -113,11 +113,11 @@ pub enum Revocation {
     /// Only what the stream staples, which settles its signer's chain and not the timestamp
     /// authority's.
     ///
-    /// For a consumer's build. `build_refresh` promises a published crate that nothing is fetched
-    /// -- a registry checkout must not be written to and a build must not depend on a responder
-    /// being up -- and this is that promise expressed as a policy rather than as an omission. The
-    /// stream is still refused if what it staples fails or is missing, and the gate that asks a
-    /// responder runs upstream in CI, on these same committed bytes.
+    /// For the regeneration check a provider crate runs in its own tests: it compares the
+    /// committed store against what the committed stream generates, and a test that depends on a
+    /// responder being up is a test nobody trusts. This is that policy stated rather than left as
+    /// an omission. The stream is still refused if what it staples fails or is missing, and the
+    /// gate that does ask a responder runs upstream, on these same committed bytes.
     Stapled,
     /// What the stream staples, plus what certval fetches for the chain nothing staples.
     ///

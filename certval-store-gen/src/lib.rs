@@ -8,8 +8,6 @@ pub mod adapters;
 pub mod authroot_refresh;
 pub mod build_check;
 pub mod build_log;
-#[cfg(feature = "fetch")]
-pub mod build_refresh;
 #[cfg(feature = "cab")]
 pub mod cab;
 pub mod core;

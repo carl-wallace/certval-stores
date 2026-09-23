@@ -128,6 +128,29 @@ enum Command {
         #[arg(long)]
         check_only: bool,
     },
+    /// Fetch an InstallRoot stream and replace the committed copy when the publisher's is newer.
+    ///
+    /// Fetching only; generating from what it writes is `installroot`. They are separate commands
+    /// because several environments can share one stream -- NIPR's production store and both
+    /// interoperability stores all read `DoD.ir4` -- and the publisher should be asked once rather
+    /// than once per environment.
+    ///
+    /// A publisher that cannot be reached is reported, not failed: a scheduled job that went red
+    /// because DISA was briefly unreachable teaches a reader to ignore it.
+    #[cfg(feature = "fetch")]
+    Refresh {
+        /// URL the stream is served from.
+        #[arg(long)]
+        url: String,
+        /// The committed copy to compare against and replace, e.g.
+        /// certval_stores_nipr/inputs/DoD.ir4.
+        #[arg(long)]
+        into: PathBuf,
+        /// Which PKI in the stream to parse as, which is also what validates it: dod, nss, eca
+        /// or wcf. A stream that does not yield this population does not replace anything.
+        #[arg(long, default_value = "dod")]
+        population: String,
+    },
     /// TPM vendor roots: fetch TrustedTpm.cab and regenerate a provider crate.
     #[cfg(feature = "tpm")]
     Tpm {
@@ -222,6 +245,15 @@ fn main() -> Result<()> {
     } = &cli.command
     {
         return run_authroot(crate_dir, *check_only);
+    }
+    #[cfg(feature = "fetch")]
+    if let Command::Refresh {
+        url,
+        into,
+        population,
+    } = &cli.command
+    {
+        return run_refresh(url, into, population);
     }
     #[cfg(feature = "tpm")]
     if let Command::Tpm {
@@ -318,6 +350,10 @@ fn main() -> Result<()> {
         #[cfg(feature = "authroot")]
         Command::Authroot { .. } => {
             unreachable!("the cabinet-sourced commands return before this point")
+        }
+        #[cfg(feature = "fetch")]
+        Command::Refresh { .. } => {
+            unreachable!("refresh fetches and returns before this point; it generates nothing")
         }
         #[cfg(feature = "tpm")]
         Command::Tpm { .. } => {
@@ -452,6 +488,36 @@ fn run_authroot(crate_dir: &Path, check_only: bool) -> anyhow::Result<()> {
 }
 
 /// Refresh the TPM vendor crate.
+/// Report what a fetch found, and write the stream only when the publisher has something newer.
+#[cfg(feature = "fetch")]
+fn run_refresh(url: &str, into: &Path, population: &str) -> anyhow::Result<()> {
+    use certval_store_gen::adapters::tamp::Population;
+    use certval_store_gen::refresh::{stream, Outcome};
+
+    match stream(url, into, Population::parse(population)?) {
+        Outcome::Replaced { was, now } => log::warn!(
+            "{} replaced from {url}: {} -> {now}. Regenerate with `installroot` and review the diff.",
+            into.display(),
+            was.unwrap_or_else(|| "an undated stream".to_string())
+        ),
+        Outcome::Current { published } => log::info!(
+            "{} is current (published {})",
+            into.display(),
+            published.unwrap_or_else(|| "at an unstated date".to_string())
+        ),
+        Outcome::Older { committed, offered } => log::warn!(
+            "{url} is serving material published {}, older than the committed {}; keeping what is \
+             committed",
+            offered.unwrap_or_else(|| "at an unstated date".to_string()),
+            committed.unwrap_or_else(|| "stream".to_string())
+        ),
+        Outcome::Kept { why } => {
+            log::warn!("keeping the committed {}: {why}", into.display())
+        }
+    }
+    Ok(())
+}
+
 #[cfg(feature = "tpm")]
 fn run_tpm(
     crate_dir: &Path,

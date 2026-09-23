@@ -390,7 +390,6 @@ dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
- "log",
 ]
 
 [[package]]
@@ -419,7 +418,6 @@ dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
- "log",
 ]
 
 [[package]]
@@ -456,7 +454,6 @@ dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
- "log",
 ]
 
 [[package]]

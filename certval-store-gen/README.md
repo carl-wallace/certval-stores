@@ -52,13 +52,14 @@ DISA has its streams timestamped by Sectigo, and that chain is validated as of *
 included. certval does the asking — this crate takes certval's `remote` feature and calls
 `check_revocation`, so the ladder is the one certval ships rather than a second one assembled
 beside it. Who may ask is a policy, `verify::Revocation`: `verify --stream`, generation, and a
-source checkout refreshing its inputs all ask; a consumer's build does not, because `build_refresh`
-promises a published crate that it fetches nothing, and the gate that asks runs upstream in CI on
-those same committed bytes.
+source checkout refreshing its inputs all ask; the regeneration check a provider crate runs in its
+own tests does not, because a test that depends on a responder being up is a test nobody trusts, and
+the gate that asks runs upstream in CI on those same committed bytes.
 
 Taking `remote` is why this crate's floor is rustc 1.86 rather than certval's 1.85 — reqwest's
-graph carries icu 2.2.0 — and building a provider crate from source inherits it, since a build
-script's dependencies are compiled whatever the library's features say.
+graph carries icu 2.2.0. A provider crate inherits that floor where it takes this crate: at build
+time for the two that keep a build script, and at test time for the InstallRoot providers, which
+take it as a dev-dependency. Building those needs only certval's 1.85.
 
 The timestamp is verified too, not merely read — it is what the signer is validated at, and
 it arrives outside the signature where anyone handing over the file could edit it. That means

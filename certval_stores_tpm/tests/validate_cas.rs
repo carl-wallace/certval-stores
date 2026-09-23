@@ -4,7 +4,7 @@
 //! silent; the feature-on run is what proves these execute.
 #![cfg(feature = "tpm")]
 
-//! Per-vendor path validation over the fixtures this crate ships.
+//! Per-vendor path validation over the sample certificates this crate ships.
 //!
 //! Moved here from `tpm_roots` when the material did: these build and validate real certification
 //! paths for each vendor's intermediates, which is a different question from the structural and
@@ -195,7 +195,7 @@ impl ValidationInstructions {
                 .add_verify_signature_message_callback(verify_signature_message_rust_crypto_sha1);
         }
 
-        // Validated as of the cabinet's publication date, not now. These fixtures are a fixed set
+        // Validated as of the cabinet's publication date, not now. These samples are a fixed set
         // and the calendar is not: nine Microsoft/Intel regional CAs expired on 2026-09-10 and
         // turned this suite red on a date nobody chose. It is also the date the store itself is
         // pruned at, so the two ask the same question -- did this trust set validate this material

@@ -4,11 +4,6 @@ version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0 OR MIT"
 description = "ECA (DoD External Certification Authority) trust store for certval"
-# `refresh-inputs` marks a working tree where `build.rs` may re-fetch the InstallRoot stream and
-# rewrite the generated material. It is gitignored and never committed: a git dependency is a
-# checkout of this repository, so a committed sentinel would put every consumer's build on the
-# refresh path. `exclude` keeps it out of a published `.crate` too, for the day one is published.
-exclude = ["refresh-inputs"]
 
 [dependencies]
 certval_stores_core = { path = "../certval_stores_core", default-features = false }
@@ -24,15 +19,10 @@ reqwest-client = ["certval_stores_core/reqwest-client"]
 # certval_stores_nipr, where a consumer has to say which of two it wants.
 eca = []
 
-[build-dependencies]
-# `fetch` for the stream refresh in build.rs. It is compiled unconditionally and run only in a
-# source checkout; see `certval_store_gen::build_refresh` for why the gate is a file, not a feature.
-certval-store-gen = { path = "../certval-store-gen", default-features = false, features = [
-    "fetch",
-] }
-log = "0.4"
-
 [dev-dependencies]
+# The regeneration check that build.rs used to run: a dev-dependency so CI keeps it and no
+# consumer compiles it. Without `fetch` -- a test regenerates from the committed stream.
+certval-store-gen = { path = "../certval-store-gen", default-features = false }
 # default-features = false for the same reason as the core crate: certval's
 # defaults pull reqwest, and a dev-dependency taking them puts the HTTP stack
 # back into the test graph however `reqwest-client` is configured, so a
