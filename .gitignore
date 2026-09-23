@@ -1,10 +1,9 @@
 /target
 **/target
 
-# The build-script refresh sentinel, which belongs to the two cabinet-sourced providers. Never
-# committed: a git dependency is a checkout of this repository, so a committed sentinel would put
-# every consumer's build on the refresh path. Create it in a working tree (`touch
-# certval_stores_msft/refresh-inputs`, `touch certval_stores_tpm/refresh-inputs`) to let `cargo
-# build` re-fetch the cabinet and regenerate. The InstallRoot providers are refreshed by
-# `certval-store-gen refresh` instead.
+# The build-script refresh sentinel, which nothing reads any more: every provider refreshes from
+# `certval-store-gen` and `refresh.yml`, and the one build script left (`certval_stores_msft`)
+# verifies its committed material unconditionally. Kept so that a leftover file in an old working
+# tree cannot be committed; `exclude = ["refresh-inputs"]` in certval_stores_msft and
+# certval_stores_tpm is its last other reference.
 refresh-inputs
