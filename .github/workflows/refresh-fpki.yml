@@ -1,0 +1,104 @@
+# Refreshing the Federal PKI, on its own schedule.
+#
+# Separate from refresh.yml because the cadence is different and the material is. The InstallRoot
+# streams and the Microsoft list move on a publisher's release schedule and are checked weekly; the
+# FPKI mesh is republished by the FPKI crawler whenever any participant's cross-certificates change,
+# which is continuous. A cross-certificate appearing is how a participant becomes reachable, so a
+# week of not knowing is a week of paths that should have been found and were not.
+#
+# **The bundle is not signed.** That is what separates this provider from the others: the streams
+# carry RFC 5934 signatures and the Microsoft list a CMS one, and there is nothing equivalent to
+# check before taking this. Committing the bundle under `inputs/` is the compensation -- it gives
+# this crate the property the InstallRoot providers have, a source artifact the store can be
+# regenerated from and compared against, so a store that drifted from its own input can be told
+# from one that did not.
+name: refresh fpki
+
+on:
+  schedule:
+    # Daily. Offset from the other refresh jobs so two runs are not competing for a runner, and
+    # off the hour because everyone schedules on the hour.
+    - cron: "40 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh-fpki:
+    name: certval_stores_fpki
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Fetch the published bundle
+        env:
+          BUNDLE: https://raw.githubusercontent.com/GSA/idmanagement.gov/staging/_implement/tools/CACertificatesValidatingToFederalCommonPolicyG2.p7b
+        run: |
+          mkdir -p certval_stores_fpki/inputs
+          curl -sSfL "$BUNDLE" -o fetched.p7b
+          # The adapter takes DER; the published bundle is PEM-wrapped PKCS#7. Converting before
+          # the comparison below means a re-wrapping upstream does not read as a content change.
+          openssl pkcs7 -inform PEM -in fetched.p7b \
+                        -outform DER -out certval_stores_fpki/inputs/fpki-bundle.der.p7b
+
+      - name: Regenerate the store if the bundle moved
+        env:
+          RUST_LOG: info
+        run: |
+          if git diff --quiet certval_stores_fpki/inputs; then
+            echo "the bundle has not moved; nothing to regenerate"
+            exit 0
+          fi
+          cargo run -q -p certval-store-gen -- --out-dir ./out \
+            fpki --p7 certval_stores_fpki/inputs/fpki-bundle.der.p7b 2>&1 | tee fpki.log
+          # Only the CA half is embedded: the single anchor, Federal Common Policy CA G2, is
+          # carried as DER in the crate, so the generated ta.cbor is redundant here.
+          cp out/ca.cbor certval_stores_fpki/cas/fpki/fpki.cbor
+
+      - name: Open a pull request if the material moved
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$(git status --porcelain certval_stores_fpki)" ]; then
+            echo "nothing changed"
+            exit 0
+          fi
+          branch="refresh/certval_stores_fpki-$(date -u +%Y%m%d)"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add certval_stores_fpki
+          git commit -F - <<EOF
+          refresh certval_stores_fpki from the publisher
+
+          $(grep -E 'trust anchors|intermediates' fpki.log || true)
+          EOF
+          git push origin "$branch"
+          gh pr create \
+            --title "refresh certval_stores_fpki" \
+            --body "$(cat <<'BODY'
+          Opened by the scheduled refresh, from the bundle the FPKI crawler publishes.
+
+          The bundle is unsigned, so the committed `inputs/fpki-bundle.der.p7b` in this pull
+          request records exactly what was taken. The split into anchors and intermediates is by
+          **verifying self-signatures**, not by comparing issuer to subject -- the FPKI contains
+          self-issued rollover certificates that a naive comparison would misfile as roots.
+
+          **CI on this pull request is expected to fail.** `EXPECTED_INTERMEDIATES` in
+          `certval_stores_fpki/tests/tests.rs` pins the count that was last reviewed. Read the
+          certificate diff, update the constant, and merge.
+
+          Worth looking at first:
+
+          - intermediates added -- each is a cross-certificate, and each makes some participant
+            reachable that was not
+          - intermediates removed -- a participant leaving the mesh, or a cross-certificate that
+            expired
+          - the anchor is not expected to move. One root is the correct count for this PKI, not a
+            gap; if Federal Common Policy CA G2 changes, that is a much larger event than a
+            refresh and should not be merged from here.
+          BODY
+          )"

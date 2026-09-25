@@ -35,6 +35,13 @@ stream: `DoD.ir4` and `JITC.ir4`, `ECA.ir4`, `WCF.ir4`. The stream is a set of s
 messages, so it records what DoD published rather than what someone collected, and
 regenerating from it is how those crates are refreshed.
 
+## Keeping the stores current
+
+**[MAINTENANCE.md](MAINTENANCE.md)** — how certificates enter each crate and what keeps it from going
+stale: the five sources and what authenticates each, the weekly refresh that opens a pull request,
+why that pull request is expected to arrive red, what CI guarantees, and where the family is not
+yet symmetric.
+
 ## Where the rest of the documentation lives
 
 The provider API and the requirements a store has to meet are documented in the
