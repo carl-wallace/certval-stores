@@ -43,7 +43,7 @@ jobs:
           - crate: certval_stores_tpm
             command: tpm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Refresh from the publisher
@@ -135,7 +135,7 @@ jobs:
               gen installroot --stream certval_stores_wcf/inputs/WCF.ir4 --population wcf \
                 --provider-dir certval_stores_wcf --env prod
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
 
       - name: Fetch the streams
