@@ -34,7 +34,7 @@ fn roots_for(id: &str) -> &'static [&'static [u8]] {
 /// Number of intermediate CA certificates in the embedded FPKI CA store. Update
 /// this with the store; see README.md for the refresh procedure.
 #[cfg(feature = "fpki")]
-const EXPECTED_INTERMEDIATES: usize = 133;
+const EXPECTED_INTERMEDIATES: usize = 145;
 /// Digest over the intermediate set, which the count above cannot see. The FPKI crawler
 /// republishes whenever any participant's cross-certificates change, so a refresh that swaps one
 /// cross-certificate for another leaves the count identical and the mesh materially different.
@@ -42,7 +42,7 @@ const EXPECTED_INTERMEDIATES: usize = 133;
 /// To update: run the tests, and the failure prints the digest to paste in.
 #[cfg(feature = "fpki")]
 const EXPECTED_INTERMEDIATE_SET: &str =
-    "a2cf31cd0cfd07258203b8830c8c069f5f8139a7c92a623e5d9f14e15199dfa5";
+    "40225f47005ca74f4b9f09f07cee0f5084391b5d3a06064e043f99d058ee2c61";
 
 /// The gate the count is not. See [`EXPECTED_INTERMEDIATE_SET`].
 #[test]
