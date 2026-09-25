@@ -2,6 +2,7 @@
 name = "certval_stores_tpm"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.85"
 license = "Apache-2.0 OR MIT"
 description = "TPM vendor trust store for certval, from Microsoft's TrustedTpm.cab"
 # `refresh-inputs` marks a working tree where `build.rs` may re-fetch the cabinet and rewrite the
