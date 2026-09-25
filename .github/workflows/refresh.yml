@@ -23,9 +23,10 @@ on:
     - cron: "0 6 * * 1"
   workflow_dispatch:
 
+# Only contents: write, to push a branch. `pull-requests: write` would also let a
+# workflow approve a pull request, which is not a power this repository grants.
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   # Two jobs rather than one: the TPM refresh re-fetches 2.9 MB and spends two minutes building a
@@ -52,9 +53,7 @@ jobs:
           cargo run -p certval-store-gen --features cli,authroot,tpm -- \
             ${{ matrix.command }} --crate-dir ${{ matrix.crate }} 2>&1 | tee refresh.log
 
-      - name: Open a pull request if the material moved
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Push a branch if the material moved
         run: |
           if [ -z "$(git status --porcelain ${{ matrix.crate }})" ]; then
             echo "nothing changed"
@@ -65,35 +64,34 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$branch"
           git add ${{ matrix.crate }}
-          # The tool's own summary is the commit body: it states what was carried, what was
-          # dropped and what the publisher dated it, which is what a reviewer needs before
-          # opening a single certificate.
+          # The tool's own summary leads the commit body: it states what was carried, what was
+          # dropped and what the publisher dated it, which is what a reviewer needs before opening
+          # a single certificate. The rest is the review guidance, here rather than in a pull
+          # request body because this job opens no pull request: that needs a permission which
+          # also allows a workflow to approve one.
           git commit -F - <<EOF
           refresh ${{ matrix.crate }} from the publisher
 
           $(grep -E 'rewritten|carried|dropped' refresh.log || true)
-          EOF
-          git push origin "$branch"
-          gh pr create \
-            --title "refresh ${{ matrix.crate }}" \
-            --body "$(cat <<'BODY'
-          Opened by the scheduled refresh. The material here came from the publisher and was
-          signature-checked before being written: the Microsoft trust list by its own CMS
-          signature against the pinned anchor, the TPM cabinet by its Authenticode signature.
 
-          **CI on this pull request is expected to fail.** Each crate pins the counts its material
-          had when it was last reviewed, so a change fails the tests and names itself. Read the
-          certificate diff, update the constants, and merge.
+          The material came from the publisher and was signature-checked before being written:
+          the Microsoft trust list by its own CMS signature against the pinned anchor, the TPM
+          cabinet by its Authenticode signature.
+
+          CI is expected to fail. Each crate pins the counts its material had when it was last
+          reviewed, so a change fails the tests and names itself. Read the certificate diff,
+          update the constants, and merge.
 
           Worth looking at first:
 
-          - roots added or removed -- each is a trust decision by the publisher
-          - `provenance/*/dropped.txt`, where it exists: a count moving down means a publisher
+          - roots added or removed: each is a trust decision by the publisher
+          - provenance/*/dropped.txt, where it exists: a count moving down means a publisher
             started including an issuer, up means a vendor's root stopped being carried
           - for the Microsoft list, roots that left because they acquired a disallowed date rather
             than because they expired
-          BODY
-          )"
+          EOF
+          git push origin "$branch"
+          echo "pushed $branch; open a pull request from it when you are ready to review"
 
   # The InstallRoot streams, in two steps rather than one. Several environments can read the same
   # stream -- NIPR's production store and both interoperability stores all come from DoD.ir4 -- so
@@ -159,9 +157,7 @@ jobs:
           gen() { cargo run -q -p certval-store-gen --features cli -- "$@"; }
           ${{ matrix.generate }}
 
-      - name: Open a pull request if the material moved
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Push a branch if the material moved
         run: |
           if [ -z "$(git status --porcelain ${{ matrix.crate }})" ]; then
             echo "nothing changed"
@@ -172,21 +168,19 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$branch"
           git add ${{ matrix.crate }}
-          git commit -m "refresh ${{ matrix.crate }} from the publisher"
-          git push origin "$branch"
-          gh pr create \
-            --title "refresh ${{ matrix.crate }}" \
-            --body "$(cat <<'BODY'
-          Opened by the scheduled refresh. The stream was parsed as its population before it
-          replaced anything, and a stream published *older* than the committed one is refused as a
-          rollback rather than taken.
+          git commit -F - <<EOF
+          refresh ${{ matrix.crate }} from the publisher
 
-          **CI on this pull request is expected to fail.** Each crate pins the counts its material
-          had when it was last reviewed, so a change fails the tests and names itself. Read the
-          certificate diff, update the constants, and merge.
+          The stream was parsed as its population before it replaced anything, and a stream
+          published older than the committed one is refused as a rollback rather than taken.
 
-          `*_store_is_what_the_committed_stream_generates` is the test that matters here: it
-          regenerates from the committed `.ir4` and compares certificate sets, so a store that
+          CI is expected to fail. Each crate pins the counts its material had when it was last
+          reviewed, so a change fails the tests and names itself. Read the certificate diff,
+          update the constants, and merge.
+
+          *_store_is_what_the_committed_stream_generates is the test that matters here: it
+          regenerates from the committed .ir4 and compares certificate sets, so a store that
           drifted from its own input fails even when the counts still line up.
-          BODY
-          )"
+          EOF
+          git push origin "$branch"
+          echo "pushed $branch; open a pull request from it when you are ready to review"

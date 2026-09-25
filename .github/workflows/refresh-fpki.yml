@@ -21,9 +21,10 @@ on:
     - cron: "40 6 * * *"
   workflow_dispatch:
 
+# Only contents: write, to push a branch. `pull-requests: write` would also let a
+# workflow approve a pull request, which is not a power this repository grants.
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   refresh-fpki:
@@ -38,17 +39,23 @@ jobs:
           BUNDLE: https://raw.githubusercontent.com/GSA/idmanagement.gov/staging/_implement/tools/CACertificatesValidatingToFederalCommonPolicyG2.p7b
         run: |
           mkdir -p certval_stores_fpki/inputs
-          curl -sSfL "$BUNDLE" -o fetched.p7b
+          # Fetched outside the working tree: the only thing this job may leave behind is the
+          # converted bundle under inputs/, and a stray copy at the root shows up as an
+          # uncommitted change in every later step.
+          curl -sSfL "$BUNDLE" -o "$RUNNER_TEMP/fetched.p7b"
           # The adapter takes DER; the published bundle is PEM-wrapped PKCS#7. Converting before
           # the comparison below means a re-wrapping upstream does not read as a content change.
-          openssl pkcs7 -inform PEM -in fetched.p7b \
+          openssl pkcs7 -inform PEM -in "$RUNNER_TEMP/fetched.p7b" \
                         -outform DER -out certval_stores_fpki/inputs/fpki-bundle.der.p7b
 
       - name: Regenerate the store if the bundle moved
         env:
           RUST_LOG: info
         run: |
-          if git diff --quiet certval_stores_fpki/inputs; then
+          # `git status`, not `git diff`: on a first run inputs/ holds an untracked file, which a
+          # diff cannot see, so a diff-based check skips the regeneration and commits a bundle
+          # with no store built from it.
+          if [ -z "$(git status --porcelain -- certval_stores_fpki/inputs)" ]; then
             echo "the bundle has not moved; nothing to regenerate"
             exit 0
           fi
@@ -58,9 +65,7 @@ jobs:
           # carried as DER in the crate, so the generated ta.cbor is redundant here.
           cp out/ca.cbor certval_stores_fpki/cas/fpki/fpki.cbor
 
-      - name: Open a pull request if the material moved
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Push a branch if the material moved
         run: |
           if [ -z "$(git status --porcelain certval_stores_fpki)" ]; then
             echo "nothing changed"
@@ -71,34 +76,33 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$branch"
           git add certval_stores_fpki
+          # The review guidance lives in the commit message rather than a pull request body: this
+          # job opens no pull request, because doing so needs a permission that also allows a
+          # workflow to approve one. The branch is the signal; GitHub offers to open the pull
+          # request from it.
           git commit -F - <<EOF
           refresh certval_stores_fpki from the publisher
 
           $(grep -E 'trust anchors|intermediates' fpki.log || true)
-          EOF
-          git push origin "$branch"
-          gh pr create \
-            --title "refresh certval_stores_fpki" \
-            --body "$(cat <<'BODY'
-          Opened by the scheduled refresh, from the bundle the FPKI crawler publishes.
 
-          The bundle is unsigned, so the committed `inputs/fpki-bundle.der.p7b` in this pull
-          request records exactly what was taken. The split into anchors and intermediates is by
-          **verifying self-signatures**, not by comparing issuer to subject -- the FPKI contains
-          self-issued rollover certificates that a naive comparison would misfile as roots.
+          The bundle is unsigned, so the committed inputs/fpki-bundle.der.p7b records exactly what
+          was taken. The split into anchors and intermediates is by verifying self-signatures
+          rather than by comparing issuer to subject, since the FPKI contains self-issued rollover
+          certificates that a naive comparison would misfile as roots.
 
-          **CI on this pull request is expected to fail.** `EXPECTED_INTERMEDIATES` in
-          `certval_stores_fpki/tests/tests.rs` pins the count that was last reviewed. Read the
-          certificate diff, update the constant, and merge.
+          CI is expected to fail. EXPECTED_INTERMEDIATES in certval_stores_fpki/tests/tests.rs
+          pins the count that was last reviewed. Read the certificate diff, update the constant,
+          and merge.
 
           Worth looking at first:
 
-          - intermediates added -- each is a cross-certificate, and each makes some participant
+          - intermediates added: each is a cross-certificate, and each makes some participant
             reachable that was not
-          - intermediates removed -- a participant leaving the mesh, or a cross-certificate that
+          - intermediates removed: a participant leaving the mesh, or a cross-certificate that
             expired
           - the anchor is not expected to move. One root is the correct count for this PKI, not a
             gap; if Federal Common Policy CA G2 changes, that is a much larger event than a
             refresh and should not be merged from here.
-          BODY
-          )"
+          EOF
+          git push origin "$branch"
+          echo "pushed $branch; open a pull request from it when you are ready to review"

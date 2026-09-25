@@ -50,12 +50,16 @@ Weekly, Mondays at 06:00 UTC, plus `workflow_dispatch`. Two jobs, for five crate
   interoperability stores, so the publisher is asked once per stream and the generator run once per
   environment. Regeneration is skipped entirely when no stream moved.
 
-Either job opens a pull request only when the material actually changed.
+Either job pushes a branch only when the material actually changed, and stops there. **No workflow
+here opens a pull request**, because the permission that allows an Actions token to open one also
+allows it to approve one, and that is not a power these repositories grant. The branch is the
+signal; GitHub offers to open the pull request from it, and the review guidance rides in the commit
+message so it travels with the branch.
 
-**A refresh PR is expected to arrive red, and that is the mechanism rather than a defect.** Each
-crate pins the counts its material had when a person last reviewed it. When a publisher moves, the
-tests fail and name what changed; someone reads the certificate diff, updates the constants, and
-merges. A green refresh would mean nothing moved, in which case no PR is opened at all. The failure
+**A refresh is expected to arrive red, and that is the mechanism rather than a defect.** Each crate
+pins the counts its material had when a person last reviewed it. When a publisher moves, the tests
+fail and name what changed; someone reads the certificate diff, updates the constants, and merges.
+A green refresh would mean nothing moved, in which case no branch is pushed at all. The failure
 *is* the acknowledgement gate.
 
 The rollback guard sits in the generator, not the workflow: a stream published older than the
@@ -80,17 +84,17 @@ Firefox ships. It is the only networked job in that repo, kept off pull requests
 GitHub outage cannot block one.
 
 It **detects**; it does not act. Acting is a separate weekly workflow in that repository, which
-runs `tools/refresh.py` and `tools/refresh_cas.py` and opens a pull request the same way this
-workspace does. The two are kept apart on purpose: drift is cheap and runs daily, while a refresh
+runs `tools/refresh.py` and `tools/refresh_cas.py` and pushes a branch the same way this workspace
+does. The two are kept apart on purpose: drift is cheap and runs daily, while a refresh
 fetches the whole CCADB report and every disclosed intermediate.
 
 ### By hand
 
 `pbdev` carries a development environment and does not track a publisher, so nothing schedules it.
 
-Every other provider can still be refreshed by hand with the same command its workflow runs — each
-crate's README carries the invocation, and a `workflow_dispatch` does the same thing with a pull
-request at the end of it.
+Every other provider can be refreshed by hand with the same command its workflow runs: each crate's
+README carries the invocation, and a `workflow_dispatch` does the same thing and leaves a branch to
+review.
 
 `webpki_root_certs` moves when its dependency moves, and Dependabot is what moves it — weekly,
 with `webpki-root-certs` deliberately excluded from every group, so a change to which roots the
@@ -132,8 +136,8 @@ counts line up. `fpki` has the bundle to do the same and not yet the test; it ca
 once a refresh has created `inputs/`.
 
 **The refresh workflows want one `workflow_dispatch` each before their schedules are trusted.** The
-FPKI one creates `certval_stores_fpki/inputs/` on its first run, so its first pull request carries
-a whole file rather than a diff, and the Mozilla one checks out this workspace to build the
+FPKI one creates `certval_stores_fpki/inputs/` on its first run, so its first branch carries a
+whole file rather than a diff, and the Mozilla one checks out this workspace to build the
 generator, which is the step most likely to need adjusting.
 
 An accepted cost rather than a gap, recorded so it is not rediscovered: `inputs-verified` reaches
