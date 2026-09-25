@@ -40,11 +40,13 @@ const EXPECTED_INTERMEDIATES: usize = 133;
 /// cross-certificate for another leaves the count identical and the mesh materially different.
 ///
 /// To update: run the tests, and the failure prints the digest to paste in.
+#[cfg(feature = "fpki")]
 const EXPECTED_INTERMEDIATE_SET: &str =
     "a2cf31cd0cfd07258203b8830c8c069f5f8139a7c92a623e5d9f14e15199dfa5";
 
 /// The gate the count is not. See [`EXPECTED_INTERMEDIATE_SET`].
 #[test]
+#[cfg(feature = "fpki")]
 fn the_intermediate_set_is_what_was_reviewed() {
     let entries = certval_stores_fpki::PROVIDER.entries();
     let cbor = entries
