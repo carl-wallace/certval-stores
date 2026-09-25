@@ -61,7 +61,7 @@ curl -sSfO https://raw.githubusercontent.com/GSA/idmanagement.gov/staging/_imple
 openssl pkcs7 -inform PEM -in CACertificatesValidatingToFederalCommonPolicyG2.p7b \
               -outform DER -out fpki-bundle.der.p7b
 
-# redhound/certval-store-gen
+# certval-store-gen, a member of this workspace: cargo run -p certval-store-gen --
 certval-store-gen --out-dir ./out fpki --p7 ./fpki-bundle.der.p7b
 cp out/ca.cbor cas/fpki/fpki.cbor
 ```

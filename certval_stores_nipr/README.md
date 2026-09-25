@@ -122,7 +122,7 @@ Locally it is two commands. `refresh` fetches a stream and replaces `inputs/DoD.
 committed one is refused as a rollback rather than taken:
 
 ```sh
-# redhound/certval-store-gen
+# certval-store-gen, a member of this workspace: cargo run -p certval-store-gen --
 certval-store-gen refresh --url https://crl.gds.disa.mil/pke/config/DoD.ir4 \
     --into inputs/DoD.ir4 --population dod
 ```
@@ -132,7 +132,7 @@ in `inputs/` and regenerate. One stream can feed more than one environment, so i
 environment. Both `roots/<env>/` and `cas/<env>/` are output, so nothing there is edited by hand:
 
 ```sh
-# redhound/certval-store-gen
+# certval-store-gen, a member of this workspace: cargo run -p certval-store-gen --
 certval-store-gen installroot --stream inputs/DoD.ir4  --population dod \
     --provider-dir . --env prod --dry-run   # read the diff first
 certval-store-gen installroot --stream inputs/DoD.ir4  --population dod \

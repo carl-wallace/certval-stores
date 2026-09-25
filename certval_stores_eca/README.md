@@ -87,7 +87,7 @@ publisher's own date is newer; a stream published older than the committed one i
 rollback rather than taken:
 
 ```sh
-# redhound/certval-store-gen
+# certval-store-gen, a member of this workspace: cargo run -p certval-store-gen --
 certval-store-gen refresh --url https://crl.gds.disa.mil/pke/config/ECA.ir4 \
     --into inputs/ECA.ir4 --population eca
 ```
@@ -97,7 +97,7 @@ in `inputs/` and regenerate. Both `roots/prod/` and `cas/prod/` are output, so n
 edited by hand:
 
 ```sh
-# redhound/certval-store-gen
+# certval-store-gen, a member of this workspace: cargo run -p certval-store-gen --
 certval-store-gen installroot --stream inputs/ECA.ir4 --population eca \
     --provider-dir . --env prod --dry-run   # read the diff first
 certval-store-gen installroot --stream inputs/ECA.ir4 --population eca \

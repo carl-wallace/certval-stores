@@ -2,6 +2,7 @@
 name = "certval_stores_webpki_root_certs"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.85"
 license = "Apache-2.0 OR MIT"
 description = "Mozilla TLS server root certificates for certval, taken from the webpki-root-certs crate"
 

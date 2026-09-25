@@ -2,6 +2,7 @@
 name = "certval_stores_msft"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.85"
 license = "Apache-2.0 OR MIT"
 description = "Microsoft root program trust stores for certval, split by the purposes the program grants"
 # `refresh-inputs` marks a working tree where `build.rs` may re-fetch the trust list and rewrite the

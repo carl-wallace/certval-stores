@@ -2,6 +2,7 @@
 name = "certval_stores_nipr"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.85"
 license = "Apache-2.0 OR MIT"
 description = "NIPR (DoD PKI) trust stores for certval — production (nipr) and operational-test (om_nipr) environments"
 

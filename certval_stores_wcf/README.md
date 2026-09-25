@@ -100,7 +100,7 @@ publisher's own date is newer; a stream published older than the committed one i
 rollback rather than taken:
 
 ```sh
-# redhound/certval-store-gen
+# certval-store-gen, a member of this workspace: cargo run -p certval-store-gen --
 certval-store-gen refresh --url https://crl.gds.disa.mil/pke/config/WCF.ir4 \
     --into inputs/WCF.ir4 --population wcf
 ```

@@ -1,0 +1,38 @@
+# Dependency updates.
+#
+# The cargo entry is not housekeeping here: `certval_stores_webpki_root_certs` vendors no
+# certificates of its own, so its trust material moves only when the `webpki-root-certs`
+# dependency moves. Without this, the crate whose entire advantage over `certval_stores_mozilla`
+# is update cost had nothing that updated it.
+#
+# Weekly, on the same day as the provider refresh, so a maintainer reads all of the week's trust
+# movement in one sitting rather than two.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # One pull request for the ordinary churn. The RustCrypto and x509 crates move together and
+      # reviewing them apart means reading the same lockfile change several times.
+      rust-crypto:
+        patterns:
+          - "x509-*"
+          - "const-oid"
+          - "der"
+          - "spki"
+          - "cms"
+          - "pkcs*"
+          - "sha1"
+          - "sha2"
+    # Trust material is reviewed on its own, never grouped: a bump here changes which roots the
+    # crate serves, which is a trust decision and not a dependency update.
+    # (`webpki-root-certs` is deliberately left out of every group above.)
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

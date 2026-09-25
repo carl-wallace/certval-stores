@@ -53,7 +53,7 @@ since the `local` adapter below is handed a folder rather than a dated artifact.
 ## Refreshing
 
 ```sh
-# redhound/certval-store-gen
+# certval-store-gen, a member of this workspace: cargo run -p certval-store-gen --
 certval-store-gen --out-dir ./out local --tas roots/dev --cas cas/dev
 cp out/ca.cbor cas/dev/dev.cbor
 ```

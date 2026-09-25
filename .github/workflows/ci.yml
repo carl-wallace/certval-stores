@@ -9,11 +9,11 @@ env:
   CARGO_INCREMENTAL: 0
   RUSTFLAGS: "-Dwarnings"
 
-# No MSRV matrix leg, deliberately. certval's floor is 1.85, but this workspace
-# cannot reach it: reqwest pulls idna -> icu_* 2.2.0, which requires rustc 1.86,
-# so a 1.85 job fails in dependency resolution before compiling anything here.
-# 1.86 is the earliest candidate for a floor if one is wanted; verify it before
-# adding a leg, and declare `rust-version` in the crates to go with it.
+# No MSRV matrix leg across the workspace, because the floor is not uniform: the
+# provider crates declare certval's own 1.85 and `certval-store-gen` declares
+# 1.86, which it needs honestly — it takes certval's `remote` feature, so reqwest
+# pulls idna -> icu_* 2.2.0. A whole-workspace 1.85 job would fail on the
+# generator alone. The providers are covered by the leg below.
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -70,20 +70,22 @@ jobs:
       # No environment feature to name: this crate has one store and it is unconditional.
       - run: cargo build -p certval_stores_webpki_root_certs --no-default-features --target wasm32-unknown-unknown
 
-  # Without the client the icu crates leave the *library* graph, but not the build-script
-  # one: certval-store-gen takes certval's `remote` feature so revocation checking is
-  # certval's own, and reqwest carries icu 2.2.0 into every provider's build script, which
-  # no library feature can turn off. So this leg holds 1.86 rather than certval's 1.85 —
-  # one release apart, a dozen behind stable, and the price of not running a second
-  # revocation implementation beside certval's.
+  # The floor a consumer actually meets, which is certval's own 1.85 and what every provider
+  # declares. What sets it is the library graph alone: certval-store-gen is a dev-dependency taken
+  # with `default-features = false`, so it governs `cargo test` rather than a consumer's build, and
+  # it declares 1.86 for itself.
+  #
+  # Two crates rather than all nine: nipr is the multi-environment shape and msft the only one with
+  # a build script, so anything that breaks the floor breaks one of those.
   build-msrv-no-client:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.86.0 # what certval-store-gen's graph needs; certval itself is 1.85
+          toolchain: 1.85.0 # certval's floor, which the providers declare
       - run: cargo build -p certval_stores_nipr --no-default-features --features nipr
+      - run: cargo build -p certval_stores_msft --no-default-features --features msft_all
 
   # Lints run on stable only. The pre-commit hook in each clone runs the same
   # commands so they fail before a push — an early warning, not a replacement.
