@@ -1,6 +1,6 @@
 # Dependency updates.
 #
-# The cargo entry is not housekeeping here: `certval_stores_webpki_root_certs` vendors no
+# The cargo entry is not housekeeping here: `certval_stores_webpki_root_certs` holds no
 # certificates of its own, so its trust material moves only when the `webpki-root-certs`
 # dependency moves. Without this, the crate whose entire advantage over `certval_stores_mozilla`
 # is update cost had nothing that updated it.
@@ -14,25 +14,27 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     groups:
-      # One pull request for the ordinary churn. The RustCrypto and x509 crates move together and
-      # reviewing them apart means reading the same lockfile change several times.
-      rust-crypto:
+      # One pull request for the week's churn. Grouping by family sounded tidier and produced one
+      # grouped update beside four ungrouped ones, because a week's movement rarely lands inside
+      # whichever family was named.
+      cargo:
         patterns:
-          - "x509-*"
-          - "const-oid"
-          - "der"
-          - "spki"
-          - "cms"
-          - "pkcs*"
-          - "sha1"
-          - "sha2"
-    # Trust material is reviewed on its own, never grouped: a bump here changes which roots the
-    # crate serves, which is a trust decision and not a dependency update.
-    # (`webpki-root-certs` is deliberately left out of every group above.)
+          - "*"
+        # Two exceptions, each because merging it is a decision rather than an update.
+        # `webpki-root-certs` IS the trust material of one provider, so a bump changes which roots
+        # ship. `certval` is a git pin, so a bump changes the engine every store is built against.
+        exclude-patterns:
+          - "webpki-root-certs"
+          - "certval"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      actions:
+        patterns:
+          - "*"
