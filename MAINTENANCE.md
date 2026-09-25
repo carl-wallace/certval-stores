@@ -57,10 +57,16 @@ signal; GitHub offers to open the pull request from it, and the review guidance 
 message so it travels with the branch.
 
 **A refresh is expected to arrive red, and that is the mechanism rather than a defect.** Each crate
-pins the counts its material had when a person last reviewed it. When a publisher moves, the tests
-fail and name what changed; someone reads the certificate diff, updates the constants, and merges.
-A green refresh would mean nothing moved, in which case no branch is pushed at all. The failure
-*is* the acknowledgement gate.
+pins both the counts and a **digest over the certificate set** its material had when a person last
+reviewed it. When a publisher moves, the tests fail and name what changed; someone reads the
+certificate diff, updates the constants, and merges. The failure *is* the acknowledgement gate.
+
+The digest is there because a count cannot see substitution, and that is not hypothetical: on
+2026-09-25 a Mozilla refresh removed 19 intermediates and added 19 others, every pinned count was
+unchanged, and 38 changed certificates passed a gate whose only purpose is to make someone look.
+A count measures size where the question is membership. `conformance::set_digest` digests each
+certificate, sorts the digests and digests the sorted list, so order does not matter and any
+addition, removal or swap moves the value.
 
 The rollback guard sits in the generator, not the workflow: a stream published older than the
 committed one is refused rather than taken.

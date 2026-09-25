@@ -21,6 +21,8 @@ ciborium = { version = "0.2.2", default-features = false, features = ["std"], op
 # Derives the serde shape of a store for `conformance::RawStore`; certval's own
 # BuffersAndPaths is readonly, so it cannot be built or edited from out here.
 serde = { version = "1", default-features = false, features = ["derive", "alloc"], optional = true }
+# `test-util` only, for `conformance::set_digest`. Never in a consumer's graph.
+sha2 = { version = "0.11.0", optional = true }
 
 [features]
 default = ["reqwest-client"]
@@ -33,7 +35,7 @@ default = ["reqwest-client"]
 reqwest-client = ["dep:reqwest"]
 # Conformance checks over the TrustStoreProvider contract, for provider crates
 # to run from their own tests. Off by default so consumers do not carry them.
-test-util = ["dep:ciborium", "dep:serde"]
+test-util = ["dep:ciborium", "dep:serde", "dep:sha2"]
 
 # native-tls uses the OS-blessed crypto on macOS/iOS (Secure Transport), Linux
 # (system OpenSSL), and Windows (SChannel). Android is the only target where

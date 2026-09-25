@@ -972,6 +972,48 @@ pub fn assert_conformant(provider: &dyn TrustStoreProvider) {
 /// The checks above are only worth running if they fail when they should. These
 /// feed deliberately broken providers to each check; the provider crates cover
 /// the passing side with their real material.
+/// Fingerprint of a certificate set, independent of the order it is stored in.
+///
+/// **A count measures size where the question is membership.** On 2026-09-25 a Mozilla refresh
+/// removed 19 intermediates and added 19 others: every count the tests pinned was unchanged, so
+/// they passed over 38 changed certificates, through a gate whose whole purpose is to make a
+/// person look. A digest over the set moves whenever any certificate is added, removed or
+/// swapped, so a refresh that changes the material cannot merge without someone updating the
+/// constant, which is the acknowledgement the counts failed to ask for.
+///
+/// Each certificate is digested, the digests are sorted, and the sorted list is digested again.
+/// Sorting is what makes it a *set* fingerprint rather than a sequence one: a generator emitting
+/// the same certificates in a different order has changed nothing and must not read as a change.
+///
+/// Intended use is a constant in a provider's tests, updated from the value a failure prints:
+///
+/// ```no_run
+/// # #[cfg(feature = "test-util")]
+/// # fn main() {
+/// # let ders: Vec<&[u8]> = vec![];
+/// const EXPECTED_SET: &str = "...";
+/// let actual = certval_stores_core::conformance::set_digest(ders.into_iter());
+/// assert_eq!(actual, EXPECTED_SET, "the set changed; if intended, set EXPECTED_SET to {actual}");
+/// # }
+/// # #[cfg(not(feature = "test-util"))]
+/// # fn main() {}
+/// ```
+pub fn set_digest<'a>(ders: impl Iterator<Item = &'a [u8]>) -> String {
+    use core::fmt::Write;
+    use sha2::{Digest, Sha256};
+
+    fn hex(bytes: &[u8]) -> String {
+        bytes.iter().fold(String::new(), |mut acc, b| {
+            let _ = write!(acc, "{b:02x}");
+            acc
+        })
+    }
+
+    let mut each: Vec<String> = ders.map(|der| hex(&Sha256::digest(der))).collect();
+    each.sort_unstable();
+    hex(&Sha256::digest(each.join("\n").as_bytes()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -380,6 +380,7 @@ dependencies = [
  "log",
  "reqwest",
  "serde",
+ "sha2",
  "tokio",
 ]
 
