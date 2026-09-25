@@ -28,6 +28,15 @@ const EXPECTED_EMAIL: usize = 215;
 const EXPECTED_CODE_SIGNING: usize = 143;
 #[cfg(feature = "msft_timestamping")]
 const EXPECTED_TIMESTAMPING: usize = 162;
+/// Digest over the root set itself, which the counts above cannot see: a count measures size
+/// where the question is membership, so a list that drops one root and adds another passes every
+/// assertion here unchanged. Taken over `msft_all` alone because the five narrowed environments
+/// are subsets of it over the same material, so a substitution anywhere is a substitution there.
+/// The counts remain the gate on re-partitioning, which is a root moving between purposes.
+///
+/// To update: run the tests, and the failure prints the digest to paste in.
+#[cfg(feature = "msft_all")]
+const EXPECTED_ALL_SET: &str = "02454e837907f80656324b2bafee3c406bdcff92ea0a57ae5168fb18684aa489";
 
 /// Gated like the tests that call it: with no environment feature enabled this crate serves
 /// nothing, so there is no entry to look up.
@@ -60,6 +69,18 @@ fn entry_shapes_are_sound() {
 fn roots_parse() {
     let failures = conformance::check_roots_parse(certval_stores_msft::provider());
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// The gate the counts are not. See [`EXPECTED_ALL_SET`].
+#[test]
+#[cfg(feature = "msft_all")]
+fn the_root_set_is_what_was_reviewed() {
+    let entry = entry(certval_stores_msft::MSFT_ALL);
+    let actual = conformance::set_digest(entry.roots.iter().copied());
+    assert_eq!(
+        actual, EXPECTED_ALL_SET,
+        "the Microsoft root set changed; if that is intended, set EXPECTED_ALL_SET to {actual}"
+    );
 }
 
 #[test]

@@ -35,6 +35,34 @@ fn roots_for(id: &str) -> &'static [&'static [u8]] {
 /// this with the store; see README.md for the refresh procedure.
 #[cfg(feature = "fpki")]
 const EXPECTED_INTERMEDIATES: usize = 133;
+/// Digest over the intermediate set, which the count above cannot see. The FPKI crawler
+/// republishes whenever any participant's cross-certificates change, so a refresh that swaps one
+/// cross-certificate for another leaves the count identical and the mesh materially different.
+///
+/// To update: run the tests, and the failure prints the digest to paste in.
+const EXPECTED_INTERMEDIATE_SET: &str =
+    "a2cf31cd0cfd07258203b8830c8c069f5f8139a7c92a623e5d9f14e15199dfa5";
+
+/// The gate the count is not. See [`EXPECTED_INTERMEDIATE_SET`].
+#[test]
+fn the_intermediate_set_is_what_was_reviewed() {
+    let entries = certval_stores_fpki::PROVIDER.entries();
+    let cbor = entries
+        .iter()
+        .find(|e| e.id == certval_stores_fpki::FPKI)
+        .and_then(|e| e.cert_store_cbor)
+        .expect("FPKI entry must carry a CA store");
+    let mut cert_source = CertSource::new_from_cbor(cbor).expect("fpki.cbor must deserialize");
+    cert_source
+        .initialize(&Default::default())
+        .expect("fpki.cbor must initialize");
+    let buffers = cert_source.get_buffers();
+    let actual = conformance::set_digest(buffers.iter().map(|cf| cf.bytes.as_slice()));
+    assert_eq!(
+        actual, EXPECTED_INTERMEDIATE_SET,
+        "the FPKI intermediate set changed; if intended, set EXPECTED_INTERMEDIATE_SET to {actual}"
+    );
+}
 
 fn providers() -> Vec<&'static dyn TrustStoreProvider> {
     vec![certval_stores_fpki::provider()]

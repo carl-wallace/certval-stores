@@ -90,9 +90,10 @@ jobs:
           rather than by comparing issuer to subject, since the FPKI contains self-issued rollover
           certificates that a naive comparison would misfile as roots.
 
-          CI is expected to fail. EXPECTED_INTERMEDIATES in certval_stores_fpki/tests/tests.rs
-          pins the count that was last reviewed. Read the certificate diff, update the constant,
-          and merge.
+          CI is expected to fail. EXPECTED_INTERMEDIATES and EXPECTED_INTERMEDIATE_SET in
+          certval_stores_fpki/tests/tests.rs pin the count and the certificate set that were last
+          reviewed; the set digest is the half that catches one cross-certificate being swapped
+          for another. Read the certificate diff, update the constants, and merge.
 
           Worth looking at first:
 

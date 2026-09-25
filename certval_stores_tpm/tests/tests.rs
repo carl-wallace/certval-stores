@@ -19,6 +19,18 @@ use certval_stores_core::conformance;
 const EXPECTED_ROOTS: usize = 47;
 #[cfg(feature = "tpm")]
 const EXPECTED_INTERMEDIATES: usize = 2112;
+
+/// Digests over the sets themselves, which the counts above cannot see: a count measures size
+/// where the question is membership, so a cabinet that retires one vendor CA and publishes
+/// another passes every assertion here unchanged. 2112 intermediates is the largest set in this
+/// workspace and the one where a symmetric change is least likely to be noticed by eye.
+///
+/// To update: run the tests, and the failure prints the digest to paste in.
+#[cfg(feature = "tpm")]
+const EXPECTED_ROOT_SET: &str = "344c05490713d9d09140741a043a461b1cd930cfd012d258640d5335d11d1eb5";
+#[cfg(feature = "tpm")]
+const EXPECTED_INTERMEDIATE_SET: &str =
+    "011e244a36146ff2a01cd21e5bcae902babda7236ba453a1d8002bd227219cc3";
 /// Intermediates the cabinet publishes that the store does not carry, listed with their reasons in
 /// `provenance/tpm/dropped.txt`: 36 that reach no root in it (mostly AMD fTPM CAs whose issuers it
 /// does not include), 6 that do not decode (STMicro, a non-canonical INTEGER), 366 that had already
@@ -68,6 +80,29 @@ fn the_cert_store_loads() {
 fn partial_paths_cover_every_ca() {
     let failures = conformance::check_partial_paths(certval_stores_tpm::provider());
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// The gate the counts are not. See [`EXPECTED_ROOT_SET`].
+#[test]
+#[cfg(feature = "tpm")]
+fn the_material_is_what_was_reviewed() {
+    let entry = entry();
+    let roots = conformance::set_digest(entry.roots.iter().copied());
+    assert_eq!(
+        roots, EXPECTED_ROOT_SET,
+        "the TPM root set changed; if that is intended, set EXPECTED_ROOT_SET to {roots}"
+    );
+
+    let cert_source = certval::CertSource::new_from_cbor(
+        entry.cert_store_cbor.expect("the tpm store carries CAs"),
+    )
+    .expect("the CA store must load");
+    let buffers = cert_source.get_buffers();
+    let cas = conformance::set_digest(buffers.iter().map(|cf| cf.bytes.as_slice()));
+    assert_eq!(
+        cas, EXPECTED_INTERMEDIATE_SET,
+        "the TPM intermediate set changed; if intended, set EXPECTED_INTERMEDIATE_SET to {cas}"
+    );
 }
 
 #[test]

@@ -79,8 +79,9 @@ jobs:
           cabinet by its Authenticode signature.
 
           CI is expected to fail. Each crate pins the counts its material had when it was last
-          reviewed, so a change fails the tests and names itself. Read the certificate diff,
-          update the constants, and merge.
+          reviewed, and a digest over the certificate set, which is the half that catches a
+          publisher swapping one certificate for another without changing how many there are.
+          Read the certificate diff, update the constants, and merge.
 
           Worth looking at first:
 
