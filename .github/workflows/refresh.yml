@@ -62,6 +62,9 @@ jobs:
           branch="refresh/${{ matrix.crate }}-$(date -u +%Y%m%d)"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # What moved in the store, by content, where the crate commits one (TPM does; the
+          # Microsoft provider commits certificates, which the file list already names).
+          moved="$(bash .github/scripts/store-diff.sh ${{ matrix.crate }} --features cli,authroot,tpm)"
           git checkout -b "$branch"
           git add ${{ matrix.crate }}
           # The tool's own summary leads the commit body: it states what was carried, what was
@@ -74,6 +77,8 @@ jobs:
 
           $(grep -E 'rewritten|carried|dropped' refresh.log || true)
 
+          $moved
+
           The material came from the publisher and was signature-checked before being written:
           the Microsoft trust list by its own CMS signature against the pinned anchor, the TPM
           cabinet by its Authenticode signature.
@@ -81,7 +86,7 @@ jobs:
           CI is expected to fail. Each crate pins the counts its material had when it was last
           reviewed, and a digest over the certificate set, which is the half that catches a
           publisher swapping one certificate for another without changing how many there are.
-          Read the certificate diff, update the constants, and merge.
+          Check what moved, above and in the certificate files, update the constants, and merge.
 
           Worth looking at first:
 
@@ -167,17 +172,21 @@ jobs:
           branch="refresh/${{ matrix.crate }}-$(date -u +%Y%m%d)"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # What moved in each store this crate regenerated, by content.
+          moved="$(bash .github/scripts/store-diff.sh ${{ matrix.crate }} --features cli)"
           git checkout -b "$branch"
           git add ${{ matrix.crate }}
           git commit -F - <<EOF
           refresh ${{ matrix.crate }} from the publisher
 
+          $moved
+
           The stream was parsed as its population before it replaced anything, and a stream
           published older than the committed one is refused as a rollback rather than taken.
 
           CI is expected to fail. Each crate pins the counts its material had when it was last
-          reviewed, so a change fails the tests and names itself. Read the certificate diff,
-          update the constants, and merge.
+          reviewed, so a change fails the tests and names itself. The diff above names what
+          moved; check it, update the constants, and merge.
 
           *_store_is_what_the_committed_stream_generates is the test that matters here: it
           regenerates from the committed .ir4 and compares certificate sets, so a store that

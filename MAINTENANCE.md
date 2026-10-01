@@ -54,7 +54,11 @@ Either job pushes a branch only when the material actually changed, and stops th
 here opens a pull request**, because the permission that allows an Actions token to open one also
 allows it to approve one, and that is not a power these repositories grant. The branch is the
 signal; GitHub offers to open the pull request from it, and the review guidance rides in the commit
-message so it travels with the branch.
+message so it travels with the branch. So does what moved: for every CBOR store a refresh rewrote,
+the message carries `certval-store-gen diff` of the committed store against the new one, naming the
+certificates added and removed and counting the partial paths that changed
+(`.github/scripts/store-diff.sh`). A provider that commits certificates rather than a store, such as
+the Microsoft one, shows its changes in the file list instead.
 
 **A refresh is expected to arrive red, and that is the mechanism rather than a defect.** Each crate
 pins both the counts and a **digest over the certificate set** its material had when a person last
@@ -75,7 +79,8 @@ committed one is refused rather than taken.
 
 Daily, in its own workflow because the cadence differs: the mesh is republished whenever any
 participant's cross-certificates change, and a cross-certificate appearing is how a participant
-becomes reachable. The bundle is fetched, converted from PEM-wrapped PKCS#7 to DER and **committed
+becomes reachable. The bundle is fetched, re-encoded as DER (the publisher has served it both PEM-wrapped and as
+DER) and **committed
 under `inputs/`**; the store is regenerated from it only if it moved.
 
 The bundle is the one source here with no signature to check before taking it. Committing it is the

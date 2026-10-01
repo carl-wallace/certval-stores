@@ -57,8 +57,9 @@ not a constant.
 ```sh
 curl -sSfO https://raw.githubusercontent.com/GSA/idmanagement.gov/staging/_implement/tools/CACertificatesValidatingToFederalCommonPolicyG2.p7b
 
-# the adapter takes DER; the published bundle is PEM-wrapped PKCS#7
-openssl pkcs7 -inform PEM -in CACertificatesValidatingToFederalCommonPolicyG2.p7b \
+# the adapter takes DER; the bundle is published PEM-wrapped or as DER, so pick the input form
+grep -aq -- '-----BEGIN' CACertificatesValidatingToFederalCommonPolicyG2.p7b && form=PEM || form=DER
+openssl pkcs7 -inform "$form" -in CACertificatesValidatingToFederalCommonPolicyG2.p7b \
               -outform DER -out fpki-bundle.der.p7b
 
 # certval-store-gen, a member of this workspace: cargo run -p certval-store-gen --

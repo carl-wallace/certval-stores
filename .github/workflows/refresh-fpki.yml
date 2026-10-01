@@ -43,9 +43,12 @@ jobs:
           # converted bundle under inputs/, and a stray copy at the root shows up as an
           # uncommitted change in every later step.
           curl -sSfL "$BUNDLE" -o "$RUNNER_TEMP/fetched.p7b"
-          # The adapter takes DER; the published bundle is PEM-wrapped PKCS#7. Converting before
-          # the comparison below means a re-wrapping upstream does not read as a content change.
-          openssl pkcs7 -inform PEM -in "$RUNNER_TEMP/fetched.p7b" \
+          # The adapter takes DER. The publisher has served the bundle both PEM-wrapped (the
+          # crawler's output) and as DER (a manual upload on 2026-09-29), so the input form is
+          # read off the file. Re-encoding to DER before the comparison below means a change of
+          # wrapping upstream does not read as a content change.
+          if grep -aq -- '-----BEGIN' "$RUNNER_TEMP/fetched.p7b"; then form=PEM; else form=DER; fi
+          openssl pkcs7 -inform "$form" -in "$RUNNER_TEMP/fetched.p7b" \
                         -outform DER -out certval_stores_fpki/inputs/fpki-bundle.der.p7b
 
       - name: Regenerate the store if the bundle moved
@@ -74,6 +77,10 @@ jobs:
           branch="refresh/certval_stores_fpki-$(date -u +%Y%m%d)"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # What moved, by content: the certificates added and removed and how many partial paths
+          # changed. Computed before committing so a failure fails the job rather than leaving the
+          # message without it.
+          moved="$(bash .github/scripts/store-diff.sh certval_stores_fpki)"
           git checkout -b "$branch"
           git add certval_stores_fpki
           # The review guidance lives in the commit message rather than a pull request body: this
@@ -83,7 +90,7 @@ jobs:
           git commit -F - <<EOF
           refresh certval_stores_fpki from the publisher
 
-          $(grep -E 'trust anchors|intermediates' fpki.log || true)
+          $moved
 
           The bundle is unsigned, so the committed inputs/fpki-bundle.der.p7b records exactly what
           was taken. The split into anchors and intermediates is by verifying self-signatures
@@ -93,7 +100,7 @@ jobs:
           CI is expected to fail. EXPECTED_INTERMEDIATES and EXPECTED_INTERMEDIATE_SET in
           certval_stores_fpki/tests/tests.rs pin the count and the certificate set that were last
           reviewed; the set digest is the half that catches one cross-certificate being swapped
-          for another. Read the certificate diff, update the constants, and merge.
+          for another. The diff above names what moved; check it, update the constants, and merge.
 
           Worth looking at first:
 

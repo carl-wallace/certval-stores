@@ -98,6 +98,23 @@ enum Command {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Compare two stores by content and write nothing.
+    ///
+    /// Names the certificates one store has and the other does not, by subject, issuer and
+    /// serial, and counts the partial paths that differ, compared by the certificates they run
+    /// through rather than by index. Printed to stdout, so the output can go into a commit message.
+    Diff {
+        /// The store before the change.
+        old: PathBuf,
+        /// The store after the change.
+        new: PathBuf,
+        /// List each added and removed partial path, not only their counts.
+        #[arg(long)]
+        paths: bool,
+        /// Exit with status 1 when the stores differ, as `git diff --exit-code` does.
+        #[arg(long)]
+        exit_code: bool,
+    },
     /// Verify the signatures on one or more InstallRoot `.ir4` streams and write nothing.
     ///
     /// Separate from `installroot` because it asks a different question: not "can this
@@ -229,6 +246,21 @@ fn main() -> Result<()> {
     if let Command::Recode { store, dry_run } = &cli.command {
         return recode_stores(store, *dry_run);
     }
+    // Comparing reads two finished stores and reports on them; nothing is generated.
+    if let Command::Diff {
+        old,
+        new,
+        paths,
+        exit_code,
+    } = &cli.command
+    {
+        let d = certval_store_gen::diff::diff_files(old, new)?;
+        print!("{}", d.render(*paths));
+        if *exit_code && !d.is_empty() {
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
     // Like recoding, this never reaches the adapter-then-generate path: it reports on bytes
     // rather than producing a store from them.
     if let Command::Verify { stream } = &cli.command {
@@ -346,6 +378,7 @@ fn main() -> Result<()> {
         }
         // Handled above; the match has to name these to stay exhaustive.
         Command::Recode { .. } => unreachable!("recoding returns before this point"),
+        Command::Diff { .. } => unreachable!("comparing returns before this point"),
         Command::Verify { .. } => unreachable!("verification returns before this point"),
         #[cfg(feature = "authroot")]
         Command::Authroot { .. } => {
