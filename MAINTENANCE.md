@@ -54,7 +54,11 @@ Either job pushes a branch only when the material actually changed, and stops th
 here opens a pull request**, because the permission that allows an Actions token to open one also
 allows it to approve one, and that is not a power these repositories grant. The branch is the
 signal; GitHub offers to open the pull request from it, and the review guidance rides in the commit
-message so it travels with the branch.
+message so it travels with the branch. So does what moved: for every CBOR store a refresh rewrote,
+the message carries `certval-store-gen diff` of the committed store against the new one, naming the
+certificates added and removed and counting the partial paths that changed
+(`.github/scripts/store-diff.sh`). A provider that commits certificates rather than a store, such as
+the Microsoft one, shows its changes in the file list instead.
 
 **A refresh is expected to arrive red, and that is the mechanism rather than a defect.** Each crate
 pins both the counts and a **digest over the certificate set** its material had when a person last
