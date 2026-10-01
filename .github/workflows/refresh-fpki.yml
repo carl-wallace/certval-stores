@@ -43,9 +43,12 @@ jobs:
           # converted bundle under inputs/, and a stray copy at the root shows up as an
           # uncommitted change in every later step.
           curl -sSfL "$BUNDLE" -o "$RUNNER_TEMP/fetched.p7b"
-          # The adapter takes DER; the published bundle is PEM-wrapped PKCS#7. Converting before
-          # the comparison below means a re-wrapping upstream does not read as a content change.
-          openssl pkcs7 -inform PEM -in "$RUNNER_TEMP/fetched.p7b" \
+          # The adapter takes DER. The publisher has served the bundle both PEM-wrapped (the
+          # crawler's output) and as DER (a manual upload on 2026-09-29), so the input form is
+          # read off the file. Re-encoding to DER before the comparison below means a change of
+          # wrapping upstream does not read as a content change.
+          if grep -aq -- '-----BEGIN' "$RUNNER_TEMP/fetched.p7b"; then form=PEM; else form=DER; fi
+          openssl pkcs7 -inform "$form" -in "$RUNNER_TEMP/fetched.p7b" \
                         -outform DER -out certval_stores_fpki/inputs/fpki-bundle.der.p7b
 
       - name: Regenerate the store if the bundle moved

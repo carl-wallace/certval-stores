@@ -75,7 +75,8 @@ committed one is refused rather than taken.
 
 Daily, in its own workflow because the cadence differs: the mesh is republished whenever any
 participant's cross-certificates change, and a cross-certificate appearing is how a participant
-becomes reachable. The bundle is fetched, converted from PEM-wrapped PKCS#7 to DER and **committed
+becomes reachable. The bundle is fetched, re-encoded as DER (the publisher has served it both PEM-wrapped and as
+DER) and **committed
 under `inputs/`**; the store is regenerated from it only if it moved.
 
 The bundle is the one source here with no signature to check before taking it. Committing it is the
