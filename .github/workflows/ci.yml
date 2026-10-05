@@ -11,8 +11,8 @@ env:
 
 # No MSRV matrix leg across the workspace, because the floor is not uniform: the
 # provider crates declare certval's own 1.85 and `certval-store-gen` declares
-# 1.86, which it needs honestly — it takes certval's `remote` feature, so reqwest
-# pulls idna -> icu_* 2.2.0. A whole-workspace 1.85 job would fail on the
+# 1.88, which it needs honestly — it takes certval's `remote` feature, so reqwest
+# pulls idna -> icu_* 2.3. A whole-workspace 1.85 job would fail on the
 # generator alone. The providers are covered by the leg below.
 jobs:
   build:
@@ -73,7 +73,7 @@ jobs:
   # The floor a consumer actually meets, which is certval's own 1.85 and what every provider
   # declares. What sets it is the library graph alone: certval-store-gen is a dev-dependency taken
   # with `default-features = false`, so it governs `cargo test` rather than a consumer's build, and
-  # it declares 1.86 for itself.
+  # it declares 1.88 for itself.
   #
   # Two crates rather than all nine: nipr is the multi-environment shape and msft the only one with
   # a build script, so anything that breaks the floor breaks one of those.

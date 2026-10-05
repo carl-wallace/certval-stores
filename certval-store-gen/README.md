@@ -56,8 +56,8 @@ source checkout refreshing its inputs all ask; the regeneration check a provider
 own tests does not, because a test that depends on a responder being up is a test nobody trusts, and
 the gate that asks runs upstream in CI on those same committed bytes.
 
-Taking `remote` is why this crate's floor is rustc 1.86 rather than certval's 1.85 — reqwest's
-graph carries icu 2.2.0. A provider crate inherits that floor where it takes this crate: at build
+Taking `remote` is why this crate's floor is rustc 1.88 rather than certval's 1.85 — reqwest's
+graph carries icu 2.3. A provider crate inherits that floor where it takes this crate: at build
 time for the two that keep a build script, and at test time for the InstallRoot providers, which
 take it as a dev-dependency. Building those needs only certval's 1.85.
 
