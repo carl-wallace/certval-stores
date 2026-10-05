@@ -31,7 +31,7 @@ default = ["reqwest-client"]
 # dependency graph. On by default, since the consumers that exist use those
 # constructors. Turn it off to embed trust material without an HTTP client — a
 # wasm or embedded consumer, or one bringing its own — which also drops the
-# rustc 1.86 floor the icu crates impose.
+# rustc floor the icu crates impose (1.88 as of icu 2.3).
 reqwest-client = ["dep:reqwest"]
 # Conformance checks over the TrustStoreProvider contract, for provider crates
 # to run from their own tests. Off by default so consumers do not carry them.

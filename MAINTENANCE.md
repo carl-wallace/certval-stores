@@ -126,8 +126,8 @@ crate serves is never buried in a lockfile pull request.
   fall back, since reqwest's wasm backend has no `Certificate` or `add_root_certificate`.
 - **MSRV 1.85 on two no-client builds** — `nipr`, the multi-environment shape, and `msft`, the
   only crate with a build script. 1.85 is certval's own floor and what every provider
-  declares. `certval-store-gen` is excluded and declares 1.86, which it needs: it takes certval's
-  `remote` feature, so reqwest carries `icu 2.2.0` into its graph.
+  declares. `certval-store-gen` is excluded and declares 1.88, which it needs: it takes certval's
+  `remote` feature, so reqwest carries `icu 2.3` into its graph.
 - **`rustfmt`, and `clippy` twice** — default features and `--all-features`, because
   `--all-features` cannot catch a warning that exists only when a feature is *absent*.
 - **Ten generator feature shapes**, each with warnings fatal, `fail-fast: false`. This is the job

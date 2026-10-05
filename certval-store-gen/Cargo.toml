@@ -2,9 +2,9 @@
 name = "certval-store-gen"
 version = "0.1.0"
 edition = "2021"
-# 1.86 rather than certval's 1.85: reqwest's graph (url -> idna_adapter -> icu 2.2.0) sets it, and
-# certval's revocation fetching is worth one release. Stable is twelve ahead of it.
-rust-version = "1.86"
+# 1.88 rather than certval's 1.85: reqwest's graph (url -> idna_adapter -> icu 2.3) sets it, and
+# certval's revocation fetching is worth the difference. Stable is well ahead of it.
+rust-version = "1.88"
 description = "Offline generator for certval CBOR trust-anchor and intermediate-CA stores (Web PKI, DoD TAMP, FPKI PKCS#7)"
 license = "MIT OR Apache-2.0"
 publish = false  # until the move to a public repo settles
@@ -34,9 +34,9 @@ certval = { git = "https://github.com/carl-wallace/rust-pki.git", branch = "main
     # is the one certval ships rather than a second one assembled around it. It carries `revocation`
     # (the stapled OCSP an InstallRoot stream ships) and reqwest (what settles a chain nothing
     # staples -- the timestamp authority's). The cost is that reqwest's own graph sets the floor for
-    # building this crate, and so for building a provider crate from source: rustc 1.86 rather than
-    # certval's 1.85, one release apart and a dozen behind stable. Pinning a year-old icu to dodge
-    # that is not worth the maintenance.
+    # building this crate, and so for building a provider crate from source: rustc 1.88 rather than
+    # certval's 1.85, and still well behind stable. Pinning an older icu to dodge that is not worth
+    # the maintenance.
     "remote",
 ] }
 
