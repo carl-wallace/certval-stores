@@ -115,6 +115,8 @@ jobs:
             fetch: |
               gen refresh --url $BASE/DoD.ir4  --into certval_stores_nipr/inputs/DoD.ir4  --population dod
               gen refresh --url $BASE/JITC.ir4 --into certval_stores_nipr/inputs/JITC.ir4 --population dod
+              fetch_bundle certval_stores_nipr/inputs DODINTEROPERABILITYROOTCA2_IB.p7c
+              fetch_bundle certval_stores_nipr/inputs USDODCCEBINTEROPERABILITYROOTCA2_IB.p7c
             generate: |
               gen installroot --stream certval_stores_nipr/inputs/DoD.ir4 --population dod \
                 --provider-dir certval_stores_nipr --env prod
@@ -148,8 +150,24 @@ jobs:
         env:
           RUST_LOG: info
           BASE: https://crl.gds.disa.mil/pke/config
+          ISSUEDBY: http://crl.disa.mil/issuedby
         run: |
           gen() { cargo run -q -p certval-store-gen --features cli -- "$@"; }
+          # The interoperability environments also read each interoperability root's issued-by
+          # bundle. A .p7c carries no publication date to compare, so a fetched bundle replaces
+          # the committed copy when it parses as PKCS#7 and its bytes differ. A failed fetch or an
+          # unparseable body keeps the committed copy and warns.
+          fetch_bundle() {
+            local tmp
+            tmp="$(mktemp)"
+            if curl -sSf --max-time 60 -o "$tmp" "$ISSUEDBY/$2" \
+              && openssl pkcs7 -inform DER -in "$tmp" -print_certs -noout >/dev/null 2>&1; then
+              cmp -s "$tmp" "$1/$2" || cp "$tmp" "$1/$2"
+            else
+              echo "::warning::could not fetch $ISSUEDBY/$2; keeping the committed copy"
+            fi
+            rm -f "$tmp"
+          }
           ${{ matrix.fetch }}
 
       - name: Regenerate the environments that read a stream that moved
