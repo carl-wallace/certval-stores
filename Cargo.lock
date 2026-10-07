@@ -290,7 +290,7 @@ dependencies = [
 [[package]]
 name = "certval"
 version = "0.2.0-pre"
-source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#f2c961744fdd68fa8593265e7643ceba1f7151dd"
+source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#4035ac21736a6d5ac4652a154b13438d13e8ffb9"
 dependencies = [
  "base64ct",
  "bitvec",
@@ -942,6 +942,7 @@ dependencies = [
  "ff",
  "group",
  "hybrid-array",
+ "pkcs8",
  "rand_core",
  "sec1",
  "subtle",
@@ -1925,7 +1926,7 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 [[package]]
 name = "pkiprocmacros"
 version = "0.1.2"
-source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#f2c961744fdd68fa8593265e7643ceba1f7151dd"
+source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#4035ac21736a6d5ac4652a154b13438d13e8ffb9"
 dependencies = [
  "quote",
  "syn 2.0.119",
@@ -2203,7 +2204,7 @@ dependencies = [
 [[package]]
 name = "rfc5934"
 version = "0.1.0"
-source = "git+https://github.com/carl-wallace/rfc5934.git?branch=main#71cad7826cb9b01dddeeaf450b996ab6b4a29c39"
+source = "git+https://github.com/carl-wallace/rfc5934.git?branch=main#f836b68b4387cc69e4b768b776ab38658166243d"
 dependencies = [
  "cms",
  "const-oid",
@@ -2914,7 +2915,7 @@ checksum = "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3"
 [[package]]
 name = "tpm_cab_verify"
 version = "0.1.2"
-source = "git+https://github.com/carl-wallace/tpm_cab_verify.git?branch=main#3301a3b2be653b26356a39df5a5e3cbaf2d2d561"
+source = "git+https://github.com/carl-wallace/tpm_cab_verify.git?branch=main#2d41f45ff71e21ab2555b992845a6aa6aebf7177"
 dependencies = [
  "authenticode",
  "bincode",
