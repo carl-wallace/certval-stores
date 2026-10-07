@@ -12,12 +12,11 @@ updates:
   - package-ecosystem: cargo
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
     open-pull-requests-limit: 3
     groups:
-      # One pull request for the week's churn. Grouping by family sounded tidier and produced one
-      # grouped update beside four ungrouped ones, because a week's movement rarely lands inside
+      # One pull request for the month's churn. Grouping by family sounded tidier and produced one
+      # grouped update beside four ungrouped ones, because a period's movement rarely lands inside
       # whichever family was named.
       cargo:
         patterns:
