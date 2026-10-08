@@ -4,6 +4,10 @@ on:
   pull_request:
   push:
     branches: main
+  # Manual re-runs via `gh workflow run ci.yml` (available once this file is
+  # on the default branch). The refresh workflows will also use it to start CI on
+  # the pull request they open, which a PR opened by a workflow does not do itself.
+  workflow_dispatch:
 
 env:
   CARGO_INCREMENTAL: 0
