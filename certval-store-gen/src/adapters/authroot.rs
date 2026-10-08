@@ -77,7 +77,7 @@ use const_oid::db::rfc5280::ID_CE_SUBJECT_KEY_IDENTIFIER;
 use const_oid::db::rfc5911::ID_MESSAGE_DIGEST;
 use const_oid::db::rfc5912::{ID_SHA_256, RSA_ENCRYPTION, SHA_256_WITH_RSA_ENCRYPTION};
 use const_oid::ObjectIdentifier;
-use der::asn1::{OctetString, SetOfVec, Uint};
+use der::asn1::{BitString, OctetString, SetOfVec, Uint};
 use der::{Decode, Encode, Sequence};
 use sha1::{Digest, Sha1};
 use sha2::Sha256;
@@ -377,7 +377,7 @@ pub fn verify_stl(stl_der: &[u8], anchors: &[&[u8]]) -> Result<()> {
     pe.verify_signature_message(
         &pe,
         &signed_attrs.to_der()?,
-        signer.signature.as_bytes(),
+        &BitString::from_bytes(signer.signature.as_bytes())?,
         &sig_alg,
         signer_cert.tbs_certificate().subject_public_key_info(),
     )

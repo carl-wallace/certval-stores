@@ -36,7 +36,7 @@ use certval::{
 };
 use rsa::pkcs8::DecodePublicKey;
 use x509_cert::der::oid::db::rfc5912::SHA_1_WITH_RSA_ENCRYPTION;
-use x509_cert::der::Encode;
+use x509_cert::der::{asn1::BitString, Encode};
 use x509_cert::spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 
 /// Handle PEM files that do not adhere to strict line length limits
@@ -949,7 +949,7 @@ async fn the_committed_cabinet_verifies() {
 pub fn verify_signature_message_rust_crypto_sha1(
     _pe: &PkiEnvironment,
     message_to_verify: &[u8],                 // buffer to verify
-    signature: &[u8],                         // signature
+    signature: &BitString,                    // signature
     signature_alg: &AlgorithmIdentifierOwned, // signature algorithm
     spki: &SubjectPublicKeyInfoOwned,         // public key
 ) -> certval::Result<()> {
@@ -973,6 +973,7 @@ pub fn verify_signature_message_rust_crypto_sha1(
         }
     };
 
+    let signature = signature.as_bytes().ok_or(certval::Error::ParseError)?;
     let hash_to_verify = Sha1::digest(message_to_verify);
     let ps = Pkcs1v15Sign::new::<Sha1>();
     rsa.verify(ps, hash_to_verify.as_slice(), signature)
