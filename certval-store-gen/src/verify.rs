@@ -22,7 +22,7 @@ use const_oid::db::rfc5912::{
     ID_SHA_256, ID_SHA_384, ID_SHA_512, RSA_ENCRYPTION, SHA_256_WITH_RSA_ENCRYPTION,
     SHA_384_WITH_RSA_ENCRYPTION, SHA_512_WITH_RSA_ENCRYPTION,
 };
-use der::asn1::ObjectIdentifier;
+use der::asn1::{BitString, ObjectIdentifier};
 use der::{Decode, Encode};
 use sha2::{Digest, Sha256, Sha384, Sha512};
 use x509_cert::{ext::pkix::SubjectKeyIdentifier, spki::AlgorithmIdentifierOwned, Certificate};
@@ -613,7 +613,7 @@ pub(crate) fn verify_signed_data(
     pe.verify_signature_message(
         pe,
         &enc_signed_attrs,
-        signer.signature.as_bytes(),
+        &BitString::from_bytes(signer.signature.as_bytes())?,
         &sig_alg,
         signer_cert.tbs_certificate().subject_public_key_info(),
     )

@@ -290,7 +290,7 @@ dependencies = [
 [[package]]
 name = "certval"
 version = "0.2.0-pre"
-source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#f2c961744fdd68fa8593265e7643ceba1f7151dd"
+source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#7b45426af9a1b99b5f5aa5c348deea8c338412b5"
 dependencies = [
  "base64ct",
  "bitvec",
@@ -942,6 +942,7 @@ dependencies = [
  "ff",
  "group",
  "hybrid-array",
+ "pkcs8",
  "rand_core",
  "sec1",
  "subtle",
@@ -1879,9 +1880,9 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "pkcs1"
-version = "0.8.0-rc.4"
+version = "0.8.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "986d2e952779af96ea048f160fd9194e1751b4faea78bcf3ceb456efe008088e"
+checksum = "f485dbafe293ea6ccaa7d82bc591651a796eb8a9aec3df040b057b706073dbc3"
 dependencies = [
  "der",
  "spki",
@@ -1925,7 +1926,7 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 [[package]]
 name = "pkiprocmacros"
 version = "0.1.2"
-source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#f2c961744fdd68fa8593265e7643ceba1f7151dd"
+source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#7b45426af9a1b99b5f5aa5c348deea8c338412b5"
 dependencies = [
  "quote",
  "syn 2.0.119",
@@ -2239,9 +2240,9 @@ dependencies = [
 
 [[package]]
 name = "rsa"
-version = "0.10.0-rc.18"
+version = "0.10.0-rc.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30b2aa4ba0d89f73d1e332df05be0eeab8840351c36ca5654341dfdb57bb3caf"
+checksum = "33405e321e16ef941ca66e254f6904c3aafd3c7ff001fb88bf11c73eb75c2b85"
 dependencies = [
  "const-oid",
  "crypto-bigint",
@@ -2614,9 +2615,9 @@ checksum = "3763264f6b73151db08c50ff20d7d8a0b8796e021cdea7ceedad07b80155fa0e"
 
 [[package]]
 name = "spki"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d9efca8738c78ee9484207732f728b1ef517bbb1833d6fc0879ca898a522f6f"
+checksum = "7ef958a98b9d5da290cfc78946e9f3e61e1e62a18db0d92cac0b83cc161491a9"
 dependencies = [
  "base64ct",
  "der",
@@ -2914,7 +2915,7 @@ checksum = "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3"
 [[package]]
 name = "tpm_cab_verify"
 version = "0.1.2"
-source = "git+https://github.com/carl-wallace/tpm_cab_verify.git?branch=main#3301a3b2be653b26356a39df5a5e3cbaf2d2d561"
+source = "git+https://github.com/carl-wallace/tpm_cab_verify.git?branch=main#75e261167ab9bc567eda2eb67daee1007a0c5732"
 dependencies = [
  "authenticode",
  "bincode",
