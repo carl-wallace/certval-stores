@@ -138,6 +138,24 @@ crate serves is never buried in a lockfile pull request.
   build never has to decide what to do about one that has not. It needs egress to
   `ocsp.sectigo.com` for the timestamp authority, which nothing staples.
 
+## Versioning
+
+Nothing in the family is published yet, and versions do not move until it is: every crate stays at
+`0.1.0`, and consumers take the providers as git dependencies on `branch = "main"`, so a refresh
+reaches them on their next `cargo update` with no version signal. The test constants are the signal
+in the meantime; changing one is the acknowledgement that someone read the diff.
+
+The providers publish at `1.0.0`, because the rule below needs three levels and Cargo gives a 0.x
+version only two. From then on a bump follows what changed:
+
+- **Patch**, when only intermediate CA certificates or partial paths change. What is trusted is
+  unchanged; only which paths can be built without fetching anything is different. A refresh that
+  drops expired or withdrawn cross-certificates is a patch, as one that adds new ones is.
+- **Minor**, when trust anchors change, or the API gains something compatibly. A root change is the
+  larger event, so it is marked as one, but it stays Cargo-compatible and still arrives with
+  `cargo update`.
+- **Major**, when the API changes incompatibly.
+
 ## Still open
 
 **A regeneration test for the Federal PKI.** The stream providers have
