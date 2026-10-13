@@ -392,6 +392,7 @@ name = "certval_stores_fpki"
 version = "0.1.0"
 dependencies = [
  "certval",
+ "certval-store-gen",
  "certval_stores_core",
 ]
 

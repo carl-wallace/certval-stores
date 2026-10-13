@@ -29,8 +29,8 @@ Five sources, distinguished by what authenticates the material:
 The stream-sourced crates keep the signed artifact they were generated from. That is what makes
 them checkable later: `*_store_is_what_the_committed_stream_generates` regenerates from the
 committed `.ir4` and compares certificate sets, so a store that drifted from its own input fails
-even when the pinned counts still line up. `fpki` commits its bundle for the same reason,
-though the test that would use it is still owed.
+even when the pinned counts still line up. `fpki` commits its bundle for the same reason, and
+`the_store_is_what_the_committed_bundle_generates` does the same with it.
 
 `certval_stores_msft` is the only crate with a build script, and it refreshes nothing. Every file in
 `roots/` must hash to its own name, which is the same comparison that admitted it — Microsoft's list
@@ -181,18 +181,7 @@ version only two. From then on a bump follows what changed:
   `cargo update`.
 - **Major**, when the API changes incompatibly.
 
-## Still open
-
-**A regeneration test for the Federal PKI.** The stream providers have
-`*_store_is_what_the_committed_stream_generates`, which rebuilds from the committed `.ir4` and
-compares certificate sets, so a store that drifted from its own input fails even when the pinned
-counts line up. `fpki` has the bundle to do the same and not yet the test; it can only be written
-once a refresh has created `inputs/`.
-
-**The refresh workflows want one `workflow_dispatch` each before their schedules are trusted.** The
-FPKI one creates `certval_stores_fpki/inputs/` on its first run, so its first branch carries a
-whole file rather than a diff, and the Mozilla one checks out this workspace to build the
-generator, which is the step most likely to need adjusting.
+## Accepted costs
 
 An accepted cost rather than a gap, recorded so it is not rediscovered: `inputs-verified` reaches
 `ocsp.sectigo.com` on every pull request, so a responder outage blocks the repository. The workflow
