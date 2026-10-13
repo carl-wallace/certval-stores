@@ -50,12 +50,15 @@ Weekly, Mondays at 06:00 UTC, plus `workflow_dispatch`. Two jobs, for five crate
   interoperability stores, so the publisher is asked once per stream and the generator run once per
   environment. Regeneration is skipped entirely when no stream moved.
 
-Either job pushes a branch only when the material actually changed, and stops there. **No workflow
-here opens a pull request**, because the permission that allows an Actions token to open one also
-allows it to approve one, and that is not a power these repositories grant. The branch is the
-signal; GitHub offers to open the pull request from it, and the review guidance rides in the commit
-message so it travels with the branch. So does what moved: for every CBOR store a refresh rewrote,
-the message carries `certval-store-gen diff` of the committed store against the new one, naming the
+Either job acts only when the material actually changed, and then **opens a pull request** from a
+branch named for the crate (`refresh/<crate>`, `.github/scripts/refresh-pr.sh`). The pull request
+is the notice: GitHub emails its creation, so a waiting refresh no longer depends on someone
+noticing a branch. While it is open, later runs push nothing to it, since the reviewer may have
+pushed the updated constants there; if the material moved again they comment on it once, and the
+run after the merge opens a new one. Opening it needs the repository setting that lets Actions
+create pull requests, which also lets them approve one; with no approvals required by the rulesets,
+that half unlocks nothing. The review guidance is the pull request's description and the commit
+message. So is what moved: for every CBOR store a refresh rewrote, it carries `certval-store-gen diff` of the committed store against the new one, naming the
 certificates added and removed and counting the partial paths that changed
 (`.github/scripts/store-diff.sh`). A provider that commits certificates rather than a store, such as
 the Microsoft one, shows its changes in the file list instead.
@@ -64,6 +67,28 @@ the Microsoft one, shows its changes in the file list instead.
 pins both the counts and a **digest over the certificate set** its material had when a person last
 reviewed it. When a publisher moves, the tests fail and name what changed; someone reads the
 certificate diff, updates the constants, and merges. The failure *is* the acknowledgement gate.
+A pull request opened by the workflow starts no CI by itself, so the first run is the one the
+reviewer's push of the updated constants starts (or, for a refresh that moves nothing pinned, a
+close and reopen).
+
+Every pinned constant is checked with `certval_stores_core::pin!`, so updating them is one command
+on the refresh branch:
+
+```sh
+UPDATE_PINS=1 cargo test --workspace --all-features
+cargo fmt
+cargo test --workspace --all-features
+git diff -- '*/tests/*'
+```
+
+With `UPDATE_PINS` set, each `pin!` rewrites its constant's declaration to the value the material
+gives instead of failing, so that run passes every pin by construction, against binaries compiled
+with the old values. The plain run after it is the one that checks the new constants, as CI will.
+The diff is what to read beside the certificate diff before committing. The values come from the code that checks them, so the updater cannot drift from the
+gate. A constant checked against two different values in one run (the roots the TPM crate embeds
+and the roots its committed cabinet regenerates, say) still fails: that is the material disagreeing
+with itself, which no value settles. The refresh job deliberately does not run this itself: the
+constants exist so that a person looks before the material merges.
 
 The digest is there because a count cannot see substitution, and that is not hypothetical: on
 2026-09-25 a Mozilla refresh removed 19 intermediates and added 19 others, every pinned count was
@@ -95,8 +120,8 @@ Firefox ships. It is the only networked job in that repo, kept off pull requests
 GitHub outage cannot block one.
 
 It **detects**; it does not act. Acting is a separate weekly workflow in that repository, which
-runs `tools/refresh.py` and `tools/refresh_cas.py` and pushes a branch the same way this workspace
-does. The two are kept apart on purpose: drift is cheap and runs daily, while a refresh
+runs `tools/refresh.py` and `tools/refresh_cas.py` and opens a pull request the same way this
+workspace does. The two are kept apart on purpose: drift is cheap and runs daily, while a refresh
 fetches the whole CCADB report and every disclosed intermediate.
 
 ### By hand
@@ -104,8 +129,8 @@ fetches the whole CCADB report and every disclosed intermediate.
 `pbdev` carries a development environment and does not track a publisher, so nothing schedules it.
 
 Every other provider can be refreshed by hand with the same command its workflow runs: each crate's
-README carries the invocation, and a `workflow_dispatch` does the same thing and leaves a branch to
-review.
+README carries the invocation, and a `workflow_dispatch` does the same thing and opens a pull
+request to review.
 
 `webpki_root_certs` moves when its dependency moves, and Dependabot is what moves it — weekly,
 with `webpki-root-certs` deliberately excluded from every group, so a change to which roots the

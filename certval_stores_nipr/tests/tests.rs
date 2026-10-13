@@ -94,7 +94,7 @@ fn nipr_entry_carries_four_roots_and_a_ca_store() {
     let nipr = entry(certval_stores_nipr::NIPR_PROD);
     assert_eq!(nipr.roots.len(), 4);
     let cert_source = load(nipr.cert_store_cbor.expect("NIPR must carry a CA store"));
-    assert_eq!(cert_source.len(), EXPECTED_NIPR_INTERMEDIATES);
+    certval_stores_core::pin!(EXPECTED_NIPR_INTERMEDIATES, cert_source.len());
 }
 
 #[test]
@@ -103,7 +103,7 @@ fn om_nipr_entry_carries_four_roots_and_a_ca_store() {
     let om = entry(certval_stores_nipr::NIPR_OM);
     assert_eq!(om.roots.len(), 4);
     let cert_source = load(om.cert_store_cbor.expect("OM_NIPR must carry a CA store"));
-    assert_eq!(cert_source.len(), EXPECTED_OM_NIPR_INTERMEDIATES);
+    certval_stores_core::pin!(EXPECTED_OM_NIPR_INTERMEDIATES, cert_source.len());
 }
 
 /// The shared checks are only worth running if they fail on a store that has
@@ -269,7 +269,7 @@ fn nipr_interop_entry_carries_five_roots_and_a_ca_store() {
             .cert_store_cbor
             .expect("interop must carry a CA store"),
     );
-    assert_eq!(cert_source.len(), EXPECTED_NIPR_INTEROP_INTERMEDIATES);
+    certval_stores_core::pin!(EXPECTED_NIPR_INTEROP_INTERMEDIATES, cert_source.len());
 }
 
 #[test]
@@ -282,7 +282,7 @@ fn nipr_cceb_interop_entry_carries_five_roots_and_a_ca_store() {
         cceb.cert_store_cbor
             .expect("CCEB interop must carry a CA store"),
     );
-    assert_eq!(cert_source.len(), EXPECTED_NIPR_CCEB_INTEROP_INTERMEDIATES);
+    certval_stores_core::pin!(EXPECTED_NIPR_CCEB_INTEROP_INTERMEDIATES, cert_source.len());
 }
 
 /// The interoperability roots are hand-carried: DoD Interoperability Root CA 2 and US DoD CCEB

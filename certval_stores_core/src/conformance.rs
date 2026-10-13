@@ -985,15 +985,14 @@ pub fn assert_conformant(provider: &dyn TrustStoreProvider) {
 /// Sorting is what makes it a *set* fingerprint rather than a sequence one: a generator emitting
 /// the same certificates in a different order has changed nothing and must not read as a change.
 ///
-/// Intended use is a constant in a provider's tests, updated from the value a failure prints:
+/// Intended use is a constant in a provider's tests, checked with [`pin!`](crate::pin):
 ///
 /// ```no_run
 /// # #[cfg(feature = "test-util")]
 /// # fn main() {
 /// # let ders: Vec<&[u8]> = vec![];
 /// const EXPECTED_SET: &str = "...";
-/// let actual = certval_stores_core::conformance::set_digest(ders.into_iter());
-/// assert_eq!(actual, EXPECTED_SET, "the set changed; if intended, set EXPECTED_SET to {actual}");
+/// certval_stores_core::pin!(EXPECTED_SET, certval_stores_core::conformance::set_digest(ders.into_iter()));
 /// # }
 /// # #[cfg(not(feature = "test-util"))]
 /// # fn main() {}
@@ -1012,6 +1011,166 @@ pub fn set_digest<'a>(ders: impl Iterator<Item = &'a [u8]>) -> String {
     let mut each: Vec<String> = ders.map(|der| hex(&Sha256::digest(der))).collect();
     each.sort_unstable();
     hex(&Sha256::digest(each.join("\n").as_bytes()))
+}
+
+/// Checks a pinned constant in a provider's tests against the value the material gives.
+///
+/// The counts and set digests a provider's tests pin are what was last reviewed, so a refresh
+/// that moves the material fails them until someone updates them. Run normally, `pin!` asserts
+/// and names the constant. Run with `UPDATE_PINS=1`, it rewrites the constant's declaration in
+/// the calling test file to the value the material gives and passes, so a reviewer updates every
+/// pin with `UPDATE_PINS=1 cargo test --workspace --all-features` and reviews the result as a
+/// diff. The value comes from the same code that checks it. That run passes every pin by
+/// construction, against binaries compiled with the old values, so a plain `cargo test` after it
+/// is what checks the new ones.
+///
+/// The constant must be declared once in the calling file as `const NAME: TYPE = VALUE;`, with
+/// any formatting; `cargo fmt` afterward restores the layout. An optional third argument adds
+/// context to the failure message.
+///
+/// ```no_run
+/// # #[cfg(feature = "test-util")]
+/// # fn main() {
+/// # let store: Vec<u8> = vec![];
+/// const EXPECTED_INTERMEDIATES: usize = 142;
+/// certval_stores_core::pin!(EXPECTED_INTERMEDIATES, store.len());
+/// # }
+/// # #[cfg(not(feature = "test-util"))]
+/// # fn main() {}
+/// ```
+#[macro_export]
+macro_rules! pin {
+    ($name:ident, $actual:expr $(,)?) => {
+        $crate::conformance::check_pin(
+            stringify!($name),
+            file!(),
+            env!("CARGO_MANIFEST_DIR"),
+            &$name,
+            &$actual,
+            None,
+        )
+    };
+    ($name:ident, $actual:expr, $context:expr $(,)?) => {
+        $crate::conformance::check_pin(
+            stringify!($name),
+            file!(),
+            env!("CARGO_MANIFEST_DIR"),
+            &$name,
+            &$actual,
+            Some($context),
+        )
+    };
+}
+
+/// A value a pinned constant can hold, written as the Rust literal that declares it.
+pub trait PinValue {
+    /// The literal, as it appears after `=` in the constant's declaration.
+    fn literal(&self) -> String;
+}
+
+impl PinValue for usize {
+    fn literal(&self) -> String {
+        self.to_string()
+    }
+}
+
+impl PinValue for str {
+    fn literal(&self) -> String {
+        format!("{self:?}")
+    }
+}
+
+impl PinValue for String {
+    fn literal(&self) -> String {
+        self.as_str().literal()
+    }
+}
+
+impl<T: PinValue + ?Sized> PinValue for &T {
+    fn literal(&self) -> String {
+        (**self).literal()
+    }
+}
+
+/// What [`pin!`](crate::pin) expands to.
+pub fn check_pin<E: PinValue + ?Sized, A: PinValue + ?Sized>(
+    name: &str,
+    file: &str,
+    manifest_dir: &str,
+    expected: &E,
+    actual: &A,
+    context: Option<&str>,
+) {
+    use std::sync::Mutex;
+
+    let (expected, actual) = (expected.literal(), actual.literal());
+    let context = context.map(|c| format!(" ({c})")).unwrap_or_default();
+    if std::env::var_os("UPDATE_PINS").is_none() {
+        assert!(
+            expected == actual,
+            "{name} is {expected} but the material gives {actual}{context}; if the change is \
+             intended, run the tests with UPDATE_PINS=1 to rewrite it in {file}"
+        );
+        return;
+    }
+
+    // Every value a constant was checked against in this process. One constant checked against
+    // two different values (the embedded roots and the roots the committed input regenerates,
+    // say) is a disagreement in the material that no single value for the constant settles.
+    // The lock also serializes the rewrites, which read and write the same file.
+    static SEEN: Mutex<BTreeMap<(String, String), String>> = Mutex::new(BTreeMap::new());
+    let mut seen = SEEN.lock().unwrap_or_else(|e| e.into_inner());
+    let key = (file.to_string(), name.to_string());
+    if let Some(earlier) = seen.get(&key) {
+        assert!(
+            *earlier == actual,
+            "{name} is checked against two values, {earlier} and {actual}{context}; the material \
+             disagrees with itself"
+        );
+        return;
+    }
+    seen.insert(key, actual.clone());
+    if expected == actual {
+        return;
+    }
+
+    let path = Path::new(manifest_dir)
+        .ancestors()
+        .map(|dir| dir.join(file))
+        .find(|p| p.is_file())
+        .unwrap_or_else(|| panic!("cannot find {file} from {manifest_dir}"));
+    let source = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+    let rewritten = rewrite_pin(&source, name, &actual)
+        .unwrap_or_else(|e| panic!("cannot update {name} in {}: {e}", path.display()));
+    std::fs::write(&path, rewritten)
+        .unwrap_or_else(|e| panic!("cannot write {}: {e}", path.display()));
+    eprintln!("UPDATE_PINS: {name}: {expected} -> {actual} ({file})");
+}
+
+/// `source` with the value of `const NAME: … = …;` replaced by `literal`.
+fn rewrite_pin(source: &str, name: &str, literal: &str) -> Result<String, String> {
+    let needle = format!("const {name}:");
+    let starts: Vec<usize> = source
+        .match_indices(&needle)
+        .map(|(i, _)| i)
+        .filter(|&i| source[..i].chars().last().is_none_or(char::is_whitespace))
+        .collect();
+    let [start] = starts[..] else {
+        return Err(format!(
+            "expected one declaration `{needle}`, found {}",
+            starts.len()
+        ));
+    };
+    let eq = source[start..]
+        .find('=')
+        .map(|i| start + i)
+        .ok_or("no `=` after the declaration")?;
+    let semi = source[eq..]
+        .find(';')
+        .map(|i| eq + i)
+        .ok_or("no `;` after the value")?;
+    Ok(format!("{} {literal}{}", &source[..=eq], &source[semi..]))
 }
 
 #[cfg(test)]
@@ -1363,5 +1522,35 @@ mod tests {
     fn a_missing_root_directory_is_reported() {
         let failures = check_root_inputs(Path::new("/no/such/directory"), &[]);
         assert_eq!(failures.len(), 1, "{failures:#?}");
+    }
+
+    #[test]
+    fn a_pinned_count_is_rewritten() {
+        let source = "#[cfg(feature = \"x\")]\nconst EXPECTED_ROOTS: usize = 47;\nconst EXPECTED_ROOTS_SET: usize = 1;\n";
+        assert_eq!(
+            rewrite_pin(source, "EXPECTED_ROOTS", &48usize.literal()).unwrap(),
+            "#[cfg(feature = \"x\")]\nconst EXPECTED_ROOTS: usize = 48;\nconst EXPECTED_ROOTS_SET: usize = 1;\n"
+        );
+    }
+
+    #[test]
+    fn a_pinned_digest_on_its_own_line_is_rewritten() {
+        let source = "const EXPECTED_SET: &str =\n    \"aa\";\nfn f() {}\n";
+        assert_eq!(
+            rewrite_pin(source, "EXPECTED_SET", &"bb".literal()).unwrap(),
+            "const EXPECTED_SET: &str = \"bb\";\nfn f() {}\n"
+        );
+    }
+
+    #[test]
+    fn a_name_that_only_ends_another_is_not_matched() {
+        let source = "const NOT_EXPECTED_SET: &str = \"aa\";\n";
+        assert!(rewrite_pin(source, "EXPECTED_SET", "\"bb\"").is_err());
+    }
+
+    #[test]
+    fn a_name_declared_twice_is_refused() {
+        let source = "const EXPECTED: usize = 1;\nconst EXPECTED: usize = 2;\n";
+        assert!(rewrite_pin(source, "EXPECTED", "3").is_err());
     }
 }

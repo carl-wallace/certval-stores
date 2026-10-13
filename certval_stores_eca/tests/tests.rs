@@ -57,7 +57,7 @@ fn eca_entry_carries_two_roots_and_a_ca_store() {
     let eca = entry(certval_stores_eca::ECA);
     assert_eq!(eca.roots.len(), 2);
     let cert_source = load(eca.cert_store_cbor.expect("ECA must carry a CA store"));
-    assert_eq!(cert_source.len(), EXPECTED_INTERMEDIATES);
+    certval_stores_core::pin!(EXPECTED_INTERMEDIATES, cert_source.len());
 }
 
 /// The shared checks are only worth running if they fail on a store that has

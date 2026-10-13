@@ -23,10 +23,14 @@ on:
     - cron: "0 6 * * 1"
   workflow_dispatch:
 
-# Only contents: write, to push a branch. `pull-requests: write` would also let a
-# workflow approve a pull request, which is not a power this repository grants.
+# contents to push the refresh branch, pull-requests to open the pull request. Opening one also
+# needs the repository setting "Allow GitHub Actions to create and approve pull requests", which
+# is on in this repository and certval-stores-mozilla only; with no required approvals in the rulesets,
+# the approval half of that setting unlocks nothing. A pull request opened with this token starts
+# no workflow: CI runs when the reviewer pushes the updated pinned constants.
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   # Two jobs rather than one: the TPM refresh re-fetches 2.9 MB and spends two minutes building a
@@ -53,28 +57,21 @@ jobs:
           cargo run -p certval-store-gen --features cli,authroot,tpm -- \
             ${{ matrix.command }} --crate-dir ${{ matrix.crate }} 2>&1 | tee refresh.log
 
-      - name: Push a branch if the material moved
+      - name: Open a pull request if the material moved
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -z "$(git status --porcelain ${{ matrix.crate }})" ]; then
             echo "nothing changed"
             exit 0
           fi
-          branch="refresh/${{ matrix.crate }}-$(date -u +%Y%m%d)"
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           # What moved in the store, by content, where the crate commits one (TPM does; the
           # Microsoft provider commits certificates, which the file list already names).
           moved="$(bash .github/scripts/store-diff.sh ${{ matrix.crate }} --features cli,authroot,tpm)"
-          git checkout -b "$branch"
-          git add ${{ matrix.crate }}
-          # The tool's own summary leads the commit body: it states what was carried, what was
+          # The tool's own summary leads the description: it states what was carried, what was
           # dropped and what the publisher dated it, which is what a reviewer needs before opening
-          # a single certificate. The rest is the review guidance, here rather than in a pull
-          # request body because this job opens no pull request: that needs a permission which
-          # also allows a workflow to approve one.
-          git commit -F - <<EOF
-          refresh ${{ matrix.crate }} from the publisher
-
+          # a single certificate. The rest is the review guidance.
+          cat > "$RUNNER_TEMP/body.md" <<EOF
           $(grep -E 'rewritten|carried|dropped' refresh.log || true)
 
           $moved
@@ -86,7 +83,13 @@ jobs:
           CI is expected to fail. Each crate pins the counts its material had when it was last
           reviewed, and a digest over the certificate set, which is the half that catches a
           publisher swapping one certificate for another without changing how many there are.
-          Check what moved, above and in the certificate files, update the constants, and merge.
+          Check what moved, above and in the certificate files, update the constants on this
+          branch, read their diff beside the one above, and merge:
+
+              UPDATE_PINS=1 cargo test --workspace --all-features
+              cargo fmt
+              cargo test --workspace --all-features
+              git diff -- '*/tests/*'
 
           Worth looking at first:
 
@@ -96,8 +99,9 @@ jobs:
           - for the Microsoft list, roots that left because they acquired a disallowed date rather
             than because they expired
           EOF
-          git push origin "$branch"
-          echo "pushed $branch; open a pull request from it when you are ready to review"
+          bash .github/scripts/refresh-pr.sh refresh/${{ matrix.crate }} \
+            "refresh ${{ matrix.crate }} from the publisher ($(date -u +%Y-%m-%d))" \
+            "$RUNNER_TEMP/body.md" ${{ matrix.crate }}
 
   # The InstallRoot streams, in two steps rather than one. Several environments can read the same
   # stream -- NIPR's production store and both interoperability stores all come from DoD.ir4 -- so
@@ -181,22 +185,17 @@ jobs:
           gen() { cargo run -q -p certval-store-gen --features cli -- "$@"; }
           ${{ matrix.generate }}
 
-      - name: Push a branch if the material moved
+      - name: Open a pull request if the material moved
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -z "$(git status --porcelain ${{ matrix.crate }})" ]; then
             echo "nothing changed"
             exit 0
           fi
-          branch="refresh/${{ matrix.crate }}-$(date -u +%Y%m%d)"
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           # What moved in each store this crate regenerated, by content.
           moved="$(bash .github/scripts/store-diff.sh ${{ matrix.crate }} --features cli)"
-          git checkout -b "$branch"
-          git add ${{ matrix.crate }}
-          git commit -F - <<EOF
-          refresh ${{ matrix.crate }} from the publisher
-
+          cat > "$RUNNER_TEMP/body.md" <<EOF
           $moved
 
           The stream was parsed as its population before it replaced anything, and a stream
@@ -204,11 +203,18 @@ jobs:
 
           CI is expected to fail. Each crate pins the counts its material had when it was last
           reviewed, so a change fails the tests and names itself. The diff above names what
-          moved; check it, update the constants, and merge.
+          moved; check it, update the constants on this branch, read their diff beside the one
+          above, and merge:
+
+              UPDATE_PINS=1 cargo test --workspace --all-features
+              cargo fmt
+              cargo test --workspace --all-features
+              git diff -- '*/tests/*'
 
           *_store_is_what_the_committed_stream_generates is the test that matters here: it
           regenerates from the committed .ir4 and compares certificate sets, so a store that
           drifted from its own input fails even when the counts still line up.
           EOF
-          git push origin "$branch"
-          echo "pushed $branch; open a pull request from it when you are ready to review"
+          bash .github/scripts/refresh-pr.sh refresh/${{ matrix.crate }} \
+            "refresh ${{ matrix.crate }} from the publisher ($(date -u +%Y-%m-%d))" \
+            "$RUNNER_TEMP/body.md" ${{ matrix.crate }}

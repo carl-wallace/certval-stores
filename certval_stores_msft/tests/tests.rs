@@ -34,7 +34,7 @@ const EXPECTED_TIMESTAMPING: usize = 162;
 /// are subsets of it over the same material, so a substitution anywhere is a substitution there.
 /// The counts remain the gate on re-partitioning, which is a root moving between purposes.
 ///
-/// To update: run the tests, and the failure prints the digest to paste in.
+/// To update: `UPDATE_PINS=1 cargo test --workspace --all-features` (see `conformance::check_pin`).
 #[cfg(feature = "msft_all")]
 const EXPECTED_ALL_SET: &str = "02454e837907f80656324b2bafee3c406bdcff92ea0a57ae5168fb18684aa489";
 
@@ -77,43 +77,40 @@ fn roots_parse() {
 fn the_root_set_is_what_was_reviewed() {
     let entry = entry(certval_stores_msft::MSFT_ALL);
     let actual = conformance::set_digest(entry.roots.iter().copied());
-    assert_eq!(
-        actual, EXPECTED_ALL_SET,
-        "the Microsoft root set changed; if that is intended, set EXPECTED_ALL_SET to {actual}"
-    );
+    certval_stores_core::pin!(EXPECTED_ALL_SET, actual);
 }
 
 #[test]
 fn every_environment_carries_the_expected_number_of_roots() {
     #[cfg(feature = "msft_all")]
-    assert_eq!(
-        entry(certval_stores_msft::MSFT_ALL).roots.len(),
-        EXPECTED_ALL
+    certval_stores_core::pin!(
+        EXPECTED_ALL,
+        entry(certval_stores_msft::MSFT_ALL).roots.len()
     );
     #[cfg(feature = "msft_tls")]
-    assert_eq!(
-        entry(certval_stores_msft::MSFT_TLS).roots.len(),
-        EXPECTED_TLS
+    certval_stores_core::pin!(
+        EXPECTED_TLS,
+        entry(certval_stores_msft::MSFT_TLS).roots.len()
     );
     #[cfg(feature = "msft_client_auth")]
-    assert_eq!(
-        entry(certval_stores_msft::MSFT_CLIENT_AUTH).roots.len(),
-        EXPECTED_CLIENT_AUTH
+    certval_stores_core::pin!(
+        EXPECTED_CLIENT_AUTH,
+        entry(certval_stores_msft::MSFT_CLIENT_AUTH).roots.len()
     );
     #[cfg(feature = "msft_email")]
-    assert_eq!(
-        entry(certval_stores_msft::MSFT_EMAIL).roots.len(),
-        EXPECTED_EMAIL
+    certval_stores_core::pin!(
+        EXPECTED_EMAIL,
+        entry(certval_stores_msft::MSFT_EMAIL).roots.len()
     );
     #[cfg(feature = "msft_code_signing")]
-    assert_eq!(
-        entry(certval_stores_msft::MSFT_CODE_SIGNING).roots.len(),
-        EXPECTED_CODE_SIGNING
+    certval_stores_core::pin!(
+        EXPECTED_CODE_SIGNING,
+        entry(certval_stores_msft::MSFT_CODE_SIGNING).roots.len()
     );
     #[cfg(feature = "msft_timestamping")]
-    assert_eq!(
-        entry(certval_stores_msft::MSFT_TIMESTAMPING).roots.len(),
-        EXPECTED_TIMESTAMPING
+    certval_stores_core::pin!(
+        EXPECTED_TIMESTAMPING,
+        entry(certval_stores_msft::MSFT_TIMESTAMPING).roots.len()
     );
 }
 

@@ -917,7 +917,7 @@ fn the_committed_cabinet_has_the_expected_digest() {
     use tpm_cab_verify::CabVerifyParts;
     let cursor = std::io::Cursor::new(include_bytes!("../inputs/TrustedTpm.cab"));
     let cvp = CabVerifyParts::new(cursor).expect("the committed cabinet must parse");
-    assert_eq!(EXPECTED_CAB_DIGEST, buffer_to_hex(&cvp.digest));
+    certval_stores_core::pin!(EXPECTED_CAB_DIGEST, buffer_to_hex(&cvp.digest));
 }
 
 /// The committed cabinet's Authenticode signature verifies.

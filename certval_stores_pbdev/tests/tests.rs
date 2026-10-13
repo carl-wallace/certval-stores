@@ -47,7 +47,7 @@ fn dev_entry_carries_two_roots_and_a_ca_store() {
     cert_source
         .initialize(&cps)
         .expect("dev.cbor must initialize");
-    assert_eq!(cert_source.len(), EXPECTED_DEV_INTERMEDIATES);
+    certval_stores_core::pin!(EXPECTED_DEV_INTERMEDIATES, cert_source.len());
 }
 
 /// `get_roots` is the provider's anchors as certval sees them, so it must expose
