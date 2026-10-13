@@ -58,7 +58,7 @@ fn wcf_entry_carries_one_root_and_a_ca_store() {
     let wcf = entry(certval_stores_wcf::WCF);
     assert_eq!(wcf.roots.len(), 1);
     let cert_source = load(wcf.cert_store_cbor.expect("WCF must carry a CA store"));
-    assert_eq!(cert_source.len(), EXPECTED_INTERMEDIATES);
+    certval_stores_core::pin!(EXPECTED_INTERMEDIATES, cert_source.len());
 }
 
 /// The store is two deep: the root issues one intermediate and that intermediate
@@ -94,7 +94,7 @@ fn every_signing_ca_is_two_certificates_from_the_anchor() {
         "expected one 1-certificate path (the intermediate) and ten 2-certificate paths (the \
          signing CAs), got lengths {lengths:?}"
     );
-    assert_eq!(
+    certval_stores_core::pin!(
         EXPECTED_INTERMEDIATES,
         lengths.len(),
         "every CA must be reachable by exactly one path"

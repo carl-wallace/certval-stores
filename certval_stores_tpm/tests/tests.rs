@@ -25,7 +25,7 @@ const EXPECTED_INTERMEDIATES: usize = 2112;
 /// another passes every assertion here unchanged. 2112 intermediates is the largest set in this
 /// workspace and the one where a symmetric change is least likely to be noticed by eye.
 ///
-/// To update: run the tests, and the failure prints the digest to paste in.
+/// To update: `UPDATE_PINS=1 cargo test --workspace --all-features` (see `conformance::check_pin`).
 #[cfg(feature = "tpm")]
 const EXPECTED_ROOT_SET: &str = "344c05490713d9d09140741a043a461b1cd930cfd012d258640d5335d11d1eb5";
 #[cfg(feature = "tpm")]
@@ -88,10 +88,7 @@ fn partial_paths_cover_every_ca() {
 fn the_material_is_what_was_reviewed() {
     let entry = entry();
     let roots = conformance::set_digest(entry.roots.iter().copied());
-    assert_eq!(
-        roots, EXPECTED_ROOT_SET,
-        "the TPM root set changed; if that is intended, set EXPECTED_ROOT_SET to {roots}"
-    );
+    certval_stores_core::pin!(EXPECTED_ROOT_SET, roots);
 
     let cert_source = certval::CertSource::new_from_cbor(
         entry.cert_store_cbor.expect("the tpm store carries CAs"),
@@ -99,23 +96,20 @@ fn the_material_is_what_was_reviewed() {
     .expect("the CA store must load");
     let buffers = cert_source.get_buffers();
     let cas = conformance::set_digest(buffers.iter().map(|cf| cf.bytes.as_slice()));
-    assert_eq!(
-        cas, EXPECTED_INTERMEDIATE_SET,
-        "the TPM intermediate set changed; if intended, set EXPECTED_INTERMEDIATE_SET to {cas}"
-    );
+    certval_stores_core::pin!(EXPECTED_INTERMEDIATE_SET, cas);
 }
 
 #[test]
 #[cfg(feature = "tpm")]
 fn the_environment_carries_the_expected_material() {
     let entry = entry();
-    assert_eq!(entry.roots.len(), EXPECTED_ROOTS);
+    certval_stores_core::pin!(EXPECTED_ROOTS, entry.roots.len());
     let cert_source = certval::CertSource::new_from_cbor(
         entry.cert_store_cbor.expect("the tpm store carries CAs"),
     )
     .expect("the CA store must load");
     use certval::CertVector;
-    assert_eq!(cert_source.len(), EXPECTED_INTERMEDIATES);
+    certval_stores_core::pin!(EXPECTED_INTERMEDIATES, cert_source.len());
 }
 
 /// The embedded `include_bytes!` list and the files under `roots/tpm` have to be the same set.
@@ -145,7 +139,7 @@ fn the_dropped_intermediates_are_recorded() {
         .lines()
         .filter(|l| !l.starts_with('#') && !l.trim().is_empty())
         .count();
-    assert_eq!(listed, EXPECTED_DROPPED);
+    certval_stores_core::pin!(EXPECTED_DROPPED, listed);
 }
 
 /// What ships is the validated output of the cabinet committed beside it.
@@ -171,13 +165,13 @@ fn the_store_is_what_the_committed_cabinet_generates() {
     let (inputs, dropped) = certval_store_gen::tpm_refresh::regenerate_from(&cab, as_of.as_deref())
         .expect("the cabinet must regenerate");
 
-    assert_eq!(
-        inputs.trust_anchors.len(),
+    certval_stores_core::pin!(
         EXPECTED_ROOTS,
+        inputs.trust_anchors.len(),
         "the committed cabinet yields a different number of roots than this crate embeds"
     );
-    assert_eq!(inputs.intermediates.len(), EXPECTED_INTERMEDIATES);
-    assert_eq!(dropped.len(), EXPECTED_DROPPED);
+    certval_stores_core::pin!(EXPECTED_INTERMEDIATES, inputs.intermediates.len());
+    certval_stores_core::pin!(EXPECTED_DROPPED, dropped.len());
 
     // By bytes, not by count: a store with the right number of the wrong certificates is the
     // failure this is for.
@@ -264,7 +258,7 @@ fn every_intermediate_validates_to_a_root() {
 
     // Asserted before the loop so this cannot pass by validating nothing: an empty or
     // short-loaded store would otherwise leave the failure list empty and the test green.
-    assert_eq!(buffers.len(), EXPECTED_INTERMEDIATES);
+    certval_stores_core::pin!(EXPECTED_INTERMEDIATES, buffers.len());
 
     let mut unvalidated = vec![];
     for cf in &buffers {

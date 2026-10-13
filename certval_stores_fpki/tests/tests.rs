@@ -39,7 +39,7 @@ const EXPECTED_INTERMEDIATES: usize = 142;
 /// republishes whenever any participant's cross-certificates change, so a refresh that swaps one
 /// cross-certificate for another leaves the count identical and the mesh materially different.
 ///
-/// To update: run the tests, and the failure prints the digest to paste in.
+/// To update: `UPDATE_PINS=1 cargo test --workspace --all-features` (see `conformance::check_pin`).
 #[cfg(feature = "fpki")]
 const EXPECTED_INTERMEDIATE_SET: &str =
     "6a948398e9053e5be4e34e87f75120aab15cda8d0ce6e2c4726a9670cfacefca";
@@ -60,10 +60,7 @@ fn the_intermediate_set_is_what_was_reviewed() {
         .expect("fpki.cbor must initialize");
     let buffers = cert_source.get_buffers();
     let actual = conformance::set_digest(buffers.iter().map(|cf| cf.bytes.as_slice()));
-    assert_eq!(
-        actual, EXPECTED_INTERMEDIATE_SET,
-        "the FPKI intermediate set changed; if intended, set EXPECTED_INTERMEDIATE_SET to {actual}"
-    );
+    certval_stores_core::pin!(EXPECTED_INTERMEDIATE_SET, actual);
 }
 
 fn providers() -> Vec<&'static dyn TrustStoreProvider> {
@@ -104,7 +101,7 @@ fn embedded_ca_store_deserializes_and_initializes() {
     cert_source
         .initialize(&Default::default())
         .expect("fpki.cbor must initialize");
-    assert_eq!(cert_source.len(), EXPECTED_INTERMEDIATES);
+    certval_stores_core::pin!(EXPECTED_INTERMEDIATES, cert_source.len());
 }
 
 #[test]

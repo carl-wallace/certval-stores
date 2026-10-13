@@ -21,10 +21,14 @@ on:
     - cron: "40 6 * * *"
   workflow_dispatch:
 
-# Only contents: write, to push a branch. `pull-requests: write` would also let a
-# workflow approve a pull request, which is not a power this repository grants.
+# contents to push the refresh branch, pull-requests to open the pull request. Opening one also
+# needs the repository setting "Allow GitHub Actions to create and approve pull requests", which
+# is on in this repository and certval-stores-mozilla only; with no required approvals in the rulesets,
+# the approval half of that setting unlocks nothing. A pull request opened with this token starts
+# no workflow: CI runs when the reviewer pushes the updated pinned constants.
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   refresh-fpki:
@@ -68,28 +72,19 @@ jobs:
           # carried as DER in the crate, so the generated ta.cbor is redundant here.
           cp out/ca.cbor certval_stores_fpki/cas/fpki/fpki.cbor
 
-      - name: Push a branch if the material moved
+      - name: Open a pull request if the material moved
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -z "$(git status --porcelain certval_stores_fpki)" ]; then
             echo "nothing changed"
             exit 0
           fi
-          branch="refresh/certval_stores_fpki-$(date -u +%Y%m%d)"
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           # What moved, by content: the certificates added and removed and how many partial paths
-          # changed. Computed before committing so a failure fails the job rather than leaving the
-          # message without it.
+          # changed. Computed before anything is committed so a failure fails the job rather than
+          # leaving the description without it.
           moved="$(bash .github/scripts/store-diff.sh certval_stores_fpki)"
-          git checkout -b "$branch"
-          git add certval_stores_fpki
-          # The review guidance lives in the commit message rather than a pull request body: this
-          # job opens no pull request, because doing so needs a permission that also allows a
-          # workflow to approve one. The branch is the signal; GitHub offers to open the pull
-          # request from it.
-          git commit -F - <<EOF
-          refresh certval_stores_fpki from the publisher
-
+          cat > "$RUNNER_TEMP/body.md" <<EOF
           $moved
 
           The bundle is unsigned, so the committed inputs/fpki-bundle.der.p7b records exactly what
@@ -100,7 +95,13 @@ jobs:
           CI is expected to fail. EXPECTED_INTERMEDIATES and EXPECTED_INTERMEDIATE_SET in
           certval_stores_fpki/tests/tests.rs pin the count and the certificate set that were last
           reviewed; the set digest is the half that catches one cross-certificate being swapped
-          for another. The diff above names what moved; check it, update the constants, and merge.
+          for another. The diff above names what moved; check it, update the constants on this
+          branch, read their diff beside the one above, and merge:
+
+              UPDATE_PINS=1 cargo test --workspace --all-features
+              cargo fmt
+              cargo test --workspace --all-features
+              git diff -- '*/tests/*'
 
           Worth looking at first:
 
@@ -112,5 +113,6 @@ jobs:
             gap; if Federal Common Policy CA G2 changes, that is a much larger event than a
             refresh and should not be merged from here.
           EOF
-          git push origin "$branch"
-          echo "pushed $branch; open a pull request from it when you are ready to review"
+          bash .github/scripts/refresh-pr.sh refresh/certval_stores_fpki \
+            "refresh certval_stores_fpki from the publisher ($(date -u +%Y-%m-%d))" \
+            "$RUNNER_TEMP/body.md" certval_stores_fpki
