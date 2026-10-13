@@ -22,7 +22,8 @@ eca = []
 
 [dev-dependencies]
 # The regeneration check that build.rs used to run: a dev-dependency so CI keeps it and no
-# consumer compiles it. Without `fetch` -- a test regenerates from the committed stream.
+# consumer compiles it. Default features off, which leaves out the CLI and `fetch` with its HTTP
+# client: the test reads only the committed stream.
 certval-store-gen = { path = "../certval-store-gen", default-features = false }
 # default-features = false for the same reason as the core crate: certval's
 # defaults pull reqwest, and a dev-dependency taking them puts the HTTP stack

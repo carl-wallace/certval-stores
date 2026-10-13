@@ -41,9 +41,10 @@ downloaded from. `FPKI_LEGACY` reports no publication date at all — the G1 mes
 no longer published — and gives the day its anchor reached this repository as the
 collection date, the latest it can have been fetched.
 
-The store is built from that bundle rather than from `.der` files kept beside it,
-so there is no generator-input check here as there is in the DoD providers. The
-two anchors above are files, though, and `conformance::check_root_inputs` asserts
+The store is built from that bundle, committed as `inputs/fpki-bundle.der.p7b`,
+and `the_store_is_what_the_committed_bundle_generates` regenerates from it and
+compares certificate sets, as the DoD providers do with their streams. The two
+anchors above are files, and `conformance::check_root_inputs` asserts
 each directory holds exactly what `src/lib.rs` `include_bytes!`es — both
 environments are single-anchor, so a second `.der` appearing in either directory
 is the drift it catches.

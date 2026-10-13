@@ -10,6 +10,10 @@ description = "Federal PKI trust store for certval — anchored at the Federal C
 certval_stores_core = { path = "../certval_stores_core", default-features = false }
 
 [dev-dependencies]
+# The regeneration check: a dev-dependency so CI runs it and no consumer compiles it. Default
+# features off, which leaves out the CLI and `fetch` with its HTTP client: the test reads only
+# the committed bundle.
+certval-store-gen = { path = "../certval-store-gen", default-features = false }
 certval_stores_core = { path = "../certval_stores_core", default-features = false, features = ["test-util"] }
 # default-features = false for the same reason as the core crate: certval's
 # defaults pull reqwest, and a dev-dependency taking them puts the HTTP stack

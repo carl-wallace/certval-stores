@@ -84,15 +84,46 @@ pub fn tamp_store_with(
     if let Err(e) = crate::ingest::merge_extras(&mut inputs, extra_roots, extra_cas) {
         return skip(format!("supplied material did not read: {e}"));
     }
-    let store = match generate(&inputs) {
-        Ok(s) => s,
-        Err(e) => return skip(format!("generation from {} failed: {e}", stream.display())),
+    regenerate_and_compare(&inputs, stream, &committed_bytes)
+}
+
+/// Regenerate from a certificates-only PKCS#7 bundle (the Federal PKI's) and compare with the
+/// committed store.
+pub fn p7_store(bundle: &Path, committed: &Path) -> Verdict {
+    let skip = |why: String| Verdict::Skipped { why };
+
+    let Ok(bytes) = std::fs::read(bundle) else {
+        return skip(format!("{} is not readable", bundle.display()));
     };
-    let Some(regenerated) = store.ca_cbor else {
-        return skip(format!("{} yields no CA store", stream.display()));
+    let Ok(committed_bytes) = std::fs::read(committed) else {
+        return skip(format!("{} is not readable", committed.display()));
     };
 
-    compare(&committed_bytes, &regenerated)
+    let mut pe = PkiEnvironment::default();
+    pe.populate_5280_pki_environment();
+    let inputs = match adapters::p7::build(&pe, &bytes) {
+        Ok(i) => i,
+        Err(e) => return skip(format!("{} did not parse: {e}", bundle.display())),
+    };
+    regenerate_and_compare(&inputs, bundle, &committed_bytes)
+}
+
+/// Generate a store from `inputs`, read from `source`, and compare its CA half with `committed`.
+fn regenerate_and_compare(
+    inputs: &crate::core::StoreInputs,
+    source: &Path,
+    committed: &[u8],
+) -> Verdict {
+    let skip = |why: String| Verdict::Skipped { why };
+    let store = match generate(inputs) {
+        Ok(s) => s,
+        Err(e) => return skip(format!("generation from {} failed: {e}", source.display())),
+    };
+    let Some(regenerated) = store.ca_cbor else {
+        return skip(format!("{} yields no CA store", source.display()));
+    };
+
+    compare(committed, &regenerated)
 }
 
 /// Compare two serialized CA stores by the certificates they carry.

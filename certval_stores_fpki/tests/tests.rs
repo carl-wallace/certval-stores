@@ -6,10 +6,9 @@
 //! `certval_stores_core::conformance` cover the rest of what every provider owes
 //! its consumers.
 //!
-//! There is no generator-input check here, unlike the other providers: the FPKI
-//! store is built from a crawler bundle rather than from `.der` files kept
-//! beside it, so there is nothing on disk to compare against. See `README.md`
-//! for the refresh procedure.
+//! The store is checked against the crawler bundle it was generated from,
+//! committed as `inputs/fpki-bundle.der.p7b`. See `README.md` for the refresh
+//! procedure.
 
 #[cfg(any(feature = "fpki", feature = "fpki_legacy"))]
 use std::path::Path;
@@ -183,4 +182,25 @@ fn paths_validate_under_the_embedded_anchors() {
         conformance::default_environment,
         &conformance::structural_validation_settings(),
     );
+}
+
+/// What ships is what the committed bundle generates.
+///
+/// The bundle is the one input in this workspace with no signature to check before taking it, so
+/// the committed copy is the record of what was taken, and this is what ties the store to it: a
+/// store regenerated from a different bundle, edited by hand, or produced differently by a changed
+/// generator fails here even when the pinned count and set digest were updated to match it.
+#[test]
+#[cfg(feature = "fpki")]
+fn the_store_is_what_the_committed_bundle_generates() {
+    use certval_store_gen::build_check::{p7_store, Verdict};
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let verdict = p7_store(
+        &dir.join("inputs/fpki-bundle.der.p7b"),
+        &dir.join("cas/fpki/fpki.cbor"),
+    );
+    match verdict {
+        Verdict::Match { .. } => {}
+        other => panic!("the committed store does not match what the bundle generates: {other:?}"),
+    }
 }
