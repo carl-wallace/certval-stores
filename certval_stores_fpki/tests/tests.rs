@@ -41,7 +41,7 @@ const EXPECTED_INTERMEDIATES: usize = 142;
 /// To update: `UPDATE_PINS=1 cargo test --workspace --all-features` (see `conformance::check_pin`).
 #[cfg(feature = "fpki")]
 const EXPECTED_INTERMEDIATE_SET: &str =
-    "6a948398e9053e5be4e34e87f75120aab15cda8d0ce6e2c4726a9670cfacefca";
+    "ab86ef726678f8c3aecdcdbaf19dd486cb1f4eb396a1e24dea9df4e97d2be923";
 
 /// The gate the count is not. See [`EXPECTED_INTERMEDIATE_SET`].
 #[test]
