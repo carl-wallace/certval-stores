@@ -32,6 +32,13 @@ permissions:
   contents: write
   pull-requests: write
 
+# An explicit bash runs every step with pipefail, which the runner's default shell leaves off.
+# The generator step pipes through tee, so a run that fails before writing anything fails its step
+# instead of reaching the next one as a clean tree that reads as "nothing changed".
+defaults:
+  run:
+    shell: bash
+
 jobs:
   # Two jobs rather than one: the TPM refresh re-fetches 2.9 MB and spends two minutes building a
   # path graph, and a timeout there must not hide a Microsoft trust list that moved.
