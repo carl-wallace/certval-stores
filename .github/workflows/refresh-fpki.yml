@@ -30,6 +30,13 @@ permissions:
   contents: write
   pull-requests: write
 
+# An explicit bash runs every step with pipefail, which the runner's default shell leaves off.
+# The generator step pipes through tee, so a run that fails before writing anything fails its step
+# instead of reaching the next one as a clean tree that reads as "nothing changed".
+defaults:
+  run:
+    shell: bash
+
 jobs:
   refresh-fpki:
     name: certval_stores_fpki
