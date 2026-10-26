@@ -447,7 +447,7 @@ pub fn get_reqwest_client(
                         continue;
                     }
                 };
-                if get_certificate_from_trust_anchor(&ta.decoded_ta).is_none() {
+                if get_certificate_from_trust_anchor(ta.decoded()).is_none() {
                     error!(
                         "A {} anchor carries no certificate, so it is a trust anchor here and not in the TLS trust set",
                         entry.id

@@ -221,7 +221,7 @@ pub fn check_roots_parse(provider: &dyn TrustStoreProvider) -> Vec<String> {
             match PDVTrustAnchorChoice::try_from(*root) {
                 Ok(ta) => {
                     decoded += 1;
-                    if get_certificate_from_trust_anchor(&ta.decoded_ta).is_some() {
+                    if get_certificate_from_trust_anchor(ta.decoded()).is_some() {
                         with_certificate += 1;
                     }
                     // Scoped to the `certificate` alternative, which is untagged
@@ -781,8 +781,8 @@ pub fn check_providers_compose(providers: &[&dyn TrustStoreProvider]) -> Vec<Str
                 let label = format!("{name:?} in {:?}", entry.id);
                 match anchors.get(&hex_skid) {
                     Some((first, first_label)) => {
-                        if get_subject_public_key_info_from_trust_anchor(&first.decoded_ta)
-                            != get_subject_public_key_info_from_trust_anchor(&ta.decoded_ta)
+                        if get_subject_public_key_info_from_trust_anchor(first.decoded())
+                            != get_subject_public_key_info_from_trust_anchor(ta.decoded())
                         {
                             failures.push(format!(
                                 "anchors {first_label} and {label} share key identifier {hex_skid} but carry different public keys; certval refuses to anchor on such a key identifier, so composing these providers disables both"
