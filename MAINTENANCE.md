@@ -32,6 +32,13 @@ committed `.ir4` and compares certificate sets, so a store that drifted from its
 even when the pinned counts still line up. `fpki` commits its bundle for the same reason, and
 `the_store_is_what_the_committed_bundle_generates` does the same with it.
 
+Every provider the generator writes embeds its anchors through a list it writes with them:
+`src/roots_<env>.rs` in `nipr`, `eca`, `wcf`, `tpm` and `pbdev`, and `src/env_*.rs` in `msft`.
+Each crate's tests check that list against `roots/`, both as generated text and as the anchors the
+crate yields, so a refresh that changes a publisher's roots changes what the crate embeds in the
+same commit. `fpki`'s two fixed anchors are listed in its `lib.rs`, since its refresh writes no
+roots.
+
 `certval_stores_msft` is the only crate with a build script, and it refreshes nothing. Every file in
 `roots/` must hash to its own name, which is the same comparison that admitted it — Microsoft's list
 is signed and the certificates it names are not, so the SHA-1 the list gave is what binds them. It
@@ -61,7 +68,9 @@ that half unlocks nothing. The review guidance is the pull request's description
 message. So is what moved: for every CBOR store a refresh rewrote, it carries `certval-store-gen diff` of the committed store against the new one, naming the
 certificates added and removed and counting the partial paths that changed
 (`.github/scripts/store-diff.sh`). A provider that commits certificates rather than a store, such as
-the Microsoft one, shows its changes in the file list instead.
+the Microsoft one, shows its changes in the file list instead. Trust anchors get a section of their
+own (`.github/scripts/roots-diff.sh`): each root the refresh added, removed or replaced, by file and
+subject, since a change of roots is the larger event the versioning below marks as a minor bump.
 
 **A refresh is expected to arrive red, and that is the mechanism rather than a defect.** Each crate
 pins both the counts and a **digest over the certificate set** its material had when a person last
