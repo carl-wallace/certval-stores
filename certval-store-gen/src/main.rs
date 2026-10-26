@@ -685,10 +685,6 @@ fn write_provider(
         },
         provenance,
     )?;
-    log::info!(
-        "the include_bytes! list for this environment is now:\n{}",
-        provider::include_bytes_lines(&dir.join("roots").join(env))?
-    );
     Ok(())
 }
 
