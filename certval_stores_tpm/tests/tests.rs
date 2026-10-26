@@ -16,9 +16,9 @@ use certval_stores_core::conformance;
 /// between vendor folders are collapsed. Update alongside the material --
 /// a change here is the point at which a refresh gets acknowledged in review.
 #[cfg(feature = "tpm")]
-const EXPECTED_ROOTS: usize = 47;
+const EXPECTED_ROOTS: usize = 49;
 #[cfg(feature = "tpm")]
-const EXPECTED_INTERMEDIATES: usize = 2112;
+const EXPECTED_INTERMEDIATES: usize = 2111;
 
 /// Digests over the sets themselves, which the counts above cannot see: a count measures size
 /// where the question is membership, so a cabinet that retires one vendor CA and publishes
@@ -27,10 +27,10 @@ const EXPECTED_INTERMEDIATES: usize = 2112;
 ///
 /// To update: `UPDATE_PINS=1 cargo test --workspace --all-features` (see `conformance::check_pin`).
 #[cfg(feature = "tpm")]
-const EXPECTED_ROOT_SET: &str = "344c05490713d9d09140741a043a461b1cd930cfd012d258640d5335d11d1eb5";
+const EXPECTED_ROOT_SET: &str = "2c0487c7c0110f219932c6185f91a7cceeba5acd59b0486aa2d26b926188cac7";
 #[cfg(feature = "tpm")]
 const EXPECTED_INTERMEDIATE_SET: &str =
-    "011e244a36146ff2a01cd21e5bcae902babda7236ba453a1d8002bd227219cc3";
+    "ac5c72dffb41fbaecae8352f63418aad311043619d8a6d264179260fd9b2c4f2";
 /// Intermediates the cabinet publishes that the store does not carry, listed with their reasons in
 /// `provenance/tpm/dropped.txt`: 36 that reach no root in it (mostly AMD fTPM CAs whose issuers it
 /// does not include), 6 that do not decode (STMicro, a non-canonical INTEGER), 366 that had already
@@ -42,7 +42,7 @@ const EXPECTED_INTERMEDIATE_SET: &str =
 /// attestations from parts in service rather than historical ones. A store of everything the
 /// cabinet holds would be a separate crate, not a flag on this one.
 #[cfg(feature = "tpm")]
-const EXPECTED_DROPPED: usize = 410;
+const EXPECTED_DROPPED: usize = 417;
 
 #[cfg(feature = "tpm")]
 fn entry() -> certval_stores_core::StoreEntry {

@@ -2,7 +2,7 @@
 
 use certval_stores_core::{StoreEntry, TrustStoreProvider};
 
-// The 48 vendor roots the cabinet publishes, one `include_bytes!` each. Hand-maintained, as in
+// The 49 vendor roots the cabinet publishes, one `include_bytes!` each. Hand-maintained, as in
 // every provider here: `certval-store-gen` prints this list when a refresh changes it, and
 // `roots_match_the_committed_files` fails when the list and the directory disagree -- which is
 // what makes a hand-maintained list safe rather than a liability.
@@ -24,7 +24,9 @@ static TPM_ROOTS: &[&[u8]] = &[
     include_bytes!("../roots/tpm/Infineon_Infineon_OPTIGA(TM)_RSA_Root_CA_2.der"),
     include_bytes!("../roots/tpm/Infineon_OptigaEccRootCA3.der"),
     include_bytes!("../roots/tpm/Infineon_OptigaRsaRootCA3.der"),
+    include_bytes!("../roots/tpm/Intel_DCP_DICE_Global_RootCA.der"),
     include_bytes!("../roots/tpm/Intel_EKRootPublicKey.der"),
+    include_bytes!("../roots/tpm/Intel_Intel_DICE_SubCA_CAID343_1_001.der"),
     include_bytes!("../roots/tpm/Intel_ODCA_CA2_CSME_Intermediate.der"),
     include_bytes!("../roots/tpm/Intel_ODCA_CA2_OSSE_Intermediate.der"),
     include_bytes!("../roots/tpm/Intel_OnDie_CA_RootCA_Certificate.der"),

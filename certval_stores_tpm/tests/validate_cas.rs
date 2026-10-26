@@ -26,7 +26,7 @@ use walkdir::WalkDir;
 
 /// Authenticode digest of `inputs/TrustedTpm.cab`, the cabinet this crate's material came from.
 const EXPECTED_CAB_DIGEST: &str =
-    "E1F48903EDB3E767681AB2DE837765BBFDA3309DF060F0AA81D44E5BE748A729";
+    "1B22B9A8225C066B31AAD5A559B3588CCDDFF74F833AA4912313150D1431C035";
 
 use base64ct::{Base64, Encoding};
 
@@ -545,6 +545,9 @@ async fn validate_cas_microsoft() {
         "microsoft/IntermediateCA/EUS-ifx-keyid-a26ceeac95fa33673219d0c2a77637102fb53ff2.cer",
         "microsoft/IntermediateCA/EUS-ifx-keyid-ce77153b6e110ca4ae2971a09851ef499326202a.cer",
         "microsoft/IntermediateCA/EUS-intc-keyid-17a00575d05e58e3881210bb98b1045bb4c30639.cer",
+        "microsoft/IntermediateCA/EUS-intc-keyid-b066d9697f5d3a07b425c10f587cceecf16ffe58.cer",
+        "microsoft/IntermediateCA/EUS-intc-keyid-f307ba33347c283a1e0c1508ad02f5c8ca06f45e.cer",
+        "microsoft/IntermediateCA/EUS-intc-keyid-f6dcae3808326f10a46a62d55fe0a9cbe841a3d4.cer",
         "microsoft/IntermediateCA/EUS-ntc-keyid-23f4e22ad3be374a449772954aa283aed752572e.cer",
         "microsoft/IntermediateCA/EUS-ntc-keyid-882f047b87121cf9885f31160bc7bb5586af471b.cer",
         "microsoft/IntermediateCA/NCU-ifx-keyid-0d9969519b979d32ee4b803165664e9cc86f9d0d.cer",
@@ -562,6 +565,9 @@ async fn validate_cas_microsoft() {
         "microsoft/IntermediateCA/NCU-ifx-keyid-a26ceeac95fa33673219d0c2a77637102fb53ff2.cer",
         "microsoft/IntermediateCA/NCU-ifx-keyid-ce77153b6e110ca4ae2971a09851ef499326202a.cer",
         "microsoft/IntermediateCA/NCU-intc-keyid-17a00575d05e58e3881210bb98b1045bb4c30639.cer",
+        "microsoft/IntermediateCA/NCU-intc-keyid-b066d9697f5d3a07b425c10f587cceecf16ffe58.cer",
+        "microsoft/IntermediateCA/NCU-intc-keyid-f307ba33347c283a1e0c1508ad02f5c8ca06f45e.cer",
+        "microsoft/IntermediateCA/NCU-intc-keyid-f6dcae3808326f10a46a62d55fe0a9cbe841a3d4.cer",
         "microsoft/IntermediateCA/NCU-ntc-keyid-23f4e22ad3be374a449772954aa283aed752572e.cer",
         "microsoft/IntermediateCA/NCU-ntc-keyid-882f047b87121cf9885f31160bc7bb5586af471b.cer",
         "microsoft/IntermediateCA/WUS-ifx-keyid-0d9969519b979d32ee4b803165664e9cc86f9d0d.cer",
@@ -579,6 +585,9 @@ async fn validate_cas_microsoft() {
         "microsoft/IntermediateCA/WUS-ifx-keyid-a26ceeac95fa33673219d0c2a77637102fb53ff2.cer",
         "microsoft/IntermediateCA/WUS-ifx-keyid-ce77153b6e110ca4ae2971a09851ef499326202a.cer",
         "microsoft/IntermediateCA/WUS-intc-keyid-17a00575d05e58e3881210bb98b1045bb4c30639.cer",
+        "microsoft/IntermediateCA/WUS-intc-keyid-b066d9697f5d3a07b425c10f587cceecf16ffe58.cer",
+        "microsoft/IntermediateCA/WUS-intc-keyid-f307ba33347c283a1e0c1508ad02f5c8ca06f45e.cer",
+        "microsoft/IntermediateCA/WUS-intc-keyid-f6dcae3808326f10a46a62d55fe0a9cbe841a3d4.cer",
         "microsoft/IntermediateCA/WUS-ntc-keyid-23f4e22ad3be374a449772954aa283aed752572e.cer",
         "microsoft/IntermediateCA/WUS-ntc-keyid-882f047b87121cf9885f31160bc7bb5586af471b.cer",
     ];
