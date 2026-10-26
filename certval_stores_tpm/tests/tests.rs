@@ -114,10 +114,10 @@ fn the_environment_carries_the_expected_material() {
 
 /// The embedded `include_bytes!` list and the files under `roots/tpm` have to be the same set.
 ///
-/// The list is hand-maintained -- a refresh prints it rather than writing it -- so this is what
-/// makes that safe: a root added to the directory and forgotten in `lib.rs` would otherwise ship
-/// as a file nothing embeds, and one removed from the directory would fail to compile, which is
-/// the easy direction. This catches the other one.
+/// A refresh writes the list (`src/roots_tpm.rs`) with the directory, so the two drift only by a
+/// hand edit to one of them: a root added to the directory and not to the list would ship as a
+/// file nothing embeds, and one removed from the directory would fail to compile, which is the easy
+/// direction. This catches the other one.
 #[test]
 #[cfg(feature = "tpm")]
 fn roots_match_the_committed_files() {
@@ -309,4 +309,17 @@ fn every_intermediate_validates_to_a_root() {
         buffers.len(),
         unvalidated.join("\n")
     );
+}
+
+/// `src/roots_tpm.rs` is what `certval-store-gen` writes from the committed `roots/tpm/`.
+///
+/// The roots of this crate change seldom, so the generator would otherwise go unexercised for
+/// months at a time; this runs it on every build. The root-inputs check above then ties the
+/// embedded list to the same files.
+#[test]
+fn the_root_list_matches_the_directory() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    if let Err(e) = certval_store_gen::provider::check_roots_module(dir, "tpm") {
+        panic!("{e}");
+    }
 }

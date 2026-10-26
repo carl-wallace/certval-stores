@@ -509,3 +509,18 @@ fn nipr_cceb_interop_store_is_what_the_committed_stream_generates() {
         "cceb_interop",
     );
 }
+
+/// Each `src/roots_<env>.rs` is what `certval-store-gen` writes from the committed `roots/<env>/`.
+///
+/// The roots of this crate change seldom, so the generator would otherwise go unexercised for
+/// months at a time; this runs it on every build. The root-inputs checks above then tie the
+/// embedded list to the same files.
+#[test]
+fn the_root_lists_match_the_directories() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    for env in ["om", "prod", "interop", "cceb_interop"] {
+        if let Err(e) = certval_store_gen::provider::check_roots_module(dir, env) {
+            panic!("{e}");
+        }
+    }
+}

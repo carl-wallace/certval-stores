@@ -863,8 +863,9 @@ pub fn check_generator_inputs(dir: &Path, cbor: &[u8]) -> Vec<String> {
 
 /// Check a trust-anchor directory against the anchors a provider embeds.
 ///
-/// Anchors reach a provider through a hand-maintained `include_bytes!` list
-/// rather than through a generated store, so the compiler catches only one
+/// Anchors reach a provider through an `include_bytes!` list rather than
+/// through a generated store -- one `certval-store-gen` writes with the
+/// directory, or one kept by hand -- so the compiler catches only one
 /// direction of drift: remove a `.der` and the crate stops building. Add one and
 /// nothing happens — the file ships, reads as part of the trust set to anyone
 /// looking at the repository, and is not in it. This compares the directory

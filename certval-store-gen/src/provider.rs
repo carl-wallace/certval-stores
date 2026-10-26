@@ -280,8 +280,9 @@ pub fn check_roots_module(crate_dir: &Path, env: &str) -> std::result::Result<()
             .collect()
     };
     Err(format!(
-        "{} is not what roots/{env}/ generates; regenerate the environment rather than editing \
-         either by hand\nonly in the committed file:\n{}\nonly in the generated text:\n{}",
+        "{} does not match what the generator writes from roots/{env}/; regenerate the \
+         environment rather than editing either by hand\nonly in the committed file:\n{}\nonly \
+         in the generated text:\n{}",
         path.display(),
         only(&committed, &generated).join("\n"),
         only(&generated, &committed).join("\n"),

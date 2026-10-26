@@ -49,9 +49,9 @@ CA store.
 each one as loose DER for review. At 2,480 certificates that would be ten megabytes of the same
 material twice over, in a diff nobody reads. What replaces the review is
 `the_store_is_what_the_committed_cabinet_generates`, which rebuilds the store from the committed
-cabinet and compares -- a stronger check than reading DER, and one CI runs on every change. The 47
-roots stay loose, because `lib.rs` embeds them individually and a test compares that list against
-the directory.
+cabinet and compares -- a stronger check than reading DER, and one CI runs on every change. The
+roots stay loose, because `src/roots_tpm.rs`, which a refresh writes with them, embeds them
+individually and a test compares that list against the directory.
 
 ## What is not carried
 

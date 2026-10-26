@@ -3,43 +3,21 @@
 use certval_stores_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "om_nipr")]
-static OM_NIPR_ROOTS: &[&[u8]] = &[
-    include_bytes!("../roots/om/DoD_JITC_Root_CA_3.der"),
-    include_bytes!("../roots/om/DoD_JITC_Root_CA_4.der"),
-    include_bytes!("../roots/om/DoD_JITC_Root_CA_5.der"),
-    include_bytes!("../roots/om/DoD_JITC_Root_CA_6.der"),
-];
+mod roots_om;
 
 #[cfg(feature = "nipr")]
-static NIPR_ROOTS: &[&[u8]] = &[
-    include_bytes!("../roots/prod/DoD_Root_CA_3.der"),
-    include_bytes!("../roots/prod/DoD_Root_CA_4.der"),
-    include_bytes!("../roots/prod/DoD_Root_CA_5.der"),
-    include_bytes!("../roots/prod/DoD_Root_CA_6.der"),
-];
+mod roots_prod;
 
 // The interoperability environments are NIPR plus one cross-certified root and the
 // bundle that root publishes at its own SIA. DoD Root CA 3 and DoD Root CA 6 appear
-// here as anchors and again in the CA store as the interop root issued them -- same
+// among their anchors and again in the CA store as the interop root issued them -- same
 // subjects, different certificates, which is what lets a DoD-anchored consumer reach
 // the other side.
 #[cfg(feature = "nipr_interop")]
-static NIPR_INTEROP_ROOTS: &[&[u8]] = &[
-    include_bytes!("../roots/interop/DoD_Interoperability_Root_CA_2.der"),
-    include_bytes!("../roots/interop/DoD_Root_CA_3.der"),
-    include_bytes!("../roots/interop/DoD_Root_CA_4.der"),
-    include_bytes!("../roots/interop/DoD_Root_CA_5.der"),
-    include_bytes!("../roots/interop/DoD_Root_CA_6.der"),
-];
+mod roots_interop;
 
 #[cfg(feature = "nipr_cceb_interop")]
-static NIPR_CCEB_INTEROP_ROOTS: &[&[u8]] = &[
-    include_bytes!("../roots/cceb_interop/DoD_Root_CA_3.der"),
-    include_bytes!("../roots/cceb_interop/DoD_Root_CA_4.der"),
-    include_bytes!("../roots/cceb_interop/DoD_Root_CA_5.der"),
-    include_bytes!("../roots/cceb_interop/DoD_Root_CA_6.der"),
-    include_bytes!("../roots/cceb_interop/US_DoD_CCEB_Interoperability_Root_CA_2.der"),
-];
+mod roots_cceb_interop;
 
 // Written by `certval-store-gen` from the stream each environment is generated from:
 // `published` is the verified RFC 3161 timestamp on the InstallRoot messages read (DoD
@@ -108,7 +86,7 @@ impl TrustStoreProvider for NiprStores {
         entries.push(StoreEntry {
             id: NIPR_OM,
             label: "U.S. DoD (JITC)",
-            roots: OM_NIPR_ROOTS,
+            roots: roots_om::ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/om/om.cbor")),
             published: Some(OM_NIPR_PUBLISHED),
             collected: Some(OM_NIPR_COLLECTED),
@@ -117,7 +95,7 @@ impl TrustStoreProvider for NiprStores {
         entries.push(StoreEntry {
             id: NIPR_PROD,
             label: "U.S. DoD (NIPR)",
-            roots: NIPR_ROOTS,
+            roots: roots_prod::ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/prod/prod.cbor")),
             published: Some(NIPR_PUBLISHED),
             collected: Some(NIPR_COLLECTED),
@@ -126,7 +104,7 @@ impl TrustStoreProvider for NiprStores {
         entries.push(StoreEntry {
             id: NIPR_INTEROP,
             label: "U.S. DoD (NIPR + Interoperability)",
-            roots: NIPR_INTEROP_ROOTS,
+            roots: roots_interop::ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/interop/interop.cbor")),
             published: Some(NIPR_INTEROP_PUBLISHED),
             collected: Some(NIPR_INTEROP_COLLECTED),
@@ -135,7 +113,7 @@ impl TrustStoreProvider for NiprStores {
         entries.push(StoreEntry {
             id: NIPR_CCEB_INTEROP,
             label: "U.S. DoD (NIPR + CCEB Interoperability)",
-            roots: NIPR_CCEB_INTEROP_ROOTS,
+            roots: roots_cceb_interop::ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/cceb_interop/cceb_interop.cbor")),
             published: Some(NIPR_CCEB_INTEROP_PUBLISHED),
             collected: Some(NIPR_CCEB_INTEROP_COLLECTED),

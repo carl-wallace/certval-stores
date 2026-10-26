@@ -3,10 +3,7 @@
 use certval_stores_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "dev")]
-static DEV_ROOTS: &[&[u8]] = &[
-    include_bytes!("../roots/dev/DOD_ENG_Root-3.der"),
-    include_bytes!("../roots/dev/DOD_ENG_Root-6.der"),
-];
+mod roots_dev;
 
 /// Trust-store provider for the Purebred development environment.
 pub struct PbDevStores;
@@ -25,7 +22,7 @@ impl TrustStoreProvider for PbDevStores {
         entries.push(StoreEntry {
             id: PUREBRED_DEV,
             label: "U.S. DoD (Purebred development)",
-            roots: DEV_ROOTS,
+            roots: roots_dev::ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/dev/dev.cbor")),
             // The development PKI publishes nothing anywhere, so there is no publication
             // date to state -- see the README's note that these roots have no external

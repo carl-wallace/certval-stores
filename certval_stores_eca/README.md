@@ -61,7 +61,7 @@ The generated DER ships beside the `.cbor` in `cas/prod/`, and
 `conformance::check_generator_inputs` asserts it still matches what the store
 carries — nothing `include_bytes!`es those files, so without that check they
 would drift in silence. The anchors in `roots/prod/` *are* `include_bytes!`d, one
-line per file in `src/lib.rs`, and `conformance::check_root_inputs` asserts the
+line per file in `src/roots_prod.rs`, which the generator writes with the directory, and `conformance::check_root_inputs` asserts the
 directory and that list agree. The compiler checks only half of that: removing a
 `.der` breaks the build, while adding one leaves a file that ships and reads as
 an anchor without being in the trust set.
@@ -106,10 +106,10 @@ certval-store-gen installroot --stream inputs/ECA.ir4 --population eca \
 
 `--dry-run` reports what would change by subject and serial and writes nothing,
 which is the form to run first: a re-issued certificate keeps its subject and its
-key, so a serial is what tells you it moved. Writing also prints the
-`include_bytes!` list, which goes into `src/lib.rs` — the anchors are embedded as
-DER rather than read from the store, because `reqwest::Certificate::from_der`
-takes only a bare `Certificate`.
+key, so a serial is what tells you it moved. Writing also rewrites
+`src/roots_prod.rs`, the `include_bytes!` list that embeds the anchors — as DER
+rather than read from the store, because `reqwest::Certificate::from_der` takes
+only a bare `Certificate`.
 
 `--population eca` is what selects this material. A stream can publish more than
 one PKI: `JITC.ir4` carries DoD, NSS and ECA anchors together, and the generator

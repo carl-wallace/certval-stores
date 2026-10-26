@@ -3,10 +3,7 @@
 use certval_stores_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "eca")]
-static ECA_ROOTS: &[&[u8]] = &[
-    include_bytes!("../roots/prod/ECA_Root_CA_4.der"),
-    include_bytes!("../roots/prod/ECA_Root_CA_5.der"),
-];
+mod roots_prod;
 
 // Written by `certval-store-gen` from `inputs/ECA.ir4`: `published` is the verified RFC 3161
 // timestamp on the InstallRoot messages read, `collected` the day the stream was fetched. See the
@@ -33,7 +30,7 @@ impl TrustStoreProvider for EcaStores {
         entries.push(StoreEntry {
             id: ECA,
             label: "U.S. DoD (ECA)",
-            roots: ECA_ROOTS,
+            roots: roots_prod::ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/prod/prod.cbor")),
             published: Some(ECA_PUBLISHED),
             collected: Some(ECA_COLLECTED),

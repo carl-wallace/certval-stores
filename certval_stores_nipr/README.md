@@ -92,8 +92,8 @@ on: the generator folds certificates in the order the filesystem lists them, so 
 regeneration elsewhere can reorder the buffers without changing the material. The
 set is what matters, and `check_generator_inputs` is what asserts it.
 
-The anchors in `roots/prod/` and `roots/om/` *are* `include_bytes!`d, one line
-per file in `src/lib.rs`, and `conformance::check_root_inputs` asserts the
+The anchors in each `roots/<env>/` *are* `include_bytes!`d, one line per file in
+`src/roots_<env>.rs`, which the generator writes with the directory, and `conformance::check_root_inputs` asserts the
 directory and that list agree. The compiler checks only half of it: removing a
 `.der` breaks the build, while adding one leaves a file that ships and reads as
 an anchor without being in the trust set.
@@ -129,7 +129,8 @@ certval-store-gen refresh --url https://crl.gds.disa.mil/pke/config/DoD.ir4 \
 
 Generation is a separate run, and is also how to take a stream downloaded by hand: replace the one
 in `inputs/` and regenerate. One stream can feed more than one environment, so it runs once per
-environment. Both `roots/<env>/` and `cas/<env>/` are output, so nothing there is edited by hand:
+environment. `roots/<env>/`, `cas/<env>/` and `src/roots_<env>.rs` are output, so nothing there is
+edited by hand:
 
 ```sh
 # certval-store-gen, a member of this workspace: cargo run -p certval-store-gen --
@@ -144,9 +145,9 @@ certval-store-gen installroot --stream inputs/JITC.ir4 --population dod \
 
 `--dry-run` reports what would change by subject and serial and writes nothing,
 which is the form to run first: a re-issued certificate keeps its subject and its
-key, so a serial is what tells you it moved. Writing also prints the
-`include_bytes!` list for the environment, which goes into `src/lib.rs` — the
-anchors are embedded as DER rather than read from the store, because
+key, so a serial is what tells you it moved. Writing also rewrites
+`src/roots_<env>.rs`, the `include_bytes!` list that embeds the environment's
+anchors — as DER rather than read from the store, because
 `reqwest::Certificate::from_der` takes only a bare `Certificate`.
 
 Then update `EXPECTED_NIPR_INTERMEDIATES` / `EXPECTED_OM_NIPR_INTERMEDIATES` in

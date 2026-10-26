@@ -19,6 +19,9 @@ reqwest-client = ["certval_stores_core/reqwest-client"]
 dev = []
 
 [dev-dependencies]
+# For the check that `src/roots_dev.rs` is what the generator writes from `roots/dev/`: a
+# dev-dependency so CI runs it and no consumer compiles it.
+certval-store-gen = { path = "../certval-store-gen", default-features = false }
 # default-features = false for the same reason as the core crate: certval's
 # defaults pull reqwest, and a dev-dependency taking them puts the HTTP stack
 # back into the test graph however `reqwest-client` is configured, so a
