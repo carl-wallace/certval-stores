@@ -313,7 +313,7 @@ fn staple_ocsp(path: &mut CertificationPath, stapled: &[Vec<u8>]) -> Result<usiz
             None => path.target.decoded(),
         };
         let req = match i {
-            0 => certval::build_ocsp_request(cert, &path.trust_anchor.decoded_ta, None),
+            0 => certval::build_ocsp_request(cert, path.trust_anchor.decoded(), None),
             _ => certval::build_ocsp_request(cert, path.intermediates[i - 1].decoded(), None),
         };
         // A position whose request cannot be built cannot be matched, and that is not an error

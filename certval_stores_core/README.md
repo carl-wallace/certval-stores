@@ -116,8 +116,7 @@ it or builds its own `reqwest::Client`.
 ### The `reqwest-client` feature
 
 `reqwest` is about 60% of this crate's dependency graph — 169 crates become 77
-without it, tokio, hyper and `url -> idna -> icu` among them — and the icu crates
-impose a rustc floor above certval's own (1.88 as of icu 2.3; certval's MSRV is 1.85). It is on by
+without it, tokio, hyper and `url -> idna -> icu` among them. It is on by
 default, because the consumers that exist use those constructors. Turn it off to
 embed trust material without an HTTP client:
 
