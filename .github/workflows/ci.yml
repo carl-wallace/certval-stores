@@ -13,11 +13,6 @@ env:
   CARGO_INCREMENTAL: 0
   RUSTFLAGS: "-Dwarnings"
 
-# No MSRV matrix leg across the workspace, because the floor is not uniform: the
-# provider crates declare certval's own 1.85 and `certval-store-gen` declares
-# 1.88, which it needs honestly — it takes certval's `remote` feature, so reqwest
-# pulls idna -> icu_* 2.3. A whole-workspace 1.85 job would fail on the
-# generator alone. The providers are covered by the leg below.
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -74,10 +69,8 @@ jobs:
       # No environment feature to name: this crate has one store and it is unconditional.
       - run: cargo build -p certval_stores_webpki_root_certs --no-default-features --target wasm32-unknown-unknown
 
-  # The floor a consumer actually meets, which is certval's own 1.85 and what every provider
-  # declares. What sets it is the library graph alone: certval-store-gen is a dev-dependency taken
-  # with `default-features = false`, so it governs `cargo test` rather than a consumer's build, and
-  # it declares 1.88 for itself.
+  # The floor a consumer actually meets, which is certval's own 1.88 and what every crate here
+  # declares.
   #
   # Two crates rather than all nine: nipr is the multi-environment shape and msft the only one with
   # a build script, so anything that breaks the floor breaks one of those.
@@ -87,7 +80,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.85.0 # certval's floor, which the providers declare
+          toolchain: 1.88.0 # certval's floor, which every crate here declares
       - run: cargo build -p certval_stores_nipr --no-default-features --features nipr
       - run: cargo build -p certval_stores_msft --no-default-features --features msft_all
 

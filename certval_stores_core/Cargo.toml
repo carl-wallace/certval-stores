@@ -2,7 +2,7 @@
 name = "certval_stores_core"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.85"
+rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
 description = "Provider trait and certval/reqwest plumbing shared by the certval_stores_* trust-store crates"
 
@@ -30,8 +30,7 @@ default = ["reqwest-client"]
 # reqwest brings tokio, hyper, and url -> idna -> icu, some 60% of this crate's
 # dependency graph. On by default, since the consumers that exist use those
 # constructors. Turn it off to embed trust material without an HTTP client — a
-# wasm or embedded consumer, or one bringing its own — which also drops the
-# rustc floor the icu crates impose (1.88 as of icu 2.3).
+# wasm or embedded consumer, or one bringing its own.
 reqwest-client = ["dep:reqwest"]
 # Conformance checks over the TrustStoreProvider contract, for provider crates
 # to run from their own tests. Off by default so consumers do not carry them.
