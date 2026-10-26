@@ -210,13 +210,6 @@ fn refresh_with(env: &str, cab: Vec<u8>, source: Source, as_of: Option<&str>) ->
         },
     )?;
     write_dropped(env, &dropped)?;
-
-    // The list in lib.rs is hand-maintained and a conformance test fails when it disagrees with
-    // the files -- the check doing its job, but it cannot write the list. So the lines are printed
-    // where a person regenerating will see them.
-    if let Ok(lines) = provider::include_bytes_lines(&Path::new("roots").join(env)) {
-        println!("cargo::warning=the roots changed; lib.rs wants:\n{lines}");
-    }
     fs::write("inputs/TrustedTpm.cab", &cab).context("the cabinet could not be committed")?;
 
     Ok(Outcome::Regenerated {

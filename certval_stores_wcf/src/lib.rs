@@ -3,7 +3,7 @@
 use certval_stores_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "wcf")]
-static WCF_ROOTS: &[&[u8]] = &[include_bytes!("../roots/prod/DoD_WCF_Root_CA_1.der")];
+mod roots_prod;
 
 // Written by `certval-store-gen` from `inputs/WCF.ir4`: `published` is the verified RFC 3161
 // timestamp on the InstallRoot messages read, `collected` the day the stream was fetched. See the
@@ -30,7 +30,7 @@ impl TrustStoreProvider for WcfStores {
         entries.push(StoreEntry {
             id: WCF,
             label: "U.S. DoD (WCF)",
-            roots: WCF_ROOTS,
+            roots: roots_prod::ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/prod/prod.cbor")),
             published: Some(WCF_PUBLISHED),
             collected: Some(WCF_COLLECTED),

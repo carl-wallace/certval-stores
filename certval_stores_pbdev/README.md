@@ -36,7 +36,7 @@ material. The set is what matters, and `check_generator_inputs` is what asserts
 it.
 
 The anchors in `roots/dev/` *are* `include_bytes!`d, one line per file in
-`src/lib.rs`, and `conformance::check_root_inputs` asserts the directory and that
+`src/roots_dev.rs`, which the generator writes with the directory, and `conformance::check_root_inputs` asserts the directory and that
 list agree. The compiler checks only half of it: removing a `.der` breaks the
 build, while adding one leaves a file that ships and reads as an anchor without
 being in the trust set.

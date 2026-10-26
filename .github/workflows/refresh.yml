@@ -75,6 +75,8 @@ jobs:
           # What moved in the store, by content, where the crate commits one (TPM does; the
           # Microsoft provider commits certificates, which the file list already names).
           moved="$(bash .github/scripts/store-diff.sh ${{ matrix.crate }} --features cli,authroot,tpm)"
+          # The anchors added, removed or replaced, by subject. Empty when no root moved.
+          roots="$(bash .github/scripts/roots-diff.sh ${{ matrix.crate }})"
           # The tool's own summary leads the description: it states what was carried, what was
           # dropped and what the publisher dated it, which is what a reviewer needs before opening
           # a single certificate. The rest is the review guidance.
@@ -82,6 +84,8 @@ jobs:
           $(grep -E 'rewritten|carried|dropped' refresh.log || true)
 
           $moved
+
+          $roots
 
           The material came from the publisher and was signature-checked before being written:
           the Microsoft trust list by its own CMS signature against the pinned anchor, the TPM
@@ -202,8 +206,12 @@ jobs:
           fi
           # What moved in each store this crate regenerated, by content.
           moved="$(bash .github/scripts/store-diff.sh ${{ matrix.crate }} --features cli)"
+          # The anchors added, removed or replaced, by subject. Empty when no root moved.
+          roots="$(bash .github/scripts/roots-diff.sh ${{ matrix.crate }})"
           cat > "$RUNNER_TEMP/body.md" <<EOF
           $moved
+
+          $roots
 
           The stream was parsed as its population before it replaced anything, and a stream
           published older than the committed one is refused as a rollback rather than taken.

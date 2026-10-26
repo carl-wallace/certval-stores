@@ -235,3 +235,16 @@ fn the_store_is_what_the_committed_stream_generates() {
         other => panic!("the committed store does not match what WCF.ir4 generates: {other:?}"),
     }
 }
+
+/// `src/roots_prod.rs` is what `certval-store-gen` writes from the committed `roots/prod/`.
+///
+/// The roots of this crate change seldom, so the generator would otherwise go unexercised for
+/// months at a time; this runs it on every build. The root-inputs check above then ties the
+/// embedded list to the same files.
+#[test]
+fn the_root_list_matches_the_directory() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    if let Err(e) = certval_store_gen::provider::check_roots_module(dir, "prod") {
+        panic!("{e}");
+    }
+}
