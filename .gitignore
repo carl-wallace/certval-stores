@@ -4,6 +4,5 @@
 # The build-script refresh sentinel, which nothing reads any more: every provider refreshes from
 # `certval-store-gen` and `refresh.yml`, and the one build script left (`certval_stores_msft`)
 # verifies its committed material unconditionally. Kept so that a leftover file in an old working
-# tree cannot be committed; `exclude = ["refresh-inputs"]` in certval_stores_msft and
-# certval_stores_tpm is its last other reference.
+# tree cannot be committed. The providers' `include` lists keep it out of a package.
 refresh-inputs
