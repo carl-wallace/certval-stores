@@ -23,14 +23,15 @@ Five sources, distinguished by what authenticates the material:
 | DoD InstallRoot stream (`.ir4`) | `nipr`, `eca`, `wcf` | RFC 5934 messages, signed by DoD; the stream is committed under `inputs/` |
 | Microsoft trust list | `msft` | CMS signature over the list, checked against a pinned anchor |
 | TPM cabinet (`TrustedTpm.cab`) | `tpm` | Authenticode signature on the cabinet |
-| Published PKCS#7 bundle | `fpki` | Nothing — the FPKI crawler republishes an unsigned bundle |
+| The mesh, walked from its committed anchor | `fpki` | Nothing per bundle: the walk starts at a committed anchor and the store keeps only what validates back to it |
 | A crates.io dependency | `webpki_root_certs` | Whatever `webpki-root-certs` carries; nothing is vendored here |
 
 The stream-sourced crates keep the signed artifact they were generated from. That is what makes
 them checkable later: `*_store_is_what_the_committed_stream_generates` regenerates from the
 committed `.ir4` and compares certificate sets, so a store that drifted from its own input fails
-even when the pinned counts still line up. `fpki` commits its bundle for the same reason, and
-`the_store_is_what_the_committed_bundle_generates` does the same with it.
+even when the pinned counts still line up. `fpki` commits every bundle its walk read, under
+`inputs/crawl/`, for the same reason, and `the_store_is_what_the_committed_walk_generates` does the
+same with them, pruned at the walk date recorded in `provenance/fpki/collected.txt`.
 
 Every provider the generator writes embeds its anchors through a list it writes with them:
 `src/roots_<env>.rs` in `nipr`, `eca`, `wcf`, `tpm` and `pbdev`, and `src/env_*.rs` in `msft`.
@@ -111,15 +112,28 @@ committed one is refused rather than taken.
 
 ### The Federal PKI (`refresh-fpki.yml`)
 
-Daily, in its own workflow because the cadence differs: the mesh is republished whenever any
+Daily, in its own workflow because the cadence differs: the mesh changes whenever any
 participant's cross-certificates change, and a cross-certificate appearing is how a participant
-becomes reachable. The bundle is fetched, re-encoded as DER (the publisher has served it both PEM-wrapped and as
-DER) and **committed
-under `inputs/`**; the store is regenerated from it only if it moved.
+becomes reachable. `certval-store-gen fpki-crawl` walks the mesh from Federal Common Policy CA G2,
+following both the SIA `caRepository` and AIA `caIssuers` bundles each certificate names, and
+**commits every bundle as served under
+`inputs/crawl/<host>/<path>`**, the walk date in `provenance/fpki/collected.txt`, and the store,
+validated at that date; what it leaves out is listed in `provenance/fpki/dropped.txt`. A walk that
+reads exactly the committed bundles writes nothing.
 
-The bundle is the one source here with no signature to check before taking it. Committing it is the
-compensation: it gives this crate the property the InstallRoot providers have, a source artifact
-the store can be regenerated from and compared against.
+The FPKI's repositories are not reliably up, so one host failing must not cost the refresh. A
+repository that gives no answer after the walk's retries is read from its committed bundle
+instead, and the walk continues through it; anything in that copy that has expired since is
+pruned at the walk date. A repository with no committed copy is skipped, since the store held
+nothing from it before either. The workflow raises a warning for either, so a host that stays
+down is seen rather than silently aging its copy. A repository answering that it has nothing (a
+4xx) is not an outage: the mesh has at least one such URI permanently.
+
+The bundles are the one source here with no signature to check before taking them. Committing them
+is the compensation: it gives this crate the property the InstallRoot providers have, a source
+artifact the store can be regenerated from and compared against. Until 2026-10-27 the source was
+GSA's FPKI crawler bundle, which lagged the mesh and left out two Northrop Grumman CAs whose
+repository serves BER.
 
 ### Drift detection (`certval-stores-mozilla`)
 

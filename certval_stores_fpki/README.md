@@ -27,56 +27,66 @@ two environments distinct rather than merging the roots.
 |------|--------|
 | `roots/fpki/Federal_Common_Policy_CA_G2.der` | `https://repo.fpki.gov/fcpca/fcpcag2.crt` |
 | `roots/legacy/Federal_Common_Policy_CA.der` | `https://repo.fpki.gov/fcpca/fcpca.crt` |
-| `cas/fpki/fpki.cbor` | built from `CACertificatesValidatingToFederalCommonPolicyG2.p7b` |
+| `cas/fpki/fpki.cbor` | built by walking the mesh from the G2 anchor; see below |
 
-That `.p7b` is the FPKI crawler's output (`GSA/FPKIcrawler`) — the same data behind
-the FPKI graph on idmanagement.gov — published in the `GSA/idmanagement.gov` repo
-at `_implement/tools/`. Snapshot taken **2026-08-12** from a bundle the crawler
-published **2026-08-10**.
+The FPKI is a cross-certified mesh, and it publishes no single artifact to build from: its
+certificates name bundles of their neighbours, SIA `caRepository` for what a CA issued and AIA
+`caIssuers` for what was issued to a certificate's issuer. `certval-store-gen fpki-crawl` walks
+both from Federal Common Policy CA G2, as certval's graph builder does, and commits:
 
-Those two dates are what the `FPKI` entry reports as `published` and `collected`.
-They are literals in `src/lib.rs` here, unlike the DoD providers' generator-written
-files: the `.p7b` states neither date, so both come off the GSA repository it was
-downloaded from. `FPKI_LEGACY` reports no publication date at all — the G1 mesh is
-no longer published — and gives the day its anchor reached this repository as the
+- `inputs/crawl/<host>/<path>`: every bundle the walk read, exactly as its repository served it.
+  These are the publishers' own artifacts, BER included, so a refresh diff names the repository
+  that changed.
+- `provenance/fpki/collected.txt`: the day of the walk, which the `FPKI` entry reports as
+  `collected`. It is also the date the store is validated at: a certificate the mesh still
+  publishes after it expired is left out and listed in `provenance/fpki/dropped.txt`. A mesh
+  states no publication date, so the entry reports none.
+- `cas/fpki/fpki.cbor`: the store.
+
+The anchors are never written by the walk. `FPKI_LEGACY` reports no publication date — the G1
+mesh is no longer published — and gives the day its anchor reached this repository as the
 collection date, the latest it can have been fetched.
 
-The store is built from that bundle, committed as `inputs/fpki-bundle.der.p7b`,
-and `the_store_is_what_the_committed_bundle_generates` regenerates from it and
-compares certificate sets, as the DoD providers do with their streams. The two
-anchors above are files, and `conformance::check_root_inputs` asserts
-each directory holds exactly what `src/lib.rs` `include_bytes!`es — both
-environments are single-anchor, so a second `.der` appearing in either directory
-is the drift it catches.
+`the_store_is_what_the_committed_walk_generates` regenerates the store from the committed
+bundles at the recorded date and compares certificate sets, as the DoD providers do with their
+streams. The two anchors above are files, and `conformance::check_root_inputs` asserts each
+directory holds exactly what `src/lib.rs` `include_bytes!`es — both environments are
+single-anchor, so a second `.der` appearing in either directory is the drift it catches.
+
+Until 2026-10-27 the store was built from GSA's FPKI crawler bundle
+(`CACertificatesValidatingToFederalCommonPolicyG2.p7b`). The walk replaced it because that bundle
+lagged the mesh and left out the two Northrop Grumman signing CAs, whose repository serves BER.
 
 ## Refreshing
 
-Unlike the DoD stores, this material moves: the crawler republishes automatically
-whenever the mesh changes, so treat the embedded store as a snapshot with a date,
-not a constant.
+The mesh moves whenever a participant's cross-certificates change, so treat the embedded store
+as a snapshot with a date, not a constant. `refresh-fpki.yml` walks it daily and opens a pull
+request when the material moved. By hand, from the workspace root:
 
 ```sh
-curl -sSfO https://raw.githubusercontent.com/GSA/idmanagement.gov/staging/_implement/tools/CACertificatesValidatingToFederalCommonPolicyG2.p7b
-
-# the adapter takes DER; the bundle is published PEM-wrapped or as DER, so pick the input form
-grep -aq -- '-----BEGIN' CACertificatesValidatingToFederalCommonPolicyG2.p7b && form=PEM || form=DER
-openssl pkcs7 -inform "$form" -in CACertificatesValidatingToFederalCommonPolicyG2.p7b \
-              -outform DER -out fpki-bundle.der.p7b
-
-# certval-store-gen, a member of this workspace: cargo run -p certval-store-gen --
-certval-store-gen --out-dir ./out fpki --p7 ./fpki-bundle.der.p7b
-cp out/ca.cbor cas/fpki/fpki.cbor
+cargo run -p certval-store-gen -- fpki-crawl
 ```
 
-`certval-store-gen` splits the bundle into anchors and intermediates by
-**verifying self-signatures**, not by comparing issuer to subject — the FPKI
-contains self-issued rollover certificates (issuer == subject, signed by the
-predecessor key) that a naive comparison would misfile as roots. It should report
-`1 trust anchors, 133 intermediates`; its `ta.cbor` is redundant here because the
-single anchor is embedded as DER instead.
+The FPKI's repositories are not reliably up. A repository that gives no answer after the walk's
+retries is read from its bundle under `inputs/crawl/` instead, and the walk continues through it,
+so one host being down does not cost the subtree beneath it; anything in that earlier copy that
+has expired since is pruned like any other expired certificate. A repository with no committed
+copy is skipped and logged, since the store held nothing from it before either. A repository
+answering that it has nothing (a 4xx) is recorded as such; the mesh has at least one such URI
+permanently. `--from-committed`
+regenerates from the bundles already committed and fetches nothing, for when the generator's
+rules change rather than the mesh.
 
-After refreshing, update `EXPECTED_INTERMEDIATES` in `tests/tests.rs` if the count
-moved, and re-run `cargo test -p certval_stores_fpki --all-features`.
+Self-signed certificates the walk reaches are dropped by **verifying self-signatures**, not by
+comparing issuer to subject — the FPKI contains self-issued rollover certificates (issuer ==
+subject, signed by the predecessor key) that a naive comparison would misfile as roots.
+
+After refreshing, review the diff, then update the pins and re-run the tests:
+
+```sh
+UPDATE_PINS=1 cargo test -p certval_stores_fpki --all-features
+cargo test -p certval_stores_fpki --all-features
+```
 
 ## Sanity check against pittv3
 
