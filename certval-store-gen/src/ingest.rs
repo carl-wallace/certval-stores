@@ -97,6 +97,40 @@ fn named(bytes: Vec<u8>) -> CertFile {
     CertFile { filename, bytes }
 }
 
+/// Split certificates reached by a crawl into edges and the self-signed ones among them, returning
+/// the edges and how many were dropped.
+///
+/// Some repositories publish a peer's root alongside the cross-certificate issued to it, and a root
+/// is a node rather than an edge -- keeping it would add an anchor nobody committed, which is the
+/// one thing a crawl must not be able to do. Self-*signed* rather than self-*issued*, because the
+/// mesh is full of rollover certificates whose issuer equals their subject but whose signature
+/// comes from the predecessor key; those are genuine edges and a bare name comparison would discard
+/// them.
+///
+/// Unverifiable counts as not self-signed. `is_self_signed_with_buffer` reports an error for an
+/// algorithm certval was not built with, and the two ways to be wrong are not symmetric: filing an
+/// edge as an edge costs a redundant certificate, while filing something unreadable as a root would
+/// install an anchor on the strength of not being able to check it.
+pub fn drop_self_signed(
+    pe: &certval::PkiEnvironment,
+    certs: Vec<CertFile>,
+) -> (Vec<CertFile>, usize) {
+    let mut edges = vec![];
+    let mut roots = 0usize;
+    for cf in certs {
+        let self_signed = match parse_cert(&cf.bytes, &cf.filename) {
+            Ok(parsed) => certval::is_self_signed_with_buffer(pe, parsed.decoded(), &cf.bytes)
+                .unwrap_or(false),
+            Err(_) => false,
+        };
+        match self_signed {
+            true => roots += 1,
+            false => edges.push(cf),
+        }
+    }
+    (edges, roots)
+}
+
 /// Drop any self-issued certificate from a set destined for the intermediate store,
 /// returning what survives and reporting what did not.
 ///

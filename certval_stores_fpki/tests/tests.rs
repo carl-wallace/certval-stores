@@ -6,9 +6,9 @@
 //! `certval_stores_core::conformance` cover the rest of what every provider owes
 //! its consumers.
 //!
-//! The store is checked against the crawler bundle it was generated from,
-//! committed as `inputs/fpki-bundle.der.p7b`. See `README.md` for the refresh
-//! procedure.
+//! The store is checked against the walk it was generated from: the bundles
+//! committed under `inputs/crawl/` and the walk date in `provenance/fpki/`. See
+//! `README.md` for the refresh procedure.
 
 #[cfg(any(feature = "fpki", feature = "fpki_legacy"))]
 use std::path::Path;
@@ -33,7 +33,7 @@ fn roots_for(id: &str) -> &'static [&'static [u8]] {
 /// Number of intermediate CA certificates in the embedded FPKI CA store. Update
 /// this with the store; see README.md for the refresh procedure.
 #[cfg(feature = "fpki")]
-const EXPECTED_INTERMEDIATES: usize = 142;
+const EXPECTED_INTERMEDIATES: usize = 150;
 /// Digest over the intermediate set, which the count above cannot see. The FPKI crawler
 /// republishes whenever any participant's cross-certificates change, so a refresh that swaps one
 /// cross-certificate for another leaves the count identical and the mesh materially different.
@@ -41,7 +41,7 @@ const EXPECTED_INTERMEDIATES: usize = 142;
 /// To update: `UPDATE_PINS=1 cargo test --workspace --all-features` (see `conformance::check_pin`).
 #[cfg(feature = "fpki")]
 const EXPECTED_INTERMEDIATE_SET: &str =
-    "ab86ef726678f8c3aecdcdbaf19dd486cb1f4eb396a1e24dea9df4e97d2be923";
+    "3104c8e8e8991a18bc979cf107578ba606df3721a590cd2d830942956d1290fe";
 
 /// The gate the count is not. See [`EXPECTED_INTERMEDIATE_SET`].
 #[test]
@@ -184,23 +184,20 @@ fn paths_validate_under_the_embedded_anchors() {
     );
 }
 
-/// What ships is what the committed bundle generates.
+/// What ships is what the committed walk generates.
 ///
-/// The bundle is the one input in this workspace with no signature to check before taking it, so
-/// the committed copy is the record of what was taken, and this is what ties the store to it: a
-/// store regenerated from a different bundle, edited by hand, or produced differently by a changed
-/// generator fails here even when the pinned count and set digest were updated to match it.
+/// The bundles carry no signature to check before taking them, so the committed copies are the
+/// record of what was taken, and this is what ties the store to them: a store regenerated from a
+/// different walk, edited by hand, or produced differently by a changed generator fails here even
+/// when the pinned count and set digest were updated to match it. Pruned at the recorded walk
+/// date, as the refresh prunes, so the check gives the same answer on any later day.
 #[test]
 #[cfg(feature = "fpki")]
-fn the_store_is_what_the_committed_bundle_generates() {
-    use certval_store_gen::build_check::{p7_store, Verdict};
+fn the_store_is_what_the_committed_walk_generates() {
+    use certval_store_gen::build_check::{crawl_store, Verdict};
     let dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let verdict = p7_store(
-        &dir.join("inputs/fpki-bundle.der.p7b"),
-        &dir.join("cas/fpki/fpki.cbor"),
-    );
-    match verdict {
+    match crawl_store(dir, &dir.join("cas/fpki/fpki.cbor")) {
         Verdict::Match { .. } => {}
-        other => panic!("the committed store does not match what the bundle generates: {other:?}"),
+        other => panic!("the committed store does not match what the walk generates: {other:?}"),
     }
 }

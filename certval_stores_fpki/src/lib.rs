@@ -7,6 +7,10 @@ static FPKI_ROOTS: &[&[u8]] = &[include_bytes!(
     "../roots/fpki/Federal_Common_Policy_CA_G2.der"
 )];
 
+/// The day of the walk the store was built from, written by `certval-store-gen fpki-crawl`.
+#[cfg(feature = "fpki")]
+const FPKI_COLLECTED: &str = include_str!("../provenance/fpki/collected.txt").trim_ascii_end();
+
 #[cfg(feature = "fpki_legacy")]
 static FPKI_LEGACY_ROOTS: &[&[u8]] = &[include_bytes!(
     "../roots/legacy/Federal_Common_Policy_CA.der"
@@ -37,13 +41,10 @@ impl TrustStoreProvider for FpkiStores {
             label: "U.S. Federal PKI (Common Policy CA G2)",
             roots: FPKI_ROOTS,
             cert_store_cbor: Some(include_bytes!("../cas/fpki/fpki.cbor")),
-            // The crawler's own publication date for the bundle this store was built
-            // from, and the day it was taken; both are recorded in the README's
-            // provenance section. Literals rather than generator-written files, because
-            // the `fpki` adapter is handed a `.p7b` that states neither -- they come off
-            // the GSA repository the bundle was downloaded from.
-            published: Some("2026-08-10"),
-            collected: Some("2026-08-12"),
+            // A mesh states no publication date: each repository answers for itself, so the
+            // store's date is the day it was walked, which is also the date it was validated at.
+            published: None,
+            collected: Some(FPKI_COLLECTED),
         });
         #[cfg(feature = "fpki_legacy")]
         entries.push(StoreEntry {

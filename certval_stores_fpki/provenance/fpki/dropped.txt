@@ -1,0 +1,32 @@
+# Certificates the walk reached that this store does not carry, with the reason.
+# Written by certval-store-gen; a change here is a change in what the mesh publishes,
+# not in this crate.
+#
+# unrooted     reached, but no partial path from the committed anchor includes it,
+#              which includes one stranded when another certificate was dropped
+# unvalidated  a path to the anchor exists and none validated as of the walk date;
+#              an InvalidNotAfterDate here is a certificate the publisher still serves
+#              after it expired
+unrooted     Carillon_Federal_Services_PIV-I_CA3
+unvalidated  CertiPath_Bridge_CA_-_G3  Some(PathValidation(NameConstraintsViolation))
+unvalidated  CertiPath_Bridge_CA_-_G3  Some(PathValidation(NameConstraintsViolation))
+unvalidated  CertiPath_Bridge_CA_-_G3  Some(PathValidation(NameConstraintsViolation))
+unrooted     CertiPath_Bridge_CA_-_G3
+unvalidated  CertiPath_Bridge_CA_-_G3  Some(PathValidation(InvalidNotAfterDate))
+unrooted     DoD_Root_CA_3
+unrooted     DoD_Root_CA_6
+unvalidated  Exostar_Digital_Certificate_Service_Signing_CA_1  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Exostar_Federated_Identity_Service_Signing_CA_3  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Federal_Bridge_CA_G4  Some(PathValidation(NameConstraintsViolation))
+unvalidated  IGC_Server_CA_1  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Northrop_Grumman_Corporate_Signing_CA-G2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  OU_U.S._Department_of_State_PIV_CA2_OU_Certification_Authorities_OU_PIV_OU_Department_of_State_O_U.S._Government_C_US  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  OU_US_Treasury_Root_CA_OU_Certification_Authorities_OU_Department_of_the_Treasury_O_U.S._Government_C_US  Some(PathValidation(SignatureVerificationFailure))
+unvalidated  USPTO_INTR_CA1  Some(PathValidation(InvalidNotAfterDate))
+unrooted     US_DoD_CCEB_Interoperability_Root_CA_2
+unrooted     US_DoD_CCEB_Interoperability_Root_CA_2
+unvalidated  VA_Patient_Direct_CA_2  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  VA_Provider_Direct_CA_2  Some(PathValidation(InvalidNotAfterDate))
+unrooted     CertiPath_Bridge_CA_-_G3
+unrooted     CertiPath_Bridge_CA_-_G3
+unrooted     USPTO_INTR_CA1
