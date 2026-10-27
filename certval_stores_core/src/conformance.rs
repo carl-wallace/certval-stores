@@ -812,9 +812,10 @@ pub fn assert_providers_compose(providers: &[&dyn TrustStoreProvider]) {
 /// Check a generator-input directory against the store built from it.
 ///
 /// Only the `.cbor` store is `include_bytes!`'d into a provider crate; the
-/// `.der` files beside it are the generator's inputs, which ship but affect
-/// nothing at runtime. They therefore drift silently: a certificate added to
-/// the directory without regenerating the store, or dropped from the directory
+/// `.der` files beside it are the generator's inputs, which stay in the
+/// repository, out of the published package, and affect nothing at runtime.
+/// They therefore drift silently: a certificate added to the directory
+/// without regenerating the store, or dropped from the directory
 /// after being folded in, is invisible until someone tries to rebuild. This
 /// compares the two sets by encoding, in both directions.
 ///

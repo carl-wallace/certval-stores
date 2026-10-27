@@ -4,11 +4,12 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
+repository = "https://github.com/carl-wallace/certval-stores"
 description = "TPM vendor trust store for certval, from Microsoft's TrustedTpm.cab"
-# `refresh-inputs` marks a working tree where `build.rs` may re-fetch the cabinet and rewrite the
-# generated material. It is gitignored and never committed: a git dependency is a checkout of this
-# repository, so a committed sentinel would put every consumer's build on the refresh path.
-exclude = ["refresh-inputs"]
+# Only what the build reads: the sources, the README lib.rs takes its docs from, the embedded
+# certificates and stores, and the provenance dates. inputs/ and tests/ are read only by the tests,
+# as are the .der files under cas/, which are the generator's inputs for the .cbor beside them.
+include = ["src/**", "README.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "provenance/**/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 certval_stores_core = { path = "../certval_stores_core", default-features = false }
