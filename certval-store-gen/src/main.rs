@@ -68,7 +68,7 @@ enum Command {
         #[arg(long)]
         include_expired: bool,
     },
-    /// Walk a mesh from committed anchors, following each CA's own SIA `caRepository`.
+    /// Walk a mesh from committed anchors, following SIA `caRepository` and AIA `caIssuers`.
     ///
     /// For a PKI that publishes no single artifact to generate from. The anchors are supplied
     /// as files because they are committed material, never discovered: a crawl collects edges.
@@ -82,6 +82,19 @@ enum Command {
         /// An existing CBOR store to report the walk's difference against, changing nothing.
         #[arg(long)]
         against: Option<PathBuf>,
+    },
+    /// Federal PKI: walk the mesh from the committed anchor and regenerate certval_stores_fpki.
+    ///
+    /// Commits every bundle the walk read under inputs/crawl/, the walk date, and the store. A
+    /// repository that does not answer is read from its committed bundle instead.
+    FpkiCrawl {
+        /// Root of the certval_stores_fpki crate to refresh.
+        #[arg(long, default_value = "certval_stores_fpki")]
+        crate_dir: PathBuf,
+        /// Regenerate from the bundles already committed under inputs/crawl/ and fetch nothing.
+        /// For when this tool's rules change rather than the mesh.
+        #[arg(long)]
+        from_committed: bool,
     },
     /// Federal PKI: an (oversized) PKCS#7 certs-only bundle.
     Fpki {
@@ -298,6 +311,14 @@ fn main() -> Result<()> {
         return run_tpm(crate_dir, env, *from_committed, as_of.as_deref());
     }
 
+    if let Command::FpkiCrawl {
+        crate_dir,
+        from_committed,
+    } = &cli.command
+    {
+        return run_fpki_crawl(crate_dir, *from_committed);
+    }
+
     let mut inputs = match &cli.command {
         Command::Local { tas, cas } => adapters::local::build(&pe, tas, cas.as_deref(), toi)?,
         Command::Webpki {
@@ -391,6 +412,9 @@ fn main() -> Result<()> {
         #[cfg(feature = "tpm")]
         Command::Tpm { .. } => {
             unreachable!("the cabinet-sourced commands return before this point")
+        }
+        Command::FpkiCrawl { .. } => {
+            unreachable!("the crawl-sourced command returns before this point")
         }
         Command::Installroot {
             stream, population, ..
@@ -571,6 +595,28 @@ fn run_tpm(
         } => log::warn!(
             "rewritten from a cabinet published {published}: {anchors} roots, {intermediates} \
              intermediates, {dropped} dropped for reaching no root or not validating as of that \
+             date. Review the diff before committing."
+        ),
+    }
+    Ok(())
+}
+
+fn run_fpki_crawl(crate_dir: &Path, from_committed: bool) -> anyhow::Result<()> {
+    use certval_store_gen::fpki_refresh::{refresh_crate, Outcome};
+
+    match refresh_crate(crate_dir, from_committed)? {
+        Outcome::Current { collected } => {
+            log::info!("nothing to do: the mesh serves what was walked on {collected}")
+        }
+        Outcome::Kept { why } => log::warn!("keeping the committed material: {why}"),
+        Outcome::Regenerated {
+            collected,
+            bundles,
+            intermediates,
+            dropped,
+        } => log::warn!(
+            "rewritten from a walk of {collected}: {bundles} bundles, {intermediates} \
+             intermediates, {dropped} dropped for reaching no anchor or not validating as of that \
              date. Review the diff before committing."
         ),
     }

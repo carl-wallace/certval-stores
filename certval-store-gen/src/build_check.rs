@@ -108,6 +108,26 @@ pub fn p7_store(bundle: &Path, committed: &Path) -> Verdict {
     regenerate_and_compare(&inputs, bundle, &committed_bytes)
 }
 
+/// Regenerate the Federal PKI store from its committed walk and compare with the committed store.
+///
+/// `crate_dir` is `certval_stores_fpki`: the anchor, the bundles under `inputs/crawl/` and the walk
+/// date beside them are all read from there, and pruned as the refresh prunes them.
+pub fn crawl_store(crate_dir: &Path, committed: &Path) -> Verdict {
+    let Ok(committed_bytes) = std::fs::read(committed) else {
+        return Verdict::Skipped {
+            why: format!("{} is not readable", committed.display()),
+        };
+    };
+    match crate::fpki_refresh::regenerate_from(crate_dir) {
+        Ok((inputs, _dropped)) => {
+            regenerate_and_compare(&inputs, &crate_dir.join("inputs/crawl"), &committed_bytes)
+        }
+        Err(e) => Verdict::Skipped {
+            why: format!("the committed walk did not regenerate: {e:#}"),
+        },
+    }
+}
+
 /// Generate a store from `inputs`, read from `source`, and compare its CA half with `committed`.
 fn regenerate_and_compare(
     inputs: &crate::core::StoreInputs,

@@ -24,6 +24,8 @@
 //! most.
 
 use std::path::Path;
+use std::sync::LazyLock;
+use std::time::Duration;
 
 use certval::PkiEnvironment;
 
@@ -34,6 +36,23 @@ use crate::verify::Revocation;
 /// orders of magnitude above that, which is enough headroom to be uninteresting and still a
 /// bound, so a redirect to something enormous cannot be read into memory.
 const MAX_STREAM_BYTES: u64 = 16 * 1024 * 1024;
+
+/// The client every fetch here goes through, with timeouts ureq does not set by default.
+///
+/// Without them a server that accepts the connection and then stalls holds a fetch open
+/// indefinitely, and a mesh walk fetches one repository at a time, so one such server stops the
+/// whole crawl, or a scheduled refresh until the job's own limit. The connect limit fails a dead
+/// or filtered host quickly. The overall limit covers the rest of the request, and is long enough
+/// to read [`MAX_STREAM_BYTES`] at about half a megabyte a second. Either one ends in an error
+/// that is not a status, which the callers file as [`FetchError::Unreachable`]: the question is
+/// left open, not answered.
+static AGENT: LazyLock<ureq::Agent> = LazyLock::new(|| {
+    ureq::Agent::config_builder()
+        .timeout_connect(Some(Duration::from_secs(30)))
+        .timeout_global(Some(Duration::from_secs(300)))
+        .build()
+        .into()
+});
 
 /// What a refresh did, and why.
 ///
@@ -201,7 +220,7 @@ pub(crate) type Conditional = Option<(Vec<u8>, Option<String>)>;
 /// whatever the material states about itself, which is the stronger check anyway.
 #[cfg(feature = "authroot")]
 pub(crate) fn fetch_if_modified(url: &str, since: Option<&str>) -> Result<Conditional, FetchError> {
-    let mut request = ureq::get(url);
+    let mut request = AGENT.get(url);
     if let Some(since) = since {
         request = request.header("If-Modified-Since", since);
     }
@@ -248,7 +267,7 @@ pub(crate) fn fetch_if_modified(url: &str, since: Option<&str>) -> Result<Condit
 
 /// GET `url` into memory, bounded by [`MAX_STREAM_BYTES`].
 pub(crate) fn fetch(url: &str) -> Result<Vec<u8>, FetchError> {
-    let mut response = ureq::get(url).call().map_err(|e| {
+    let mut response = AGENT.get(url).call().map_err(|e| {
         let message = format!("{url} could not be fetched: {e}");
         // 4xx is the server's own answer about its own repository. Everything else -- 5xx
         // included, since a server erroring is not a server saying "nothing here" -- leaves the

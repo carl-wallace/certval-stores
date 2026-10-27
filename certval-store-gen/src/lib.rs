@@ -14,6 +14,7 @@ pub mod core;
 #[cfg(feature = "fetch")]
 pub mod crawl;
 pub mod diff;
+pub mod fpki_refresh;
 pub mod ingest;
 pub mod provider;
 pub mod recode;

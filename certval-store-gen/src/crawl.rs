@@ -1,27 +1,32 @@
-//! Building a store by following SIA links out from a committed anchor.
+//! Building a store by following SIA and AIA links out from a committed anchor.
 //!
 //! Some PKIs publish no single artifact to generate from. The Federal PKI is one: it is a
-//! cross-certified mesh whose membership is discoverable only by walking it, each CA naming what
-//! it issued in its own `subjectInfoAccess` `caRepository` bundle. What a crawl produces is the
-//! same thing the GSA crawler produces, obtained the same way, and its authority is the same --
-//! each hop is the issuing CA's own statement about what it issued.
+//! cross-certified mesh whose membership is discoverable only by walking it: a certificate's SIA
+//! `caRepository` names a bundle of what its subject issued, and its AIA `caIssuers` a bundle of
+//! what was issued to its issuer. The walk follows both, as certval's graph builder does, since
+//! SIA is the less common of the two. Each hop is a CA's own statement about the certificates
+//! around it.
 //!
 //! **The committed anchor is what makes it trustworthy.** The walk starts there and nowhere else,
-//! and generation afterwards keeps only what chains back to it. An SIA URI can name anything;
+//! and generation afterwards keeps only what chains back to it. An SIA or AIA URI can name anything;
 //! reaching a certificate is not a reason to trust it, and this module deliberately does not
 //! decide that question -- it collects, and `core::generate` keeps what the anchor vouches for.
 //!
-//! **A partial crawl must never become a store.** A mesh walk is a union of many fetches, so one
-//! unreachable host silently subtracts a subtree. That failure looks exactly like a CA having
-//! been withdrawn, which is why [`Crawled::unreachable`] is reported separately and a caller
-//! refreshing committed material should refuse to replace it when the list is non-empty. This is
-//! the one place a crawl is meaningfully weaker than fetching a signed stream whole.
+//! **A host that does not answer should not cost its subtree.** A mesh walk is a union of many
+//! fetches, so one unreachable host silently subtracts everything reached only through it, which
+//! looks exactly like CAs having been withdrawn. The Federal PKI's repositories are not reliably
+//! up, so a caller with a copy from an earlier walk can supply it through [`from_anchors_with`],
+//! and the walk continues through that copy; what it fell back for is reported in
+//! [`Crawled::fell_back`]. What it could neither fetch nor stand in for is reported in
+//! [`Crawled::unreachable`].
 
 use std::collections::BTreeSet;
 
-use const_oid::db::rfc5280::ID_AD_CA_REPOSITORY;
+use const_oid::db::rfc5280::{
+    ID_AD_CA_ISSUERS, ID_AD_CA_REPOSITORY, ID_PE_AUTHORITY_INFO_ACCESS, ID_PE_SUBJECT_INFO_ACCESS,
+};
 use der::{Decode, Encode};
-use x509_cert::ext::pkix::{name::GeneralName, SubjectInfoAccessSyntax};
+use x509_cert::ext::pkix::{name::GeneralName, AuthorityInfoAccessSyntax, SubjectInfoAccessSyntax};
 use x509_cert::Certificate;
 
 use certval::CertFile;
@@ -60,22 +65,43 @@ pub struct Crawled {
     /// withdrawn a bundle is reporting a fact about itself -- the Federal PKI has at least one
     /// of these permanently, so treating it as blocking would mean never refreshing again.
     pub absent: Vec<String>,
-    /// Repositories that gave no usable answer at all.
+    /// Repositories that gave no usable answer and had no earlier copy to stand in for them.
     ///
-    /// Non-empty means the result may be a *subset* of the mesh, and a subset is indistinguishable
-    /// from a set of CAs having been withdrawn. Treat it as a reason to keep whatever is already
-    /// committed, not as a warning to pass over.
+    /// What only these lead to is missing from the result. A caller whose fallback covers every
+    /// repository it walked before loses nothing it had, since a repository with no earlier copy
+    /// contributed nothing to the earlier result either.
     pub unreachable: Vec<String>,
+    /// Repositories that gave no usable answer and were read from the caller's earlier copy
+    /// instead, so the walk continued through them.
+    pub fell_back: Vec<String>,
     /// True when a limit stopped the walk, so the result is short for that reason instead.
     pub truncated: bool,
+    /// What each repository served, as `(uri, bytes)`, for every fetch that read as a bundle.
+    ///
+    /// The bytes as published rather than the certificates decoded from them, so a committed walk
+    /// is the publishers' own artifacts and a refresh diff names the repository that changed.
+    /// [`certificates`](Self::certificates) is what these yield, the anchors and anything that is
+    /// not a certificate excluded.
+    pub bundles: Vec<(String, Vec<u8>)>,
 }
 
-/// Walk the mesh reachable from `anchors` by following `caRepository` SIA URIs.
+/// Walk the mesh reachable from `anchors` by following SIA `caRepository` and AIA `caIssuers`
+/// URIs.
 ///
-/// Breadth-first from the anchors' own repositories. Each certificate found is queued for its own
-/// repository, so a bundle reached at depth one contributes its issuees at depth two, and so on
+/// Breadth-first from the anchors' own repositories. Each certificate found has its own bundle URIs
+/// queued, so a bundle reached at depth one contributes what it links to at depth two, and so on
 /// until nothing new appears.
 pub fn from_anchors(anchors: &[CertFile], limits: &Limits) -> Crawled {
+    from_anchors_with(anchors, limits, |_| None)
+}
+
+/// [`from_anchors`], with `fallback` supplying an earlier copy of a repository that does not
+/// answer, so the walk continues through it rather than losing what lies beyond it.
+pub fn from_anchors_with(
+    anchors: &[CertFile],
+    limits: &Limits,
+    fallback: impl Fn(&str) -> Option<Vec<u8>>,
+) -> Crawled {
     let mut queue: Vec<String> = vec![];
     let mut seen_uris: BTreeSet<String> = BTreeSet::new();
     let mut seen_certs: BTreeSet<Vec<u8>> = BTreeSet::new();
@@ -84,7 +110,9 @@ pub fn from_anchors(anchors: &[CertFile], limits: &Limits) -> Crawled {
         fetched: 0,
         absent: vec![],
         unreachable: vec![],
+        fell_back: vec![],
         truncated: false,
+        bundles: vec![],
     };
 
     // The anchors seed the walk but are not part of its output: they are already committed, and a
@@ -108,16 +136,23 @@ pub fn from_anchors(anchors: &[CertFile], limits: &Limits) -> Crawled {
         let uri = queue[head].clone();
         head += 1;
 
-        let bytes = match crate::refresh::fetch(&uri) {
+        let bytes = match fetch_with_retries(&uri) {
             Ok(b) => b,
             Err(crate::refresh::FetchError::Absent(why)) => {
                 out.absent.push(why);
                 continue;
             }
-            Err(crate::refresh::FetchError::Unreachable(why)) => {
-                out.unreachable.push(why);
-                continue;
-            }
+            Err(crate::refresh::FetchError::Unreachable(why)) => match fallback(&uri) {
+                Some(earlier) => {
+                    log::warn!("{why}; using the copy from an earlier walk");
+                    out.fell_back.push(why);
+                    earlier
+                }
+                None => {
+                    out.unreachable.push(why);
+                    continue;
+                }
+            },
         };
         out.fetched += 1;
 
@@ -131,6 +166,7 @@ pub fn from_anchors(anchors: &[CertFile], limits: &Limits) -> Crawled {
             }
         };
         log::info!("{uri}: {} certificate(s)", certs.len());
+        out.bundles.push((uri.clone(), bytes));
 
         for cf in certs {
             // A repository is free to publish whatever it likes, and several publish bundles
@@ -156,11 +192,42 @@ pub fn from_anchors(anchors: &[CertFile], limits: &Limits) -> Crawled {
     out
 }
 
-/// The `caRepository` URIs a certificate names in its own SIA.
+/// Retries for a repository that gave no answer, before falling back to an earlier copy or going
+/// without. A momentary DNS or connection hiccup is common among dozens of fetches; observed
+/// 2026-10-27, when a lookup for `crl.disa.mil` failed once and answered minutes later.
+const RETRIES: u64 = 2;
+
+/// Fetch `uri`, asking again after a pause when nothing answered. A 4xx is the publisher's answer
+/// about its own repository and asking again cannot change it, so it is returned at once.
+fn fetch_with_retries(uri: &str) -> Result<Vec<u8>, crate::refresh::FetchError> {
+    let mut attempt = 0;
+    loop {
+        let why = match crate::refresh::fetch(uri) {
+            Err(crate::refresh::FetchError::Unreachable(why)) => why,
+            other => return other,
+        };
+        if attempt == RETRIES {
+            return Err(crate::refresh::FetchError::Unreachable(why));
+        }
+        attempt += 1;
+        log::info!("{why}; asking again ({attempt} of {RETRIES})");
+        std::thread::sleep(std::time::Duration::from_secs(5 * attempt));
+    }
+}
+
+/// The bundle URIs a certificate names: SIA `caRepository` and AIA `caIssuers`.
 ///
-/// Only `caRepository`, and only `http`/`https`: the other access methods point at services
-/// rather than at bundles, and a URI scheme this cannot fetch is not a failure worth reporting on
-/// every hop.
+/// Both directions, because neither alone covers a mesh. `caRepository` points down, at what the
+/// certificate's subject issued; `caIssuers` points up, at what was issued to the certificate's
+/// issuer, which in a mesh includes cross-certificates from other bridges. SIA is the rarer of the
+/// two: of the 158 certificates a SIA-only walk of the FPKI reached on 2026-10-27, 58 carried it
+/// and 155 carried `caIssuers`, so a walk that read SIA alone found a CA only where the CA above it
+/// happened to publish one. What the extra reach brings in that does not validate back to the
+/// anchor is dropped at generation, so following more links can widen the store but not loosen it.
+///
+/// Only those two access methods, and only `http`/`https`: OCSP and the other methods point at
+/// services rather than at bundles, and a URI scheme this cannot fetch is not a failure worth
+/// reporting on every hop.
 fn repositories(der: &[u8]) -> Vec<String> {
     let Ok(cert) = Certificate::from_der(der) else {
         return vec![];
@@ -169,23 +236,37 @@ fn repositories(der: &[u8]) -> Vec<String> {
         return vec![];
     };
 
-    let mut uris = vec![];
+    let mut descriptions = vec![];
     for ext in extensions.iter() {
-        if ext.extn_id != const_oid::db::rfc5280::ID_PE_SUBJECT_INFO_ACCESS {
-            continue;
-        }
-        let Ok(sia) = SubjectInfoAccessSyntax::from_der(ext.extn_value.as_bytes()) else {
-            continue;
-        };
-        for desc in sia.0.iter() {
-            if desc.access_method != ID_AD_CA_REPOSITORY {
-                continue;
-            }
-            if let GeneralName::UniformResourceIdentifier(uri) = &desc.access_location {
-                let uri = uri.as_str();
-                if uri.starts_with("http://") || uri.starts_with("https://") {
-                    uris.push(uri.to_string());
+        match ext.extn_id {
+            ID_PE_SUBJECT_INFO_ACCESS => {
+                if let Ok(sia) = SubjectInfoAccessSyntax::from_der(ext.extn_value.as_bytes()) {
+                    descriptions.extend(
+                        sia.0
+                            .into_iter()
+                            .filter(|d| d.access_method == ID_AD_CA_REPOSITORY),
+                    );
                 }
+            }
+            ID_PE_AUTHORITY_INFO_ACCESS => {
+                if let Ok(aia) = AuthorityInfoAccessSyntax::from_der(ext.extn_value.as_bytes()) {
+                    descriptions.extend(
+                        aia.0
+                            .into_iter()
+                            .filter(|d| d.access_method == ID_AD_CA_ISSUERS),
+                    );
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut uris = vec![];
+    for desc in descriptions {
+        if let GeneralName::UniformResourceIdentifier(uri) = &desc.access_location {
+            let uri = uri.as_str();
+            if uri.starts_with("http://") || uri.starts_with("https://") {
+                uris.push(uri.to_string());
             }
         }
     }
@@ -208,36 +289,14 @@ pub fn anchor_files(ders: &[Vec<u8>]) -> Vec<CertFile> {
 
 /// Turn a walk into generator inputs: the committed anchors, and the edges reached from them.
 ///
-/// A self-signed certificate reached during the walk is dropped. Some repositories publish a
-/// peer's root alongside the cross-certificate issued to it, and a root is a node rather than an
-/// edge -- keeping it would add an anchor nobody committed, which is the one thing a crawl must
-/// not be able to do. Self-*signed* rather than self-*issued*, because the mesh is full of
-/// rollover certificates whose issuer equals their subject but whose signature comes from the
-/// predecessor key; those are genuine edges and a bare name comparison would discard them.
+/// A self-signed certificate reached during the walk is dropped; see
+/// [`crate::ingest::drop_self_signed`].
 pub fn into_inputs(
     pe: &certval::PkiEnvironment,
     anchors: Vec<CertFile>,
     crawled: Crawled,
 ) -> crate::core::StoreInputs {
-    let mut intermediates = vec![];
-    let mut roots_seen = 0usize;
-    for cf in crawled.certificates {
-        // Unverifiable counts as not self-signed. `is_self_signed_with_buffer` reports an error
-        // for an algorithm certval was not built with, and the two ways to be wrong are not
-        // symmetric: filing an edge as an edge costs a redundant certificate, while filing
-        // something unreadable as a root would install an anchor on the strength of not being
-        // able to check it.
-        let self_signed = match certval::parse_cert(&cf.bytes, &cf.filename) {
-            Ok(parsed) => certval::is_self_signed_with_buffer(pe, parsed.decoded(), &cf.bytes)
-                .unwrap_or(false),
-            Err(_) => false,
-        };
-        if self_signed {
-            roots_seen += 1;
-        } else {
-            intermediates.push(cf);
-        }
-    }
+    let (intermediates, roots_seen) = crate::ingest::drop_self_signed(pe, crawled.certificates);
     if roots_seen > 0 {
         log::info!("{roots_seen} self-signed certificate(s) reached and dropped: a crawl collects edges, and anchors are committed rather than discovered");
     }

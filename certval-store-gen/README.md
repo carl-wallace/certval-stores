@@ -80,6 +80,13 @@ certval-store-gen --out-dir ./web webpki --ccadb ./ccadb-intermediates
 # Federal PKI: split a PKCS#7 bundle into roots + intermediates
 certval-store-gen --out-dir ./fpki fpki --p7 ./fpki-bundle.p7b
 
+# Federal PKI: walk the mesh from the committed anchor and regenerate certval_stores_fpki,
+# committing every bundle read under inputs/crawl/ (what refresh-fpki.yml runs)
+certval-store-gen fpki-crawl
+
+# Walk from any anchor and report the difference against a store, writing ta.cbor/ca.cbor to ./crawl
+certval-store-gen --out-dir ./crawl crawl --anchor ./root.der --against ./store.cbor
+
 # DoD: one population of an InstallRoot stream, written into a provider crate
 certval-store-gen installroot --stream ./DoD.ir4 --population dod \
     --provider-dir ../certval-stores/certval_stores_nipr --env prod --collected 2026-09-11
