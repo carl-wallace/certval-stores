@@ -34,8 +34,8 @@
 //! trustworthy.** Expired roots stay listed -- `CDD4EEAE…` has been expired since 2021, and a
 //! VeriSign timestamping root since 2004 -- and a root can remain listed while the program
 //! distrusts it from a date, carried as [`ATTR_DISALLOWED_AFTER`]. [`build`] drops both, so what
-//! it yields is what the program trusts on the day it runs. Carrying either would mean shipping
-//! `DigiCert Baltimore Root` as trusted after Microsoft retired it on 2026-09-15.
+//! it yields is what the program trusted on the day the list was published. Carrying either would
+//! mean shipping `DigiCert Baltimore Root` as trusted after Microsoft retired it on 2026-09-15.
 //!
 //! ## The published list, measured 2026-09-22
 //!

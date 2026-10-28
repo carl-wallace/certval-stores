@@ -21,7 +21,7 @@ Five sources, distinguished by what authenticates the material:
 | Source | Crates | What signs it |
 |---|---|---|
 | DoD InstallRoot stream (`.ir4`) | `nipr`, `eca`, `wcf` | RFC 5934 messages, signed by DoD; the stream is committed under `inputs/` |
-| Microsoft trust list | `msft` | CMS signature over the list, checked against a pinned anchor |
+| Microsoft trust list | `msft` | CMS signature over the list, checked against a pinned anchor; the cabinet holding the list is committed under `inputs/` |
 | TPM cabinet (`TrustedTpm.cab`) | `tpm` | Authenticode signature on the cabinet |
 | The mesh, walked from its committed anchor | `fpki` | Nothing per bundle: the walk starts at a committed anchor and the store keeps only what validates back to it |
 | A crates.io dependency | `webpki_root_certs` | Whatever `webpki-root-certs` carries; nothing is vendored here |
@@ -108,7 +108,8 @@ certificate, sorts the digests and digests the sorted list, so order does not ma
 addition, removal or swap moves the value.
 
 The rollback guard sits in the generator, not the workflow: a stream published older than the
-committed one is refused rather than taken.
+committed one, or a Microsoft list older than the one in the committed cabinet, is refused rather
+than taken.
 
 ### The Federal PKI (`refresh-fpki.yml`)
 

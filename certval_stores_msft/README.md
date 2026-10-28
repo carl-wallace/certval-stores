@@ -3,8 +3,8 @@
 The Microsoft root program as certval trust stores, split by the purposes the program grants.
 
 Microsoft publishes its root program as a **certificate trust list** rather than as a bundle:
-`authrootstl.cab` is an Authenticode-signed cabinet holding one file, `authroot.stl`, which lists
-SHA-1 thumbprints and per-root metadata and carries no certificates at all. Each certificate is
+`authrootstl.cab` is a cabinet holding one file, `authroot.stl`, a list signed with CMS that gives
+SHA-1 thumbprints and per-root metadata and contains no certificates at all. Each certificate is
 served separately, at a URL named after its own thumbprint. This crate carries the result of
 following that, and `certval-store-gen`'s `authroot` adapter is what follows it.
 
@@ -131,6 +131,12 @@ design: the counts below are pinned, so a change names itself and a person reads
 diff before it lands.
 
 `certval-store-gen authroot --check-only` verifies the committed material and fetches nothing.
+
+`inputs/authrootstl.cab` is the cabinet the committed store was generated from, exactly as it was
+fetched. A refresh compares the list it fetches with the list inside that cabinet, and refuses one
+with a lower sequence number or an earlier `thisUpdate`, writing nothing: an older list is validly
+signed as of its own date, so its signature alone does not rule it out. Expired and disallowed
+roots are judged as of the list's `thisUpdate`, not the day the refresh runs.
 
 `provenance/` records what the copy is: `published.txt` (the list's own `thisUpdate`),
 `collected.txt`, `sequence_number.txt` and `last_modified.txt` — the last two so a refresh can
