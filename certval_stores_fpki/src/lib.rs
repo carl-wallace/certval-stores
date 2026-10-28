@@ -21,8 +21,7 @@ static FPKI_LEGACY_ROOTS: &[&[u8]] = &[include_bytes!(
     "../roots/legacy/Federal_Common_Policy_CA.der"
 )];
 
-/// Trust-store provider for the Federal PKI environments.
-pub struct FpkiStores;
+struct FpkiStores;
 
 /// Store id for the U.S. Federal PKI store, to pass to `prepare_certval_environment`
 /// or `serialize_environment` rather than spelling it out: the parameter is a
@@ -66,11 +65,9 @@ impl TrustStoreProvider for FpkiStores {
     }
 }
 
-/// The provider instance.
-pub static PROVIDER: FpkiStores = FpkiStores;
-
-/// Convenience accessor returning the provider as a trait object, for adding to
-/// a provider list passed to `certval_stores_core`.
+/// The trust-store provider for the Federal PKI environments.
+///
+/// Add it to the list of providers passed to `certval_stores_core`.
 pub fn provider() -> &'static dyn TrustStoreProvider {
-    &PROVIDER
+    &FpkiStores
 }

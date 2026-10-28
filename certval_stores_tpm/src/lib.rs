@@ -26,8 +26,7 @@ const TPM_COLLECTED: Date =
     Date::parse(include_str!("../provenance/tpm/collected.txt").trim_ascii_end())
         .expect("provenance/tpm/collected.txt is not a YYYY-MM-DD date");
 
-/// Trust-store provider for the TPM vendor roots.
-pub struct TpmStores;
+struct TpmStores;
 
 /// Store id for the TPM vendor environment, to pass to `prepare_certval_environment` or
 /// `serialize_environment` rather than spelling it out: the parameter is a `&str`, so a stale
@@ -50,11 +49,9 @@ impl TrustStoreProvider for TpmStores {
     }
 }
 
-/// The provider instance.
-pub static PROVIDER: TpmStores = TpmStores;
-
-/// Convenience accessor returning the provider as a trait object, for adding to a provider list
-/// passed to `certval_stores_core`.
+/// The trust-store provider for the TPM vendor roots.
+///
+/// Add it to the list of providers passed to `certval_stores_core`.
 pub fn provider() -> &'static dyn TrustStoreProvider {
-    &PROVIDER
+    &TpmStores
 }

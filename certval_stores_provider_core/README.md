@@ -32,7 +32,7 @@ pub const EXAMPLE: &str = "example";
 const PUBLISHED: Date = Date::parse("2026-10-28").expect("not a YYYY-MM-DD date");
 const COLLECTED: Date = Date::parse("2026-10-28").expect("not a YYYY-MM-DD date");
 
-pub struct ExampleStores;
+struct ExampleStores;
 
 impl TrustStoreProvider for ExampleStores {
     fn entries(&self) -> Vec<StoreEntry> {
@@ -40,6 +40,11 @@ impl TrustStoreProvider for ExampleStores {
             .with_published(PUBLISHED)
             .with_collected(COLLECTED)]
     }
+}
+
+/// The trust-store provider for the example PKI.
+pub fn provider() -> &'static dyn TrustStoreProvider {
+    &ExampleStores
 }
 ```
 

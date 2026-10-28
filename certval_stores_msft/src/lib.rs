@@ -57,8 +57,7 @@ const PUBLISHED: Date = Date::parse(include_str!("../provenance/published.txt").
 const COLLECTED: Date = Date::parse(include_str!("../provenance/collected.txt").trim_ascii_end())
     .expect("provenance/collected.txt is not a YYYY-MM-DD date");
 
-/// Trust-store provider for the Microsoft root program.
-pub struct MsftStores;
+struct MsftStores;
 
 /// Store id for every root in the program. Pass this rather than a literal: the parameter is a
 /// `&str`, so a stale spelling compiles and fails at run time.
@@ -149,11 +148,9 @@ impl TrustStoreProvider for MsftStores {
     }
 }
 
-/// The provider instance.
-pub static PROVIDER: MsftStores = MsftStores;
-
-/// Convenience accessor returning the provider as a trait object, for adding to a provider list
-/// passed to `certval_stores_core`.
+/// The trust-store provider for the Microsoft root program.
+///
+/// Add it to the list of providers passed to `certval_stores_core`.
 pub fn provider() -> &'static dyn TrustStoreProvider {
-    &PROVIDER
+    &MsftStores
 }

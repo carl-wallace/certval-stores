@@ -8,8 +8,7 @@ use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 #[cfg(feature = "dev")]
 mod roots_dev;
 
-/// Trust-store provider for the Purebred development environment.
-pub struct PbDevStores;
+struct PbDevStores;
 
 /// Store id for the Purebred development store, to pass to `prepare_certval_environment`
 /// or `serialize_environment` rather than spelling it out: the parameter is a
@@ -38,11 +37,9 @@ impl TrustStoreProvider for PbDevStores {
     }
 }
 
-/// The provider instance.
-pub static PROVIDER: PbDevStores = PbDevStores;
-
-/// Convenience accessor returning the provider as a trait object, for adding to
-/// a provider list passed to `certval_stores_core`.
+/// The trust-store provider for the Purebred development environment.
+///
+/// Add it to the list of providers passed to `certval_stores_core`.
 pub fn provider() -> &'static dyn TrustStoreProvider {
-    &PROVIDER
+    &PbDevStores
 }

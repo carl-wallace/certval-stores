@@ -32,7 +32,7 @@ fn provider_is_conformant() {
 #[test]
 #[cfg(feature = "dev")]
 fn dev_entry_carries_one_root_and_a_ca_store() {
-    let entries = certval_stores_pbdev::PROVIDER.entries();
+    let entries = certval_stores_pbdev::provider().entries();
     let dev = entries
         .iter()
         .find(|e| e.id == certval_stores_pbdev::PUREBRED_DEV)
@@ -55,7 +55,7 @@ fn dev_entry_carries_one_root_and_a_ca_store() {
 /// no fewer (an entry left out of the fold).
 #[test]
 fn get_roots_returns_every_advertised_anchor() {
-    let expected: usize = certval_stores_pbdev::PROVIDER
+    let expected: usize = certval_stores_pbdev::provider()
         .entries()
         .iter()
         .map(|e| e.roots.len())
@@ -69,7 +69,7 @@ fn get_roots_returns_every_advertised_anchor() {
 #[cfg(feature = "dev")]
 fn dev_generator_inputs_match_the_store() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("cas/dev");
-    let entries = certval_stores_pbdev::PROVIDER.entries();
+    let entries = certval_stores_pbdev::provider().entries();
     let cbor = entries
         .iter()
         .find(|e| e.id == certval_stores_pbdev::PUREBRED_DEV)
@@ -87,7 +87,7 @@ fn dev_generator_inputs_match_the_store() {
 #[cfg(feature = "dev")]
 fn dev_root_inputs_match_the_embedded_anchors() {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("roots/dev");
-    let entries = certval_stores_pbdev::PROVIDER.entries();
+    let entries = certval_stores_pbdev::provider().entries();
     let roots = entries
         .iter()
         .find(|e| e.id == certval_stores_pbdev::PUREBRED_DEV)

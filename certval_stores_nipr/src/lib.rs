@@ -66,8 +66,7 @@ const NIPR_CCEB_INTEROP_COLLECTED: Date =
     Date::parse(include_str!("../provenance/cceb_interop/collected.txt").trim_ascii_end())
         .expect("provenance/cceb_interop/collected.txt is not a YYYY-MM-DD date");
 
-/// Trust-store provider for the NIPR (DoD PKI) environments.
-pub struct NiprStores;
+struct NiprStores;
 
 /// Store id for the NIPR operational-test (JITC) store, to pass to `prepare_certval_environment`
 /// or `serialize_environment` rather than spelling it out: the parameter is a
@@ -142,11 +141,9 @@ impl TrustStoreProvider for NiprStores {
     }
 }
 
-/// The provider instance.
-pub static PROVIDER: NiprStores = NiprStores;
-
-/// Convenience accessor returning the provider as a trait object, for adding to
-/// a provider list passed to `certval_stores_core`.
+/// The trust-store provider for the NIPR (DoD PKI) environments.
+///
+/// Add it to the list of providers passed to `certval_stores_core`.
 pub fn provider() -> &'static dyn TrustStoreProvider {
-    &PROVIDER
+    &NiprStores
 }

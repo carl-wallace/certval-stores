@@ -39,7 +39,7 @@ fn load(cbor: &[u8]) -> CertSource {
 
 #[cfg(feature = "eca")]
 fn entry(id: &str) -> certval_stores_core::StoreEntry {
-    certval_stores_eca::PROVIDER
+    certval_stores_eca::provider()
         .entries()
         .into_iter()
         .find(|e| e.id == id)
@@ -105,7 +105,7 @@ fn paths_filed_under_the_wrong_key_are_reported() {
 /// no fewer (an entry left out of the fold).
 #[test]
 fn get_roots_returns_every_advertised_anchor() {
-    let expected: usize = certval_stores_eca::PROVIDER
+    let expected: usize = certval_stores_eca::provider()
         .entries()
         .iter()
         .map(|e| e.roots.len())

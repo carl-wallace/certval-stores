@@ -28,9 +28,7 @@ static ROOTS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
         .collect()
 });
 
-/// Trust-store provider for the Mozilla TLS server roots as `webpki-root-certs`
-/// publishes them.
-pub struct WebpkiRootCertsStores;
+struct WebpkiRootCertsStores;
 
 /// Store id for the TLS server root set, to pass to
 /// `prepare_certval_environment` or `serialize_environment` rather than
@@ -59,11 +57,10 @@ impl TrustStoreProvider for WebpkiRootCertsStores {
     }
 }
 
-/// The provider instance.
-pub static PROVIDER: WebpkiRootCertsStores = WebpkiRootCertsStores;
-
-/// Convenience accessor returning the provider as a trait object, for adding to
-/// a provider list passed to `certval_stores_core`.
+/// The trust-store provider for the Mozilla TLS server roots as `webpki-root-certs`
+/// publishes them.
+///
+/// Add it to the list of providers passed to `certval_stores_core`.
 pub fn provider() -> &'static dyn TrustStoreProvider {
-    &PROVIDER
+    &WebpkiRootCertsStores
 }
