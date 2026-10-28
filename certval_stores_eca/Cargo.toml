@@ -6,6 +6,8 @@ rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/carl-wallace/certval-stores"
 description = "ECA (DoD External Certification Authority) trust store for certval"
+keywords = ["x509", "pki", "trust-anchor", "dod", "certval"]
+categories = ["cryptography"]
 # What the build reads, plus the changelog: the sources, the README lib.rs takes its docs from, the
 # embedded certificates and stores, and the provenance dates. inputs/ and tests/ are read only by
 # the tests, as are the .der files under cas/, which are the generator's inputs for the .cbor beside
@@ -33,3 +35,7 @@ certval-store-gen = { path = "../certval-store-gen", default-features = false }
 # --no-default-features test run would not build the shape it claims to.
 certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, features = ["std", "rsa"], branch = "main" }
 certval_stores_core = { path = "../certval_stores_core", default-features = false, features = ["test-util"] }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

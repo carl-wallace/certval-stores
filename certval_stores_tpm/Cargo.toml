@@ -6,6 +6,8 @@ rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/carl-wallace/certval-stores"
 description = "TPM vendor trust store for certval, from Microsoft's TrustedTpm.cab"
+keywords = ["x509", "tpm", "trust-anchor", "attestation", "certval"]
+categories = ["cryptography"]
 # What the build reads, plus the changelog: the sources, the README lib.rs takes its docs from, the
 # embedded certificates and stores, and the provenance dates. inputs/ and tests/ are read only by
 # the tests, as are the .der files under cas/, which are the generator's inputs for the .cbor beside
@@ -40,3 +42,7 @@ certval-store-gen = { path = "../certval-store-gen", default-features = false, f
 # its signature.
 tpm_cab_verify = { git = "https://github.com/carl-wallace/tpm_cab_verify.git", branch = "main" }
 tokio = { version = "1.52.4", features = ["macros", "rt-multi-thread"] }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
 /// Trust material for a single environment, carried by a [`TrustStoreProvider`].

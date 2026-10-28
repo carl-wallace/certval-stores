@@ -6,6 +6,8 @@ rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/carl-wallace/certval-stores"
 description = "Federal PKI trust store for certval — anchored at the Federal Common Policy CA G2"
+keywords = ["x509", "pki", "trust-anchor", "fpki", "certval"]
+categories = ["cryptography"]
 # What the build reads, plus the changelog: the sources, the README lib.rs takes its docs from, the
 # embedded certificates and store, and the walk date. inputs/ and tests/ are read only by the tests.
 include = ["src/**", "README.md", "CHANGELOG.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "LICENSE-APACHE", "LICENSE-MIT"]
@@ -33,3 +35,7 @@ fpki = []
 # The retired Federal Common Policy CA (G1). Anchors-only, no CA store; enable
 # only to validate paths that predate the G2 migration.
 fpki_legacy = []
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

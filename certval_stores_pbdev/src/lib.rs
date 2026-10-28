@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
 use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
