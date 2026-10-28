@@ -29,8 +29,8 @@ pub struct StoreEntry {
     pub label: &'static str,                     // what a person choosing a store reads
     pub roots: &'static [&'static [u8]],         // trust-anchor DERs
     pub cert_store_cbor: Option<&'static [u8]>,  // serialized certval CertSource (CBOR)
-    pub published: Option<&'static str>,         // the source's own date, YYYY-MM-DD
-    pub collected: Option<&'static str>,         // when this material was taken, YYYY-MM-DD
+    pub published: Option<Date>,                 // the source's own date
+    pub collected: Option<Date>,                 // when this material was taken
 }
 
 pub trait TrustStoreProvider: Send + Sync {
@@ -38,7 +38,7 @@ pub trait TrustStoreProvider: Send + Sync {
 }
 ```
 
-Both are defined in `certval_stores_provider_core`, which has no dependencies, and
+Both, and `Date`, are defined in `certval_stores_provider_core`, which has no dependencies, and
 re-exported here. A provider depends on that crate alone, so a certval or reqwest
 release that changes this crate leaves the providers' versions where they are, and
 a provider built against its 1.x fits any version of this crate.
@@ -46,6 +46,8 @@ a provider built against its 1.x fits any version of this crate.
 `StoreEntry` is `#[non_exhaustive]`, so a field can be added without a new major
 version. A provider builds one with `StoreEntry::new(id, label, roots)` and the
 `with_cert_store_cbor`, `with_published` and `with_collected` setters, all `const`.
+The two dates are a `Date`, made by `Date::parse` from `YYYY-MM-DD`; a provider
+parses them in a `const`, so a malformed date file fails its build.
 
 Each provider crate exposes `provider() -> &'static dyn TrustStoreProvider`.
 

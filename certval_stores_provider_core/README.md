@@ -21,19 +21,24 @@ version. Build one with `StoreEntry::new` and the `with_*` setters, all of which
 `const`:
 
 ```rust
-use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
+use certval_stores_provider_core::{Date, StoreEntry, TrustStoreProvider};
 
 static ROOTS: &[&[u8]] = &[];
 
 pub const EXAMPLE: &str = "example";
+
+// A provider reads these from files with include_str!; parsing in a const makes a
+// malformed file a build error.
+const PUBLISHED: Date = Date::parse("2026-10-28").expect("not a YYYY-MM-DD date");
+const COLLECTED: Date = Date::parse("2026-10-28").expect("not a YYYY-MM-DD date");
 
 pub struct ExampleStores;
 
 impl TrustStoreProvider for ExampleStores {
     fn entries(&self) -> Vec<StoreEntry> {
         vec![StoreEntry::new(EXAMPLE, "Example PKI", ROOTS)
-            .with_published("2026-10-28")
-            .with_collected("2026-10-28")]
+            .with_published(PUBLISHED)
+            .with_collected(COLLECTED)]
     }
 }
 ```

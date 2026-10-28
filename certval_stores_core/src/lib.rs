@@ -55,8 +55,8 @@ pub use certval::{get_certificate_from_trust_anchor, PDVTrustAnchorChoice};
 
 // The provider contract lives in its own crate, which depends on nothing, so that a
 // provider depends on it alone and a certval or reqwest release that moves this crate
-// does not move the providers. Re-exported so a consumer names both types from here.
-pub use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
+// does not move the providers. Re-exported so a consumer names these types from here.
+pub use certval_stores_provider_core::{Date, StoreEntry, TrustStoreProvider};
 
 /// Populate `ta_store` (trust anchors) and `pe` (certificate sources) with the
 /// material the given `providers` carry for the store `id`.
@@ -151,10 +151,10 @@ pub struct SerializedStore {
     /// [`StoreEntry::published`] for this environment, carried across so a
     /// consumer that serializes the material rather than linking the provider
     /// can still say how current it is. The CBOR itself has nowhere to hold it.
-    pub published: Option<&'static str>,
+    pub published: Option<Date>,
     /// [`StoreEntry::collected`] for this environment, carried across for the
     /// same reason.
-    pub collected: Option<&'static str>,
+    pub collected: Option<Date>,
 }
 
 /// Serialize what `providers` carry for the store `id`, for consumers that load
@@ -182,8 +182,8 @@ pub fn serialize_environment(
     // only borrowed, and is what the returned store is named by.
     let mut matched_id: Option<&'static str> = None;
     let mut label: Option<&'static str> = None;
-    let mut published: Option<&'static str> = None;
-    let mut collected: Option<&'static str> = None;
+    let mut published: Option<Date> = None;
+    let mut collected: Option<Date> = None;
     let mut acted = false;
 
     for provider in providers {

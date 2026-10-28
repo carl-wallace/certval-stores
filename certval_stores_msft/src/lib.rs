@@ -1,6 +1,15 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
+#[cfg(any(
+    feature = "msft_all",
+    feature = "msft_tls",
+    feature = "msft_client_auth",
+    feature = "msft_email",
+    feature = "msft_code_signing",
+    feature = "msft_timestamping"
+))]
+use certval_stores_provider_core::Date;
 use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 // One generated index per environment, each an `include_bytes!` list over the shared `roots/`
@@ -35,7 +44,8 @@ mod env_tls;
     feature = "msft_code_signing",
     feature = "msft_timestamping"
 ))]
-const PUBLISHED: &str = include_str!("../provenance/published.txt").trim_ascii_end();
+const PUBLISHED: Date = Date::parse(include_str!("../provenance/published.txt").trim_ascii_end())
+    .expect("provenance/published.txt is not a YYYY-MM-DD date");
 #[cfg(any(
     feature = "msft_all",
     feature = "msft_tls",
@@ -44,7 +54,8 @@ const PUBLISHED: &str = include_str!("../provenance/published.txt").trim_ascii_e
     feature = "msft_code_signing",
     feature = "msft_timestamping"
 ))]
-const COLLECTED: &str = include_str!("../provenance/collected.txt").trim_ascii_end();
+const COLLECTED: Date = Date::parse(include_str!("../provenance/collected.txt").trim_ascii_end())
+    .expect("provenance/collected.txt is not a YYYY-MM-DD date");
 
 /// Trust-store provider for the Microsoft root program.
 pub struct MsftStores;

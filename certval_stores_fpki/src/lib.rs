@@ -1,6 +1,8 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
+#[cfg(any(feature = "fpki", feature = "fpki_legacy"))]
+use certval_stores_provider_core::Date;
 use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "fpki")]
@@ -10,7 +12,9 @@ static FPKI_ROOTS: &[&[u8]] = &[include_bytes!(
 
 /// The day of the walk the store was built from, written by `certval-store-gen fpki-crawl`.
 #[cfg(feature = "fpki")]
-const FPKI_COLLECTED: &str = include_str!("../provenance/fpki/collected.txt").trim_ascii_end();
+const FPKI_COLLECTED: Date =
+    Date::parse(include_str!("../provenance/fpki/collected.txt").trim_ascii_end())
+        .expect("provenance/fpki/collected.txt is not a YYYY-MM-DD date");
 
 #[cfg(feature = "fpki_legacy")]
 static FPKI_LEGACY_ROOTS: &[&[u8]] = &[include_bytes!(
@@ -56,7 +60,7 @@ impl TrustStoreProvider for FpkiStores {
                 "U.S. Federal PKI (legacy G1 mesh)",
                 FPKI_LEGACY_ROOTS,
             )
-            .with_collected("2026-08-13"),
+            .with_collected(const { Date::parse("2026-08-13").expect("not a YYYY-MM-DD date") }),
         );
         entries
     }

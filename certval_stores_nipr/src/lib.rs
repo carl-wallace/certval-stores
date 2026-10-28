@@ -1,6 +1,13 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
+#[cfg(any(
+    feature = "nipr",
+    feature = "om_nipr",
+    feature = "nipr_interop",
+    feature = "nipr_cceb_interop"
+))]
+use certval_stores_provider_core::Date;
 use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "om_nipr")]
@@ -27,25 +34,37 @@ mod roots_cceb_interop;
 // the material instead of leaving them to a hand edit -- the gap the two answer is real
 // here, `JITC.ir4` having been signed well over a year before it was fetched.
 #[cfg(feature = "nipr")]
-const NIPR_PUBLISHED: &str = include_str!("../provenance/prod/published.txt").trim_ascii_end();
+const NIPR_PUBLISHED: Date =
+    Date::parse(include_str!("../provenance/prod/published.txt").trim_ascii_end())
+        .expect("provenance/prod/published.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "nipr")]
-const NIPR_COLLECTED: &str = include_str!("../provenance/prod/collected.txt").trim_ascii_end();
+const NIPR_COLLECTED: Date =
+    Date::parse(include_str!("../provenance/prod/collected.txt").trim_ascii_end())
+        .expect("provenance/prod/collected.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "om_nipr")]
-const OM_NIPR_PUBLISHED: &str = include_str!("../provenance/om/published.txt").trim_ascii_end();
+const OM_NIPR_PUBLISHED: Date =
+    Date::parse(include_str!("../provenance/om/published.txt").trim_ascii_end())
+        .expect("provenance/om/published.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "om_nipr")]
-const OM_NIPR_COLLECTED: &str = include_str!("../provenance/om/collected.txt").trim_ascii_end();
+const OM_NIPR_COLLECTED: Date =
+    Date::parse(include_str!("../provenance/om/collected.txt").trim_ascii_end())
+        .expect("provenance/om/collected.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "nipr_interop")]
-const NIPR_INTEROP_PUBLISHED: &str =
-    include_str!("../provenance/interop/published.txt").trim_ascii_end();
+const NIPR_INTEROP_PUBLISHED: Date =
+    Date::parse(include_str!("../provenance/interop/published.txt").trim_ascii_end())
+        .expect("provenance/interop/published.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "nipr_interop")]
-const NIPR_INTEROP_COLLECTED: &str =
-    include_str!("../provenance/interop/collected.txt").trim_ascii_end();
+const NIPR_INTEROP_COLLECTED: Date =
+    Date::parse(include_str!("../provenance/interop/collected.txt").trim_ascii_end())
+        .expect("provenance/interop/collected.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "nipr_cceb_interop")]
-const NIPR_CCEB_INTEROP_PUBLISHED: &str =
-    include_str!("../provenance/cceb_interop/published.txt").trim_ascii_end();
+const NIPR_CCEB_INTEROP_PUBLISHED: Date =
+    Date::parse(include_str!("../provenance/cceb_interop/published.txt").trim_ascii_end())
+        .expect("provenance/cceb_interop/published.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "nipr_cceb_interop")]
-const NIPR_CCEB_INTEROP_COLLECTED: &str =
-    include_str!("../provenance/cceb_interop/collected.txt").trim_ascii_end();
+const NIPR_CCEB_INTEROP_COLLECTED: Date =
+    Date::parse(include_str!("../provenance/cceb_interop/collected.txt").trim_ascii_end())
+        .expect("provenance/cceb_interop/collected.txt is not a YYYY-MM-DD date");
 
 /// Trust-store provider for the NIPR (DoD PKI) environments.
 pub struct NiprStores;

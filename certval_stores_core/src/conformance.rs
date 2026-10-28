@@ -146,28 +146,10 @@ pub fn check_entry_shape(provider: &dyn TrustStoreProvider) -> Vec<String> {
                 }
             }
         }
-        // The dates are shown to a user as a statement about how current the material
-        // is, so a malformed one is worse than none: it reads as an answer. Both are
-        // written by the generator into files the provider `include_str!`s, which is
-        // where a stray newline or a half-finished hand edit would arrive from.
-        for (what, value) in [
-            ("published", entry.published),
-            ("collected", entry.collected),
-        ] {
-            let Some(value) = value else {
-                continue;
-            };
-            if !is_iso_date(value) {
-                failures.push(format!(
-                    "entry {id:?} {what} date {value:?} is not an ISO 8601 calendar date (YYYY-MM-DD)"
-                ));
-            }
-        }
-        // Lexicographic comparison is a date comparison for this format, which is most
-        // of why the format is required above. Collecting material before its publisher
-        // published it is not a thing that happened, so one of the two is wrong.
+        // Collecting material before its publisher published it is not a thing that
+        // happened, so one of the two dates is wrong, or they were swapped.
         if let (Some(published), Some(collected)) = (entry.published, entry.collected) {
-            if is_iso_date(published) && is_iso_date(collected) && published > collected {
+            if published > collected {
                 failures.push(format!(
                     "entry {id:?} says it was published {published} and collected {collected}, which is before it existed"
                 ));
@@ -175,28 +157,6 @@ pub fn check_entry_shape(provider: &dyn TrustStoreProvider) -> Vec<String> {
         }
     }
     failures
-}
-
-/// Whether `value` is a `YYYY-MM-DD` calendar date.
-///
-/// Syntax and range only: this rejects `2026-13-01` and `2026-08-32`, and accepts
-/// `2026-02-31`, which no publisher emits and which nothing here would do anything
-/// different about. A full calendar is not worth carrying to check a date a human
-/// reads.
-fn is_iso_date(value: &str) -> bool {
-    let bytes = value.as_bytes();
-    if bytes.len() != 10 || bytes[4] != b'-' || bytes[7] != b'-' {
-        return false;
-    }
-    if !bytes
-        .iter()
-        .enumerate()
-        .all(|(i, b)| i == 4 || i == 7 || b.is_ascii_digit())
-    {
-        return false;
-    }
-    let part = |from: usize, to: usize| value[from..to].parse::<u32>().unwrap_or(0);
-    (1..=12).contains(&part(5, 7)) && (1..=31).contains(&part(8, 10))
 }
 
 /// Check that every trust anchor parses as an x509-cert `Certificate` (the
@@ -1184,6 +1144,7 @@ fn rewrite_pin(source: &str, name: &str, literal: &str) -> Result<String, String
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Date;
 
     /// A provider assembled from whatever entries a test hands it.
     struct Fake(Box<dyn Fn() -> Vec<StoreEntry> + Send + Sync>);
@@ -1283,25 +1244,17 @@ mod tests {
         );
     }
 
-    /// `ROOTS_ONE_BAD` so neither entry trips the anchor checks: what is under test
-    /// is the dates alone, and a third failure here would mean something else fired.
+    /// `ROOTS_ONE_BAD` so the entry trips none of the anchor checks: what is under
+    /// test is the dates alone, and a second failure here would mean something else
+    /// fired.
     #[test]
-    fn a_malformed_date_and_one_collected_before_it_was_published_are_reported() {
+    fn an_entry_collected_before_it_was_published_is_reported() {
         let failures = check_entry_shape(&fake(|| {
-            vec![
-                // The trailing newline an `include_str!` of a generated file brings
-                // with it when nothing trims it.
-                StoreEntry::new("dev", "Test", ROOTS_ONE_BAD).with_published("2026-08-13\n"),
-                StoreEntry::new("nipr", "Test", ROOTS_ONE_BAD)
-                    .with_published("2026-09-11")
-                    .with_collected("2026-06-12"),
-            ]
+            vec![StoreEntry::new("nipr", "Test", ROOTS_ONE_BAD)
+                .with_published(Date::parse("2026-09-11").unwrap())
+                .with_collected(Date::parse("2026-06-12").unwrap())]
         }));
-        assert_eq!(failures.len(), 2, "{failures:#?}");
-        assert!(
-            failures.iter().any(|f| f.contains("ISO 8601")),
-            "{failures:#?}"
-        );
+        assert_eq!(failures.len(), 1, "{failures:#?}");
         assert!(
             failures.iter().any(|f| f.contains("before it existed")),
             "{failures:#?}"

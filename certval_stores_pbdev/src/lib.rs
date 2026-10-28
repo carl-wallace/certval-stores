@@ -1,6 +1,8 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
+#[cfg(feature = "dev")]
+use certval_stores_provider_core::Date;
 use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "dev")]
@@ -30,7 +32,7 @@ impl TrustStoreProvider for PbDevStores {
                 roots_dev::ROOTS,
             )
             .with_cert_store_cbor(include_bytes!("../cas/dev/dev.cbor"))
-            .with_collected("2026-08-06"),
+            .with_collected(const { Date::parse("2026-08-06").expect("not a YYYY-MM-DD date") }),
         );
         entries
     }
