@@ -91,7 +91,8 @@ The three entry points the former `pb_pki` crate offered, now taking a
   the CBOR has nowhere to hold them, so this is the only way they reach a
   consumer that does not link the provider.
 - `get_reqwest_client{,_rustls,_native}(providers, …)` — a client trusting them
-  and *only* them, behind the default-on `reqwest-client` feature. Provider-only
+  and *only* them, behind the `reqwest-rustls` and `reqwest-native` features
+  described below. Provider-only
   is the whole rule: reqwest's built-in web-PKI bundle and the platform's native
   roots are both disabled, so a consumer that wants the public web PKI declares
   it by passing a provider carrying it rather than inheriting it by default.
@@ -125,24 +126,42 @@ which is sticky — nothing downstream re-enables the built-in roots — so a
 consumer that needs something outside its providers either adds a provider for
 it or builds its own `reqwest::Client`.
 
-### The `reqwest-client` feature
+### The client features
 
-`reqwest` is about 60% of this crate's dependency graph — 169 crates become 77
-without it, tokio, hyper and `url -> idna -> icu` among them. It is on by
-default, because the consumers that exist use those constructors. Turn it off to
-use the providers without an HTTP client:
+`reqwest` is most of this crate's dependency graph: tokio, hyper and
+`url -> idna -> icu` among them. Two features bring it in, one per TLS stack, so
+a consumer compiles only the stack it calls:
+
+| feature | constructor | TLS stack |
+|---|---|---|
+| `reqwest-rustls` (default) | `get_reqwest_client_rustls` | rustls with the aws-lc crypto provider, on every target including Android |
+| `reqwest-native` | `get_reqwest_client_native` | the platform's TLS: Security framework on macOS and iOS, OpenSSL on Linux, SChannel on Windows. Not on Android. |
+
+`get_reqwest_client`, which takes the caller's own `ClientBuilder`, is available
+under either. With only one stack compiled, reqwest uses that stack; with both,
+it uses native-tls unless the builder says otherwise.
+
+The default compiles rustls only. A consumer that calls
+`get_reqwest_client_native` selects native-tls instead, and does not compile
+rustls or aws-lc:
+
+```toml
+certval_stores_core = { version = "0.1", default-features = false, features = ["reqwest-native"] }
+```
+
+To use the providers without an HTTP client, turn both off:
 
 ```toml
 certval_stores_core = { version = "0.1", default-features = false }
 ```
 
-**wasm consumers must turn it off**: reqwest's wasm backend is a thin `fetch()`
+**wasm consumers must turn both off**: reqwest's wasm backend is a thin `fetch()`
 wrapper with no `Identity`, no `Certificate`, and no `timeout` or
-`add_root_certificate` on its `ClientBuilder`, so the feature does not compile for
-`wasm32-*` at all. Enabling it there fails with one explanatory `compile_error!`
-rather than a cascade of missing methods. The switch is this crate's alone: the
-provider crates do not depend on this one, so they carry no HTTP client and
-nothing for a consumer to turn off.
+`add_root_certificate` on its `ClientBuilder`, so neither feature compiles for
+`wasm32-*`. Enabling one there fails with one explanatory `compile_error!`
+rather than a cascade of missing methods. The features are this crate's alone:
+the provider crates do not depend on this one, so they contain no HTTP client
+and nothing for a consumer to turn off.
 
 ## What a trust store must satisfy
 
@@ -170,8 +189,9 @@ without a copy of the logic in a private repository.
 - Each parses on *both* legs — as an x509-cert certificate and as a
   `reqwest::Certificate` — since a root that fails either is skipped with a log
   line rather than a build failure. The reqwest half of that check is compiled
-  only under the `reqwest-client` feature; the expectation is not conditional, so
-  run the suite with default features before publishing material.
+  only under a client feature (`reqwest-rustls` or `reqwest-native`); the
+  expectation is not conditional, so run the suite with default features before
+  publishing material.
 - Each is one certval can actually use, not merely one it counted.
   `TaSource::initialize` skips a buffer that is not a usable `TrustAnchorChoice`,
   and `index_tas` leaves out anchors whose key identifier cannot be computed, so

@@ -16,7 +16,7 @@
 //! which must succeed — that pins the failure below to the trust set rather
 //! than to DNS, a proxy, or an offline machine.
 
-#![cfg(feature = "reqwest-client")]
+#![cfg(feature = "reqwest-rustls")]
 
 use certval_stores_core::{get_reqwest_client_rustls, TrustStoreProvider};
 

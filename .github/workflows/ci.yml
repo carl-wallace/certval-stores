@@ -47,7 +47,7 @@ jobs:
   # pittv3-wasm is the first consumer to take the trust material without the HTTP
   # client, and wasm is the configuration that cannot fall back: reqwest's wasm
   # backend has no Identity/Certificate and no timeout or add_root_certificate, so
-  # `reqwest-client` does not compile there at all. This is the shape that consumer
+  # neither client feature compiles there at all. This is the shape that consumer
   # builds, kept green on purpose.
   build-wasm-no-client:
     runs-on: ubuntu-latest

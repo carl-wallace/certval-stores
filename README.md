@@ -51,7 +51,7 @@ either:
 
 - **[The provider API](certval_stores_core/README.md#the-provider-api)** —
   `StoreEntry`, `TrustStoreProvider`, the three entry points, and the
-  `reqwest-client` feature.
+  `reqwest-rustls` and `reqwest-native` client features.
 - **[What a trust store must satisfy](certval_stores_core/README.md#what-a-trust-store-must-satisfy)**
   — the expectations on embedded material, nearly all of which fail *quietly*
   when unmet, and the `conformance` harness that is their executable form.

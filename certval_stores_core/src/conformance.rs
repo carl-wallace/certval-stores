@@ -36,7 +36,7 @@ use certval::{
     PDVTrustAnchorChoice, PkiEnvironment, TaSource, TimeOfInterest,
 };
 
-#[cfg(feature = "reqwest-client")]
+#[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
 use crate::get_reqwest_client;
 use crate::{prepare_certval_environment, StoreEntry, TrustStoreProvider};
 
@@ -200,8 +200,8 @@ fn is_iso_date(value: &str) -> bool {
 }
 
 /// Check that every trust anchor parses as an x509-cert `Certificate` (the
-/// certval path-building leg) and, under the `reqwest-client` feature, as a
-/// `reqwest::Certificate` (the TLS leg).
+/// certval path-building leg) and, under either client feature (`reqwest-rustls`
+/// or `reqwest-native`), as a `reqwest::Certificate` (the TLS leg).
 ///
 /// The reqwest leg is load-bearing where it applies: [`get_reqwest_client`] logs
 /// and continues when a root fails to parse, so an unparseable root silently
@@ -228,7 +228,7 @@ pub fn check_roots_parse(provider: &dyn TrustStoreProvider) -> Vec<String> {
                     // and so is the buffer itself. A certificate carried inside a
                     // `taInfo` is not what reqwest is being handed, and rejecting
                     // it here would fail a store for a shape the contract admits.
-                    #[cfg(feature = "reqwest-client")]
+                    #[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
                     if let Ok(_cert) = parse_cert(root, id) {
                         let label = get_leaf_rdn(_cert.decoded().tbs_certificate().subject());
                         if reqwest::Certificate::from_der(root).is_err() {
@@ -257,7 +257,7 @@ pub fn check_roots_parse(provider: &dyn TrustStoreProvider) -> Vec<String> {
         // it exists for: a store whose anchors are well-formed and carry no
         // certificate. Anchors that failed to decode are already reported once
         // each above, and saying it again adds nothing.
-        #[cfg(feature = "reqwest-client")]
+        #[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
         if decoded > 0 && with_certificate == 0 {
             failures.push(format!(
                 "entry {id:?} has no anchor carrying a certificate, so a TLS client configured from it would trust nothing"
@@ -711,19 +711,19 @@ pub fn check_prepare_environment(provider: &dyn TrustStoreProvider) -> Vec<Strin
 
 /// Check that a `reqwest` client can be built from the provider's anchors.
 ///
-/// Only meaningful under the `reqwest-client` feature; without it there is no
+/// Only meaningful under a client feature (`reqwest-rustls` or `reqwest-native`); without it there is no
 /// client to build and this reports nothing.
 ///
 /// Backend selection is left to the caller elsewhere in this crate; this uses a
 /// default builder so the check exercises anchor installation rather than the
 /// TLS backend the host happens to have compiled in.
 pub fn check_client_builds(provider: &dyn TrustStoreProvider) -> Vec<String> {
-    #[cfg(not(feature = "reqwest-client"))]
+    #[cfg(not(any(feature = "reqwest-rustls", feature = "reqwest-native")))]
     {
         let _ = provider;
         vec![]
     }
-    #[cfg(feature = "reqwest-client")]
+    #[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
     {
         let providers: [&dyn TrustStoreProvider; 1] = [provider];
         match get_reqwest_client(&providers, reqwest::Client::builder(), None) {

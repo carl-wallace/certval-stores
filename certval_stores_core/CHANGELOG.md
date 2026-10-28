@@ -6,5 +6,5 @@ an increase to the minimum supported Rust version is not treated as a breaking c
 
 Initial release: composes `certval_stores_*` providers into a certval `PkiEnvironment`
 (`prepare_certval_environment`), serialized stores (`serialize_environment`), trust anchors
-(`get_roots`) and `reqwest` clients (`reqwest-client` feature), with conformance checks for
-provider crates (`test-util` feature).
+(`get_roots`) and `reqwest` clients (the `reqwest-rustls` and `reqwest-native` features, one TLS
+stack each), with conformance checks for provider crates (`test-util` feature).

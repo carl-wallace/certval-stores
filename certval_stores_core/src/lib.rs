@@ -28,18 +28,21 @@ pub mod conformance;
 // and no timeout/add_root_certificate on ClientBuilder. Enabling the client on a
 // wasm target therefore fails deep inside this crate with a cascade of missing
 // methods; say so once, here, instead.
-#[cfg(all(feature = "reqwest-client", target_family = "wasm"))]
+#[cfg(all(
+    any(feature = "reqwest-rustls", feature = "reqwest-native"),
+    target_family = "wasm"
+))]
 compile_error!(
-    "the `reqwest-client` feature cannot build for wasm targets. Depend on \
-     certval_stores_* with default-features = false to embed trust material \
+    "the `reqwest-rustls` and `reqwest-native` features cannot build for wasm targets. Depend on \
+     certval_stores_core with default-features = false to use the providers \
      without an HTTP client, and bring your own transport."
 );
 
-#[cfg(feature = "reqwest-client")]
+#[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
 use std::time::Duration;
 
 use log::error;
-#[cfg(feature = "reqwest-client")]
+#[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
 use reqwest::{Client, ClientBuilder, Identity};
 
 use certval::{
@@ -259,7 +262,7 @@ pub fn serialize_environment(
 /// only those roots — using rustls. Pass `None` as `identity` for
 /// server-authenticated TLS. See [`get_reqwest_client`] for what "only those
 /// roots" excludes and how to opt back into the public web PKI.
-#[cfg(feature = "reqwest-client")]
+#[cfg(feature = "reqwest-rustls")]
 pub fn get_reqwest_client_rustls(
     providers: &[&dyn TrustStoreProvider],
     timeout_secs: u64,
@@ -280,7 +283,7 @@ pub fn get_reqwest_client_rustls(
 ///
 /// Not available on Android — native-tls there would pull in cross-compiled
 /// OpenSSL. Android consumers must use [`get_reqwest_client_rustls`].
-#[cfg(all(feature = "reqwest-client", not(target_os = "android")))]
+#[cfg(all(feature = "reqwest-native", not(target_os = "android")))]
 pub fn get_reqwest_client_native(
     providers: &[&dyn TrustStoreProvider],
     timeout_secs: u64,
@@ -318,7 +321,7 @@ pub fn get_reqwest_client_native(
 /// Note the setting is sticky: `tls_certs_only` cannot be undone by a later
 /// builder call, so the escape hatch is the `providers` argument (or building
 /// a `reqwest::Client` directly), not a flag on the builder passed in here.
-#[cfg(feature = "reqwest-client")]
+#[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
 pub fn get_reqwest_client(
     providers: &[&dyn TrustStoreProvider],
     mut builder: ClientBuilder,
