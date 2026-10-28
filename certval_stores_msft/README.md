@@ -55,6 +55,19 @@ None of the three is a decision the list makes for us, and the first two could b
 consumer verifying an *old* Authenticode signature legitimately needs a root that was restricted
 after that signature was timestamped. `msft_code_signing` cannot do that today. Ask if you need it.
 
+Each environment other than `msft_all` contains a root when the list grants that environment's
+purpose (property `…10.11.9`) and does not withdraw it (property `…10.11.122`). Microsoft adds a
+withdrawal on top of the original grant rather than editing it, so a root can list a purpose in
+both; it is left out of that environment and stays in `msft_all`.
+
+**Microsoft's NotBefore restrictions are not applied.** Properties `…10.11.126` and `…10.11.127`
+say that certificates issued after a date are not trusted for the listed purposes, while those
+issued before it still are. That depends on the issued certificate, not on the root, and has no
+equivalent in RFC 5280 path validation, so the environments contain these roots as the list grants
+them and the validity of the certificates themselves is what applies. On the list published
+2026-10-23, 50 roots in `msft_tls` feature such a date for serverAuth, among them the Entrust,
+AffirmTrust and Trustwave roots.
+
 ## Things in this material worth knowing
 
 - **Seven roots are ML-DSA-87** (`2.16.840.1.101.3.4.3.19`) — pilot roots from DigiCert, HARICA,
