@@ -40,7 +40,7 @@ use std::time::Duration;
 
 use log::error;
 #[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
-use reqwest::{Client, ClientBuilder, Identity};
+use reqwest::{tls::Version, Client, ClientBuilder, Identity};
 
 use certval::{
     CertFile, CertSource, CertVector, CertificationPathBuilderFormats, Error, PkiEnvironment,
@@ -308,6 +308,13 @@ impl From<reqwest::Error> for ClientError {
 /// roots, using rustls. Pass `None` as `identity` for server-authenticated TLS. See
 /// [`get_reqwest_client`] for how `ids` selects stores, what "only those roots" excludes, and how
 /// to opt back into the public web PKI.
+///
+/// `timeout_secs` bounds each request from connecting until the response body has been read;
+/// 0 means no timeout.
+///
+/// The client refuses TLS versions below 1.2 and follows up to 10 redirects, which is reqwest's
+/// default. It sets no limit on the size of a response body; reqwest has no such setting on the
+/// client, so a limit belongs where the caller reads the body.
 #[cfg(feature = "reqwest-rustls")]
 pub fn get_reqwest_client_rustls(
     providers: &[&dyn TrustStoreProvider],
@@ -316,9 +323,14 @@ pub fn get_reqwest_client_rustls(
     identity: Option<Identity>,
 ) -> Result<Client, ClientError> {
     let builder = Client::builder()
-        .timeout(Duration::from_secs(timeout_secs))
+        .tls_version_min(Version::TLS_1_2)
         .use_rustls_tls();
-    get_reqwest_client(providers, ids, builder, identity)
+    get_reqwest_client(
+        providers,
+        ids,
+        with_timeout(builder, timeout_secs),
+        identity,
+    )
 }
 
 /// Build a `reqwest` client trusting the roots of the stores named in `ids`, and only those
@@ -326,6 +338,9 @@ pub fn get_reqwest_client_rustls(
 /// [`get_reqwest_client`] for how `ids` selects stores, what "only those roots" excludes, and how
 /// to opt back into the public web PKI; note in particular that this disables the platform's
 /// native root store, which is the point rather than a side effect.
+///
+/// Like [`get_reqwest_client_rustls`], `timeout_secs` of 0 means no timeout, and the client refuses TLS versions below 1.2, follows up to 10
+/// redirects and sets no limit on the size of a response body.
 ///
 /// Not available on Android — native-tls there would pull in cross-compiled
 /// OpenSSL. Android consumers must use [`get_reqwest_client_rustls`].
@@ -337,9 +352,25 @@ pub fn get_reqwest_client_native(
     identity: Option<Identity>,
 ) -> Result<Client, ClientError> {
     let builder = Client::builder()
-        .timeout(Duration::from_secs(timeout_secs))
+        .tls_version_min(Version::TLS_1_2)
         .use_native_tls();
-    get_reqwest_client(providers, ids, builder, identity)
+    get_reqwest_client(
+        providers,
+        ids,
+        with_timeout(builder, timeout_secs),
+        identity,
+    )
+}
+
+// reqwest applies a zero timeout as a deadline that has already passed, so every request would
+// fail; 0 is taken to mean no timeout, which is reqwest's own default.
+#[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
+fn with_timeout(builder: ClientBuilder, timeout_secs: u64) -> ClientBuilder {
+    if timeout_secs == 0 {
+        builder
+    } else {
+        builder.timeout(Duration::from_secs(timeout_secs))
+    }
 }
 
 /// Attach the optional `identity` (mutual TLS) and the roots of the stores named in `ids` to a

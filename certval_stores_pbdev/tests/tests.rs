@@ -31,14 +31,14 @@ fn provider_is_conformant() {
 
 #[test]
 #[cfg(feature = "dev")]
-fn dev_entry_carries_two_roots_and_a_ca_store() {
+fn dev_entry_carries_one_root_and_a_ca_store() {
     let entries = certval_stores_pbdev::PROVIDER.entries();
     let dev = entries
         .iter()
         .find(|e| e.id == certval_stores_pbdev::PUREBRED_DEV)
         .expect("the dev feature must yield a DEV entry");
 
-    assert_eq!(dev.roots.len(), 2);
+    assert_eq!(dev.roots.len(), 1);
 
     let mut cps = certval::CertificationPathSettings::new();
     cps.set_time_of_interest(certval::TimeOfInterest::disabled());

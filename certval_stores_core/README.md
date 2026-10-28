@@ -98,6 +98,12 @@ The three entry points the former `pb_pki` crate offered, now taking a
   roots are both disabled, so a consumer that wants the public web PKI declares
   it by passing a provider carrying it rather than inheriting it by default.
 
+`prepare_certval_environment` decodes and indexes the store each time it is
+called, which takes from about a millisecond to about 60 ms and 0.5 MB to
+roughly 30 MB, depending on the store. Build an environment once per process,
+or once per store id, and reuse it for every validation rather than building
+one per request.
+
 The trust set is the `ids` argument: the client trusts the stores it names,
 from among those the providers return, so widening it is an edit to that list
 and nothing else. Naming stores rather than trusting every store a provider

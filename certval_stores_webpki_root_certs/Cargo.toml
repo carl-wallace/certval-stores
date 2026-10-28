@@ -28,7 +28,7 @@ certval_stores_provider_core = { path = "../certval_stores_provider_core", versi
 # carry several, or because the gate drops embedded bytes; neither applies here,
 # and a gate would only give `default-features = false` a way to silently yield
 # an empty provider.
-webpki-root-certs = "1.0.9"
+webpki-root-certs = "1.0.11"
 
 [dev-dependencies]
 # default-features = false for the same reason as the core crate: certval's

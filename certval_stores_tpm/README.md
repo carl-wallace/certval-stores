@@ -96,6 +96,10 @@ prepare_certval_environment(
 # Ok::<(), certval::Error>(())
 ```
 
+Loading decodes and indexes the whole CA store, which takes a few tens of milliseconds and holds
+roughly 25 MB of memory, several times the store's size in the binary. Build the environment once
+per process and reuse it rather than building one per request.
+
 The trust material is embedded as it was committed, and nothing in this package lets you re-check
 where it came from: using it means trusting this crate's publisher, and the review each refresh
 received before it was merged. How the material is obtained and authenticated is described in this

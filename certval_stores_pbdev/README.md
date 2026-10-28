@@ -7,7 +7,7 @@ anchored at the DoD Engineering roots.
 
 | Feature | Constant (id) | Anchors | CA store |
 |---------|---------------|---------|----------|
-| `dev` (default) | `PUREBRED_DEV` (`dod_purebred_dev`) | DoD ENG Root CA 3, DoD ENG Root CA 6 | intermediates and partial paths |
+| `dev` (default) | `PUREBRED_DEV` (`dod_purebred_dev`) | DoD ENG Root CA 6 | intermediates and partial paths |
 
 With `dev` disabled the crate builds and its provider yields no entries.
 
@@ -15,13 +15,6 @@ The store is **flat**: all four CAs — `DOD PBDEV DERILITY CA-3`,
 `DOD PBDEV EMAIL CA-71`, `DOD PBDEV ID CA-71`, `DOD PBDEV SW CA-75`, shipped as
 `PB_*.der` — are issued directly by DoD ENG Root CA 6, so every serialized
 partial path is a single certificate.
-
-**DoD ENG Root CA 3 expired on 2025-10-05** and issues none of the four CAs. It
-is retained as an anchor for paths minted before it lapsed; the generator and
-certval both log a "not valid at indicated time of interest" line for it, which
-is expected rather than a defect. The conformance checks judge material on
-structure with the time of interest disabled, so this reads as a store due for
-a decision — keep the expired anchor or drop it — not as a broken one.
 
 ## The embedded material
 

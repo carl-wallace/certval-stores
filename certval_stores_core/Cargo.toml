@@ -13,7 +13,7 @@ include = ["src/**", "README.md", "CHANGELOG.md", "LICENSE-APACHE", "LICENSE-MIT
 
 [dependencies]
 certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0" }
-log = { version = "0.4.33", features = ["std", "serde"] }
+log = "0.4.33"
 # default-features = false deliberately: certval's defaults are ["remote", "webpki"],
 # and `remote` pulls reqwest. Trust material needs neither, and taking the defaults
 # would drag the HTTP stack in behind the back of the client features below,
