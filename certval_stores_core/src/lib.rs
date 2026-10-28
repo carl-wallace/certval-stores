@@ -258,75 +258,150 @@ pub fn serialize_environment(
     })
 }
 
-/// Build a `reqwest` client trusting every root carried by `providers` — and
-/// only those roots — using rustls. Pass `None` as `identity` for
-/// server-authenticated TLS. See [`get_reqwest_client`] for what "only those
-/// roots" excludes and how to opt back into the public web PKI.
+/// Why a client could not be built.
+#[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum ClientError {
+    /// `ids` was empty, so the client would trust nothing.
+    NoStores,
+    /// None of the providers passed in contains a store with this id: a misspelled id, or a
+    /// provider built without the feature for that store.
+    UnknownStore(String),
+    /// reqwest could not build the client.
+    Reqwest(reqwest::Error),
+}
+
+#[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
+impl core::fmt::Display for ClientError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            ClientError::NoStores => {
+                write!(
+                    f,
+                    "no store ids were given, so the client would trust nothing"
+                )
+            }
+            ClientError::UnknownStore(id) => {
+                write!(f, "no provider contains a store with id {id:?}")
+            }
+            ClientError::Reqwest(e) => write!(f, "failed to build the HTTP client: {e}"),
+        }
+    }
+}
+
+#[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
+impl std::error::Error for ClientError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            ClientError::Reqwest(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
+#[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
+impl From<reqwest::Error> for ClientError {
+    fn from(e: reqwest::Error) -> Self {
+        ClientError::Reqwest(e)
+    }
+}
+
+/// Build a `reqwest` client trusting the roots of the stores named in `ids`, and only those
+/// roots, using rustls. Pass `None` as `identity` for server-authenticated TLS. See
+/// [`get_reqwest_client`] for how `ids` selects stores, what "only those roots" excludes, and how
+/// to opt back into the public web PKI.
 #[cfg(feature = "reqwest-rustls")]
 pub fn get_reqwest_client_rustls(
     providers: &[&dyn TrustStoreProvider],
+    ids: &[&str],
     timeout_secs: u64,
     identity: Option<Identity>,
-) -> Result<Client, reqwest::Error> {
+) -> Result<Client, ClientError> {
     let builder = Client::builder()
         .timeout(Duration::from_secs(timeout_secs))
         .use_rustls_tls();
-    get_reqwest_client(providers, builder, identity)
+    get_reqwest_client(providers, ids, builder, identity)
 }
 
-/// Build a `reqwest` client trusting every root carried by `providers` — and
-/// only those roots — using native-tls. Pass `None` as `identity` for
-/// server-authenticated TLS. See [`get_reqwest_client`] for what "only those
-/// roots" excludes and how to opt back into the public web PKI; note in
-/// particular that this disables the platform's native root store, which is
-/// the point rather than a side effect.
+/// Build a `reqwest` client trusting the roots of the stores named in `ids`, and only those
+/// roots, using native-tls. Pass `None` as `identity` for server-authenticated TLS. See
+/// [`get_reqwest_client`] for how `ids` selects stores, what "only those roots" excludes, and how
+/// to opt back into the public web PKI; note in particular that this disables the platform's
+/// native root store, which is the point rather than a side effect.
 ///
 /// Not available on Android — native-tls there would pull in cross-compiled
 /// OpenSSL. Android consumers must use [`get_reqwest_client_rustls`].
 #[cfg(all(feature = "reqwest-native", not(target_os = "android")))]
 pub fn get_reqwest_client_native(
     providers: &[&dyn TrustStoreProvider],
+    ids: &[&str],
     timeout_secs: u64,
     identity: Option<Identity>,
-) -> Result<Client, reqwest::Error> {
+) -> Result<Client, ClientError> {
     let builder = Client::builder()
         .timeout(Duration::from_secs(timeout_secs))
         .use_native_tls();
-    get_reqwest_client(providers, builder, identity)
+    get_reqwest_client(providers, ids, builder, identity)
 }
 
-/// Attach the optional `identity` (mutual TLS) and every provider root to a
+/// Attach the optional `identity` (mutual TLS) and the roots of the stores named in `ids` to a
 /// pre-configured `ClientBuilder`, then build. Callers pick the TLS backend
 /// (`.use_rustls_tls()` / `.use_native_tls()`) on the builder they pass in.
 ///
-/// # The resulting client trusts the provider roots and nothing else
+/// # `ids` selects the stores
+///
+/// The client trusts the stores whose ids are in `ids`, from among the stores `providers`
+/// return, and no others. Pass the provider's id constants, for example `&[MOZILLA_TLS]`. A
+/// provider can return several stores, and which it returns depends on Cargo features that any
+/// crate in the build can enable, so trusting every store a provider returns could put roots in
+/// the client that the caller never chose: Mozilla's S/MIME roots beside its TLS roots, or a test
+/// environment beside production. An id that no provider's store has is
+/// [`ClientError::UnknownStore`], and an empty `ids` is [`ClientError::NoStores`], so a mistake
+/// fails here rather than as a client that trusts less than intended.
+///
+/// # The resulting client trusts the named stores' roots and nothing else
 ///
 /// This uses `ClientBuilder::tls_certs_only`, so the platform's native roots
 /// and reqwest's built-in web-PKI bundle are **disabled**: the trust set is
-/// exactly what `providers` carries, whatever that happens to be. That is
-/// deliberate. A client built to reach the endpoints one community's anchors
+/// exactly the roots of the stores named in `ids`. That is deliberate. A client built to reach the endpoints one community's anchors
 /// serve has no reason to also accept every CA the host operating system
 /// happens to ship, and accepting them means a misissued or mis-resolved host
 /// can be authenticated by a CA that has nothing to do with the environment.
 ///
 /// The rule is about provenance, not about any particular community: it holds
 /// the same way for a consumer whose providers are Federal, DoD, or the public
-/// web PKI itself. What changes is the contents of `providers`.
+/// web PKI itself. What changes is which stores `ids` names.
 ///
-/// A consumer that genuinely needs the public web PKI should say so by passing
-/// a provider for it — `certval_stores_mozilla` carries the Mozilla root
-/// program — rather than relying on an ambient default. That keeps the trust
-/// set declared in one place and auditable from the `providers` list.
+/// A consumer that genuinely needs the public web PKI should say so by naming a
+/// store for it, such as `certval_stores_mozilla::MOZILLA_TLS`, rather than
+/// relying on an ambient default. That keeps the trust set declared in one
+/// place and auditable from `ids`.
 ///
 /// Note the setting is sticky: `tls_certs_only` cannot be undone by a later
-/// builder call, so the escape hatch is the `providers` argument (or building
+/// builder call, so the escape hatch is the `ids` argument (or building
 /// a `reqwest::Client` directly), not a flag on the builder passed in here.
 #[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
 pub fn get_reqwest_client(
     providers: &[&dyn TrustStoreProvider],
+    ids: &[&str],
     mut builder: ClientBuilder,
     identity: Option<Identity>,
-) -> Result<Client, reqwest::Error> {
+) -> Result<Client, ClientError> {
+    if ids.is_empty() {
+        return Err(ClientError::NoStores);
+    }
+    let entries: Vec<StoreEntry> = providers
+        .iter()
+        .flat_map(|provider| provider.entries())
+        .filter(|entry| ids.contains(&entry.id))
+        .collect();
+    if let Some(missing) = ids
+        .iter()
+        .find(|id| !entries.iter().any(|entry| entry.id == **id))
+    {
+        return Err(ClientError::UnknownStore((*missing).to_string()));
+    }
     if let Some(identity) = identity {
         builder = builder.identity(identity);
     }
@@ -337,37 +412,35 @@ pub fn get_reqwest_client(
     // root reqwest rejects is a test failure rather than a silent trust-set
     // shrink discovered in production.
     let mut certs = vec![];
-    for provider in providers {
-        for entry in provider.entries() {
-            for der in entry.roots {
-                // Decode as a TrustAnchorChoice first so the three outcomes are
-                // distinguishable. Handing the buffer straight to reqwest made a
-                // certificate-less anchor indistinguishable from corrupt DER,
-                // and both merely shrank the trust set `tls_certs_only` installs.
-                let ta = match PDVTrustAnchorChoice::try_from(*der) {
-                    Ok(ta) => ta,
-                    Err(e) => {
-                        error!(
-                            "Skipping a {} root that is not a TrustAnchorChoice: {e:?}",
-                            entry.id
-                        );
-                        continue;
-                    }
-                };
-                if get_certificate_from_trust_anchor(ta.decoded()).is_none() {
+    for entry in &entries {
+        for der in entry.roots {
+            // Decode as a TrustAnchorChoice first so the three outcomes are
+            // distinguishable. Handing the buffer straight to reqwest made a
+            // certificate-less anchor indistinguishable from corrupt DER,
+            // and both merely shrank the trust set `tls_certs_only` installs.
+            let ta = match PDVTrustAnchorChoice::try_from(*der) {
+                Ok(ta) => ta,
+                Err(e) => {
                     error!(
-                        "A {} anchor carries no certificate, so it is a trust anchor here and not in the TLS trust set",
+                        "Skipping a {} root that is not a TrustAnchorChoice: {e:?}",
                         entry.id
                     );
                     continue;
                 }
-                // `certificate` is the untagged alternative, so for it the buffer
-                // is already the certificate DER. A certificate carried inside a
-                // `taInfo` is not, and reqwest reports that itself.
-                match reqwest::Certificate::from_der(der) {
-                    Ok(cert) => certs.push(cert),
-                    Err(e) => error!("Failed to parse a {} root: {e:?}", entry.id),
-                }
+            };
+            if get_certificate_from_trust_anchor(ta.decoded()).is_none() {
+                error!(
+                    "A {} anchor carries no certificate, so it is a trust anchor here and not in the TLS trust set",
+                    entry.id
+                );
+                continue;
+            }
+            // `certificate` is the untagged alternative, so for it the buffer
+            // is already the certificate DER. A certificate carried inside a
+            // `taInfo` is not, and reqwest reports that itself.
+            match reqwest::Certificate::from_der(der) {
+                Ok(cert) => certs.push(cert),
+                Err(e) => error!("Failed to parse a {} root: {e:?}", entry.id),
             }
         }
     }
@@ -376,7 +449,7 @@ pub fn get_reqwest_client(
         Ok(client) => Ok(client),
         Err(e) => {
             error!("Failed to create HTTP Client: {e:?}");
-            Err(e)
+            Err(ClientError::Reqwest(e))
         }
     }
 }

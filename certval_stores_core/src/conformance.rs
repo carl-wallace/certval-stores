@@ -725,8 +725,14 @@ pub fn check_client_builds(provider: &dyn TrustStoreProvider) -> Vec<String> {
     }
     #[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
     {
+        // Every store the provider returns; with none, there is no client to build.
+        let entries = provider.entries();
+        if entries.is_empty() {
+            return vec![];
+        }
+        let ids: Vec<&str> = entries.iter().map(|entry| entry.id).collect();
         let providers: [&dyn TrustStoreProvider; 1] = [provider];
-        match get_reqwest_client(&providers, reqwest::Client::builder(), None) {
+        match get_reqwest_client(&providers, &ids, reqwest::Client::builder(), None) {
             Ok(_) => vec![],
             Err(e) => vec![format!("failed to build a reqwest client: {e:?}")],
         }

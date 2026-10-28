@@ -90,36 +90,52 @@ The three entry points the former `pb_pki` crate offered, now taking a
   form `TaSource::new_from_cbor` reads. The two dates ride along on the result:
   the CBOR has nowhere to hold them, so this is the only way they reach a
   consumer that does not link the provider.
-- `get_reqwest_client{,_rustls,_native}(providers, …)` — a client trusting them
-  and *only* them, behind the `reqwest-rustls` and `reqwest-native` features
-  described below. Provider-only
+- `get_reqwest_client{,_rustls,_native}(providers, ids, …)` — a client trusting
+  the stores named in `ids` and *only* those, behind the `reqwest-rustls` and
+  `reqwest-native` features described below. Provider-only
   is the whole rule: reqwest's built-in web-PKI bundle and the platform's native
   roots are both disabled, so a consumer that wants the public web PKI declares
   it by passing a provider carrying it rather than inheriting it by default.
 
-The trust set is the `providers` argument, so widening it is an edit to that
-list and nothing else:
+The trust set is the `ids` argument: the client trusts the stores it names,
+from among those the providers return, so widening it is an edit to that list
+and nothing else. Naming stores rather than trusting every store a provider
+returns matters because a provider can return several, and which it returns
+depends on Cargo features any crate in the build can enable. An application can
+contain Mozilla's S/MIME store for path validation and still build a TLS client
+that trusts only Mozilla's TLS store.
 
 ```rust,ignore
 use certval_stores_core::{get_reqwest_client_rustls, TrustStoreProvider};
 
-// Trusts what these providers carry and nothing more. A host whose chain ends
-// at a public CA does not authenticate, even though the OS trusts that CA.
 let providers: Vec<&dyn TrustStoreProvider> = vec![
     certval_stores_nipr::provider(),
     certval_stores_fpki::provider(),
-];
-let client = get_reqwest_client_rustls(&providers, 30, None)?;
-
-// Reaching a publicly-rooted host as well? Say so. Adding the Mozilla root
-// program as a provider is the same gesture as adding a Federal one — the
-// trust set stays declared in one place and auditable from this list.
-let providers: Vec<&dyn TrustStoreProvider> = vec![
-    certval_stores_nipr::provider(),
     certval_stores_mozilla::provider(),
 ];
-let client = get_reqwest_client_rustls(&providers, 30, None)?;
+
+// Trusts these two stores and nothing more. A host whose chain ends at a
+// public CA does not authenticate, even though the OS trusts that CA.
+let client = get_reqwest_client_rustls(
+    &providers,
+    &[certval_stores_nipr::NIPR_PROD, certval_stores_fpki::FPKI],
+    30,
+    None,
+)?;
+
+// Reaching a publicly-rooted host as well? Say so, by naming Mozilla's TLS
+// store. The trust set stays declared in one place and auditable from `ids`.
+let client = get_reqwest_client_rustls(
+    &providers,
+    &[certval_stores_nipr::NIPR_PROD, certval_stores_mozilla::MOZILLA_TLS],
+    30,
+    None,
+)?;
 ```
+
+An id that no provider's store has, a misspelling or a store whose feature is
+off, is `ClientError::UnknownStore` when the client is built, and an empty
+`ids` is `ClientError::NoStores`.
 
 There is no flag for this. The constructors call reqwest's `tls_certs_only`,
 which is sticky — nothing downstream re-enables the built-in roots — so a

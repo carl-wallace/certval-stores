@@ -15,10 +15,12 @@
 //! reason. So the same request is also made with a stock `reqwest::Client`,
 //! which must succeed — that pins the failure below to the trust set rather
 //! than to DNS, a proxy, or an offline machine.
+//!
+//! The two tests at the end, on how store ids are checked, need no network and run by default.
 
 #![cfg(feature = "reqwest-rustls")]
 
-use certval_stores_core::{get_reqwest_client_rustls, TrustStoreProvider};
+use certval_stores_core::{get_reqwest_client_rustls, ClientError, TrustStoreProvider};
 
 /// A publicly-rooted host that is not in any provider. The point is that a
 /// public CA is not enough to authenticate a host to one of these clients: the
@@ -32,6 +34,13 @@ fn providers() -> Vec<&'static dyn TrustStoreProvider> {
         certval_stores_pbdev::provider(),
     ]
 }
+
+/// One store from each provider above.
+const IDS: &[&str] = &[
+    certval_stores_fpki::FPKI,
+    certval_stores_nipr::NIPR_PROD,
+    certval_stores_pbdev::PUREBRED_DEV,
+];
 
 /// With only these providers' roots loaded, a host whose chain ends outside
 /// them must fail to authenticate. The providers below happen to be Federal and
@@ -57,7 +66,7 @@ async fn a_publicly_rooted_host_is_rejected() {
     );
 
     let provider_refs = providers();
-    let client = get_reqwest_client_rustls(&provider_refs, 30, None)
+    let client = get_reqwest_client_rustls(&provider_refs, IDS, 30, None)
         .expect("client with provider roots must build");
 
     match client.get(PUBLIC_HOST).send().await {
@@ -96,6 +105,37 @@ async fn provider_roots_reach_the_tls_configuration() {
     // Builds only if every root was accepted by `reqwest::Certificate::from_der`
     // and `tls_certs_only`; a rejected root would have been logged and skipped,
     // which `conformance::check_roots_parse` is what actually catches.
-    get_reqwest_client_rustls(&provider_refs, 30, None)
-        .expect("provider roots must be usable as reqwest certificates");
+    get_reqwest_client_rustls(
+        &provider_refs,
+        &[certval_stores_pbdev::PUREBRED_DEV],
+        30,
+        None,
+    )
+    .expect("provider roots must be usable as reqwest certificates");
+}
+
+/// An id no provider's store has fails when the client is built, rather than producing a client
+/// that silently trusts less than the caller named.
+#[test]
+fn an_unknown_store_id_is_refused() {
+    let provider_refs = providers();
+    match get_reqwest_client_rustls(
+        &provider_refs,
+        &[certval_stores_nipr::NIPR_PROD, "no_such_store"],
+        30,
+        None,
+    ) {
+        Err(ClientError::UnknownStore(id)) => assert_eq!(id, "no_such_store"),
+        other => panic!("expected UnknownStore, got {other:?}"),
+    }
+}
+
+/// A client trusting nothing is never what a caller wants, so no ids is an error.
+#[test]
+fn no_store_ids_is_refused() {
+    let provider_refs = providers();
+    assert!(matches!(
+        get_reqwest_client_rustls(&provider_refs, &[], 30, None),
+        Err(ClientError::NoStores)
+    ));
 }
