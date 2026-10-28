@@ -9,7 +9,7 @@
 /// [`StoreEntry::new`] and the `with_*` setters rather than a struct literal.
 #[non_exhaustive]
 pub struct StoreEntry {
-    /// Identifier for this store, e.g. `"dod_nipr_prod"`, `"webpki"`.
+    /// Identifier for this store, e.g. `"dod_nipr_prod"`, `"mozilla_all"`.
     ///
     /// The one name a store has. `certval_stores_core`'s `prepare_certval_environment`
     /// and `serialize_environment` match it verbatim, and it is what a consumer

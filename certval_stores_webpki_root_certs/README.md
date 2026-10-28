@@ -71,8 +71,8 @@ A consumer that already depends on `certval_stores_mozilla` gains nothing here:
 the anchors are the same bytes, and the reason to prefer this crate is a cost
 that consumer is already paying.
 
-Their store ids differ (`webpki_root_certs` here, `webpki` / `webpki_tls` /
-`webpki_email` there), so both can be loaded together. A consumer that does so
+Their store ids differ (`webpki_root_certs` here, `mozilla_all` / `mozilla_tls` /
+`mozilla_email` there), so both can be loaded together. A consumer that does so
 should expect the same certificate to appear under two store names.
 
 ## Features
@@ -90,3 +90,22 @@ dependency version recorded in `Cargo.lock`.
 
 Upstream data is licensed CDLA-Permissive-2.0; see `NOTICE`. This crate's own
 code is Apache-2.0 OR MIT, like the rest of the workspace.
+
+## Versioning
+
+This crate follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Its trust anchors
+come from the `webpki-root-certs` crate, which it requires as a minimum version rather than an
+exact one: `webpki-root-certs = "1.0.9"` means 1.0.9 or any later 1.x. When a `webpki-root-certs`
+release changes the roots, a minor release of this crate raises that minimum to the new release, so
+each minor version of this crate guarantees at least the roots of the `webpki-root-certs` release
+it requires.
+
+Because the requirement is a minimum, `cargo update` can bring in a newer `webpki-root-certs`, and
+with it newer trust anchors, before a release of this crate raises the minimum. A requirement such
+as `certval_stores_webpki_root_certs = "~1.0"` therefore does not keep the trust anchors the same,
+as it does for the other providers. To keep the same trust anchors, pin `webpki-root-certs` to one
+release in your own manifest (for example `webpki-root-certs = "=1.0.9"`). The requirement here is
+a minimum so that it never conflicts with other crates in your build that also depend on
+`webpki-root-certs`.
+
+Each release's changes are listed in `CHANGELOG.md`.

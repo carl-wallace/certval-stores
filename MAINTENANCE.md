@@ -5,7 +5,7 @@ about it. This is the maintainer's view; what a *consumer* needs is in each crat
 the provider API is in [`certval_stores_core`](certval_stores_core/README.md).
 
 Two repositories and one private one hold the family: `carl-wallace/certval-stores` (this
-workspace), `carl-wallace/certval-stores-mozilla`, and `RedHoundSoftware/certval_store_sipr`. They
+workspace), `carl-wallace/certval-stores-mozilla`, and `RedHoundSoftware/certval_stores_sipr`. They
 do not share a refresh mechanism; each is driven by what its publisher offers, which is set out
 below.
 
@@ -155,7 +155,7 @@ Every other provider can be refreshed by hand with the same command its workflow
 README carries the invocation, and a `workflow_dispatch` does the same thing and opens a pull
 request to review.
 
-`webpki_root_certs` moves when its dependency moves, and Dependabot is what moves it — weekly,
+`webpki_root_certs` moves when its dependency moves, and Dependabot is what moves it — monthly,
 with `webpki-root-certs` deliberately excluded from every group, so a change to which roots the
 crate serves is never buried in a lockfile pull request.
 
@@ -186,21 +186,71 @@ crate serves is never buried in a lockfile pull request.
 
 ## Versioning
 
-Nothing in the family is published yet, and versions do not move until it is: every crate stays at
-`0.1.0`, and consumers take the providers as git dependencies on `branch = "main"`, so a refresh
-reaches them on their next `cargo update` with no version signal. The test constants are the signal
-in the meantime; changing one is the acknowledgement that someone read the diff.
+The providers publish at `1.0.0` and follow the rule each crate's README states: a **patch**
+release changes intermediate CA certificates, partial paths, or a store's dates or label; a
+**minor** release adds or removes trust anchors in a store, adds a store, or adds to the API
+without breaking code that uses it; a **major** release breaks code that uses the API, for example
+by removing a store along with its feature and constant. Publishing at 1.0 is what gives the
+providers all three kinds of release: below 1.0, Cargo treats a patch release as compatible and
+every other release as breaking, so there would be no way to mark a trust-anchor change apart
+from an intermediate CA change.
 
-The providers publish at `1.0.0`, because the rule below needs three levels and Cargo gives a 0.x
-version only two. From then on a bump follows what changed:
+A trust-anchor change counts whether or not a file under `roots/` moved. A root that leaves one store
+and stays in another, as when Microsoft withdraws a purpose or Mozilla changes a trust bit, changes
+the anchors of the store it left. `.github/scripts/suggested-bump.sh` applies this rule to each
+refresh and puts the suggested bump first in the pull request's description.
 
-- **Patch**, when only intermediate CA certificates or partial paths change. What is trusted is
-  unchanged; only which paths can be built without fetching anything is different. A refresh that
-  drops expired or withdrawn cross-certificates is a patch, as one that adds new ones is.
-- **Minor**, when trust anchors change, or the API gains something compatibly. A root change is the
-  larger event, so it is marked as one, but it stays Cargo-compatible and still arrives with
-  `cargo update`.
-- **Major**, when the API changes incompatibly.
+Three crates sit outside the rule:
+
+- `certval_stores_provider_core` (1.x) contains `StoreEntry` and `TrustStoreProvider` and nothing
+  else, and follows ordinary semver. `StoreEntry` is `#[non_exhaustive]`, so a field arrives in a
+  minor release.
+- `certval_stores_core` (0.x) has certval and reqwest types in its API, so a breaking release of
+  certval or reqwest is a breaking release of core. The providers depend on
+  `certval_stores_provider_core` alone, so a new release of core does not require new releases of
+  the providers.
+- `certval_stores_webpki_root_certs` takes its trust anchors from the `webpki-root-certs` crate,
+  which it requires as a minimum version. When a merged Dependabot pull request moves
+  `webpki-root-certs` to a release that changes the roots, raise the minimum in its `Cargo.toml`
+  to that release and publish a minor release. A user's `cargo update` can bring the newer roots
+  before then. The requirement is never exact, because an exact one would conflict with other
+  crates that depend on `webpki-root-certs`, such as `ureq`.
+
+Each published crate has a `CHANGELOG.md`, packaged with it.
+
+## Releasing
+
+Releases are batched: publish when a merged refresh has changed a store's trust anchors, or a month
+after the last release, whichever comes first. Until then a merged refresh reaches only consumers
+taking the crates from git; a crates.io user sees nothing.
+
+For each crate with changes merged since its last release:
+
+1. Take the largest suggested bump among the refresh pull requests merged since that release, so a
+   single minor makes the release minor, or larger if code changed.
+2. Set the version and date on the crate's `CHANGELOG.md` entry and list what changed. The refresh
+   pull requests' descriptions name the roots and intermediates that moved.
+3. Bump `version` in the crate's `Cargo.toml`, and the `version =` requirement of any crate here
+   that depends on it. For `certval_stores_webpki_root_certs`, also raise its `webpki-root-certs`
+   minimum to the release in `Cargo.lock`.
+4. Check: `cargo test --workspace --all-features`; one pass with the `[patch.crates-io]` table
+   removed, since that is the dependency graph a crates.io user resolves; `cargo package -p
+   <crate>`; and the MSRV build.
+5. Publish in dependency order: `certval_stores_provider_core`, `certval_stores_core`, the
+   providers, then `certval_stores_mozilla` from its own repository.
+6. Tag each published crate as `<crate>-v<version>`.
+
+The first release differs:
+
+- certval and pkiprocmacros must be on crates.io before anything here.
+- The dependency lines that pair `git` with `version` (core on certval; mozilla on
+  `certval_stores_provider_core` and core) switch to registry versions, so the repository builds
+  what users get. Work against an unreleased certval with a temporary `[patch.crates-io]` instead.
+- Publishing eleven new crate names in one sitting meets crates.io's limit on new crates. A refused
+  publish partway through is that limit, not a failure, and the rest go up after a wait.
+- `certval_stores_sipr`, which is private and not published, moves to the registry
+  `certval_stores_provider_core` and `certval_stores_core` at the same time. A git-sourced core
+  beside registry providers gives two different `TrustStoreProvider` traits.
 
 ## Accepted costs
 

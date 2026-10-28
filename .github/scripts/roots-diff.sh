@@ -38,8 +38,7 @@ if [ "${#lines[@]}" -eq 0 ]; then
   exit 0
 fi
 
-echo "Trust anchors changed. Each is a trust decision by the publisher, and once the providers"
-echo "publish, a minor version bump (certval-stores MAINTENANCE.md, Versioning). The embedded"
-echo "root list was regenerated with them."
+echo "Trust anchors changed. Each is a trust decision by the publisher, and the reason for the"
+echo "minor version bump suggested above. The embedded root list was regenerated with them."
 echo
 printf '%s\n' "${lines[@]}"

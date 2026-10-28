@@ -6,8 +6,8 @@ rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/carl-wallace/certval-stores"
 description = "The StoreEntry type and TrustStoreProvider trait that certval_stores_* trust-store crates implement"
-# Only what the build reads: the sources and the README lib.rs takes its docs from.
-include = ["src/**", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
+# What the build reads, plus the changelog: the sources and the README lib.rs takes its docs from.
+include = ["src/**", "README.md", "CHANGELOG.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 # No dependencies, on purpose: a provider crate depends on this one alone, so nothing a
 # certval or reqwest release changes can force a new major version of the providers.

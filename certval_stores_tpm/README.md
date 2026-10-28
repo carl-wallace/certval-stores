@@ -73,6 +73,25 @@ loses a whole vendor's intermediates and reports it as a parse failure. Some PEM
 than one certificate, which is why 2,209 members yield 2,480 intermediates. There is also a
 `readme.txt` inside `AMD\IntermediateCA\`.
 
+## Versioning
+
+This crate follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html), and the version
+number also says what changed in the trust material:
+
+- A **patch** release (1.0.0 to 1.0.1) changes intermediate CA certificates, partial paths, or a
+  store's dates or label. No store's trust anchors change.
+- A **minor** release (1.0.x to 1.1.0) adds or removes trust anchors in a store, adds a store, or
+  adds to the API without breaking code that uses it.
+- A **major** release (1.x to 2.0.0) changes the API in a way that breaks code that uses it, for
+  example by removing a store along with its feature and constant.
+
+With an ordinary requirement such as `certval_stores_tpm = "1.0"`, `cargo update` takes every
+1.x release, including a minor release that adds or removes trust anchors. With
+`certval_stores_tpm = "~1.0"`, `cargo update` takes 1.0.1, 1.0.2 and so on, which change only
+intermediate CA certificates, partial paths or dates, and does not take 1.1.0, so the trust anchors
+stay those of 1.0 until the requirement is changed to `~1.1`. Each release's changes are listed in
+`CHANGELOG.md`.
+
 ## Refreshing
 
 Refreshing is a tool, not a build script — this crate has no build script at all:

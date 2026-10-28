@@ -23,7 +23,7 @@ material by trust community so the sensitive members can live in separate
 | [`certval_stores_pbdev`](certval_stores_pbdev/README.md) | public `carl-wallace/certval-stores` | `dev` (Purebred development) |
 | [`certval_stores_wcf`](certval_stores_wcf/README.md)    | public `carl-wallace/certval-stores` | `wcf` (DoD WCF PKI) |
 | [`certval_stores_tpm`](certval_stores_tpm/README.md)    | public `carl-wallace/certval-stores` | `tpm` (TPM vendor roots, from `TrustedTpm.cab`) |
-| `certval_stores_sipr`  | **private** `RedHoundSoftware/certval_store_sipr` | `om_sipr`, `sipr` (NSS PKI) |
+| `certval_stores_sipr`  | **private** `RedHoundSoftware/certval_stores_sipr` | `om_sipr`, `sipr` (NSS PKI) |
 
 Each provider crate's README records what material it carries, where that
 material came from, and how to refresh it. `certval_stores_fpki` is the one whose
@@ -71,7 +71,7 @@ provider and assembles the provider list:
 certval_stores_core  = { git = "https://github.com/carl-wallace/certval-stores.git", branch = "main" }
 certval_stores_nipr  = { git = "https://github.com/carl-wallace/certval-stores.git", branch = "main", optional = true }
 certval_stores_pbdev = { git = "https://github.com/carl-wallace/certval-stores.git", branch = "main", optional = true }
-certval_stores_sipr  = { git = "ssh://git@github.com/RedHoundSoftware/certval_store_sipr.git", branch = "main", optional = true }
+certval_stores_sipr  = { git = "ssh://git@github.com/RedHoundSoftware/certval_stores_sipr.git", branch = "main", optional = true }
 
 [features]
 dev     = ["certval_stores_pbdev/dev"]

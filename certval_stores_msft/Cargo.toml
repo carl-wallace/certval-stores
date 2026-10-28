@@ -6,9 +6,10 @@ rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/carl-wallace/certval-stores"
 description = "Microsoft root program trust stores for certval, split by the purposes the program grants"
-# Only what the build reads: the sources, the README lib.rs takes its docs from, build.rs and the
-# roots it checks, and the provenance dates. inputs/ and tests/ are read only by the tests.
-include = ["src/**", "README.md", "build.rs", "roots/**/*.der", "provenance/collected.txt", "provenance/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
+# What the build reads, plus the changelog: the sources, the README lib.rs takes its docs from,
+# build.rs and the roots it checks, and the provenance dates. inputs/ and tests/ are read only by
+# the tests.
+include = ["src/**", "README.md", "CHANGELOG.md", "build.rs", "roots/**/*.der", "provenance/collected.txt", "provenance/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0" }

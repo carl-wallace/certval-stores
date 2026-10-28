@@ -25,7 +25,7 @@ rendered rustdoc.
 ```rust,ignore
 #[non_exhaustive]
 pub struct StoreEntry {
-    pub id: &'static str,                        // the store's name: "dod_nipr_prod", "webpki"
+    pub id: &'static str,                        // the store's name: "dod_nipr_prod", "mozilla_all"
     pub label: &'static str,                     // what a person choosing a store reads
     pub roots: &'static [&'static [u8]],         // trust-anchor DERs
     pub cert_store_cbor: Option<&'static [u8]>,  // serialized certval CertSource (CBOR)
@@ -288,3 +288,12 @@ Freshness is a separate question, answered by each store's refresh procedure.
 
 Tests are gated only on the features they need, never on the *absence* of a
 feature, so `cargo test --all-features` runs the whole suite for a crate.
+
+## Versioning
+
+This crate follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) at 0.x, where a
+breaking change moves the minor version (0.1 to 0.2). Its public API includes certval and reqwest
+types, so a breaking release of certval or reqwest is a breaking release of this crate. The
+provider crates depend on `certval_stores_provider_core`, not on this crate, so a new release of
+`certval_stores_core` does not require new releases of the providers. Each release's changes are
+listed in `CHANGELOG.md`.

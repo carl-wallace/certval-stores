@@ -37,3 +37,10 @@ impl TrustStoreProvider for ExampleStores {
     }
 }
 ```
+
+## Versioning
+
+This crate follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). `StoreEntry` is
+`#[non_exhaustive]`, so code outside this crate builds an entry with `StoreEntry::new` rather than
+a struct literal, and a new field can be added in a minor release without breaking any provider. Each release's changes are listed
+in `CHANGELOG.md`.
