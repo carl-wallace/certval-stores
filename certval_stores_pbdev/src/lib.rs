@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use certval_stores_core::{StoreEntry, TrustStoreProvider};
+use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "dev")]
 mod roots_dev;
@@ -19,17 +19,18 @@ impl TrustStoreProvider for PbDevStores {
     fn entries(&self) -> Vec<StoreEntry> {
         let mut entries = Vec::new();
         #[cfg(feature = "dev")]
-        entries.push(StoreEntry {
-            id: PUREBRED_DEV,
-            label: "U.S. DoD (Purebred development)",
-            roots: roots_dev::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/dev/dev.cbor")),
+        entries.push(
             // The development PKI publishes nothing anywhere, so there is no publication
             // date to state -- see the README's note that these roots have no external
             // source to corroborate them against either.
-            published: None,
-            collected: Some("2026-08-06"),
-        });
+            StoreEntry::new(
+                PUREBRED_DEV,
+                "U.S. DoD (Purebred development)",
+                roots_dev::ROOTS,
+            )
+            .with_cert_store_cbor(include_bytes!("../cas/dev/dev.cbor"))
+            .with_collected("2026-08-06"),
+        );
         entries
     }
 }

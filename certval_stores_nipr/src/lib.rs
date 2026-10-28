@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use certval_stores_core::{StoreEntry, TrustStoreProvider};
+use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "om_nipr")]
 mod roots_om;
@@ -83,41 +83,41 @@ impl TrustStoreProvider for NiprStores {
     fn entries(&self) -> Vec<StoreEntry> {
         let mut entries = Vec::new();
         #[cfg(feature = "om_nipr")]
-        entries.push(StoreEntry {
-            id: NIPR_OM,
-            label: "U.S. DoD (JITC)",
-            roots: roots_om::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/om/om.cbor")),
-            published: Some(OM_NIPR_PUBLISHED),
-            collected: Some(OM_NIPR_COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(NIPR_OM, "U.S. DoD (JITC)", roots_om::ROOTS)
+                .with_cert_store_cbor(include_bytes!("../cas/om/om.cbor"))
+                .with_published(OM_NIPR_PUBLISHED)
+                .with_collected(OM_NIPR_COLLECTED),
+        );
         #[cfg(feature = "nipr")]
-        entries.push(StoreEntry {
-            id: NIPR_PROD,
-            label: "U.S. DoD (NIPR)",
-            roots: roots_prod::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/prod/prod.cbor")),
-            published: Some(NIPR_PUBLISHED),
-            collected: Some(NIPR_COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(NIPR_PROD, "U.S. DoD (NIPR)", roots_prod::ROOTS)
+                .with_cert_store_cbor(include_bytes!("../cas/prod/prod.cbor"))
+                .with_published(NIPR_PUBLISHED)
+                .with_collected(NIPR_COLLECTED),
+        );
         #[cfg(feature = "nipr_interop")]
-        entries.push(StoreEntry {
-            id: NIPR_INTEROP,
-            label: "U.S. DoD (NIPR + Interoperability)",
-            roots: roots_interop::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/interop/interop.cbor")),
-            published: Some(NIPR_INTEROP_PUBLISHED),
-            collected: Some(NIPR_INTEROP_COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(
+                NIPR_INTEROP,
+                "U.S. DoD (NIPR + Interoperability)",
+                roots_interop::ROOTS,
+            )
+            .with_cert_store_cbor(include_bytes!("../cas/interop/interop.cbor"))
+            .with_published(NIPR_INTEROP_PUBLISHED)
+            .with_collected(NIPR_INTEROP_COLLECTED),
+        );
         #[cfg(feature = "nipr_cceb_interop")]
-        entries.push(StoreEntry {
-            id: NIPR_CCEB_INTEROP,
-            label: "U.S. DoD (NIPR + CCEB Interoperability)",
-            roots: roots_cceb_interop::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/cceb_interop/cceb_interop.cbor")),
-            published: Some(NIPR_CCEB_INTEROP_PUBLISHED),
-            collected: Some(NIPR_CCEB_INTEROP_COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(
+                NIPR_CCEB_INTEROP,
+                "U.S. DoD (NIPR + CCEB Interoperability)",
+                roots_cceb_interop::ROOTS,
+            )
+            .with_cert_store_cbor(include_bytes!("../cas/cceb_interop/cceb_interop.cbor"))
+            .with_published(NIPR_CCEB_INTEROP_PUBLISHED)
+            .with_collected(NIPR_CCEB_INTEROP_COLLECTED),
+        );
         entries
     }
 }

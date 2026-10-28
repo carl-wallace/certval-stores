@@ -315,6 +315,7 @@ dependencies = [
  "certval_stores_msft",
  "certval_stores_nipr",
  "certval_stores_pbdev",
+ "certval_stores_provider_core",
  "certval_stores_tpm",
  "certval_stores_wcf",
  "ciborium",
@@ -327,28 +328,31 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_eca"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
+ "certval_stores_provider_core",
 ]
 
 [[package]]
 name = "certval_stores_fpki"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
+ "certval_stores_provider_core",
 ]
 
 [[package]]
 name = "certval_stores_msft"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "certval",
  "certval_stores_core",
+ "certval_stores_provider_core",
  "der",
  "sha1",
  "x509-cert",
@@ -356,48 +360,57 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_nipr"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
+ "certval_stores_provider_core",
 ]
 
 [[package]]
 name = "certval_stores_pbdev"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
+ "certval_stores_provider_core",
 ]
 
 [[package]]
+name = "certval_stores_provider_core"
+version = "1.0.0"
+
+[[package]]
 name = "certval_stores_tpm"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
+ "certval_stores_provider_core",
  "tokio",
  "tpm_cab_verify",
 ]
 
 [[package]]
 name = "certval_stores_wcf"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
+ "certval_stores_provider_core",
 ]
 
 [[package]]
 name = "certval_stores_webpki_root_certs"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "certval",
  "certval_stores_core",
+ "certval_stores_provider_core",
  "webpki-root-certs",
 ]
 

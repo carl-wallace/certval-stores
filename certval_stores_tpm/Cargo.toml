@@ -1,6 +1,6 @@
 [package]
 name = "certval_stores_tpm"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
@@ -12,15 +12,14 @@ description = "TPM vendor trust store for certval, from Microsoft's TrustedTpm.c
 include = ["src/**", "README.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "provenance/**/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
-certval_stores_core = { path = "../certval_stores_core", default-features = false }
+certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0" }
 
 [features]
 # One environment, on by default, following certval_stores_eca rather than certval_stores_nipr:
 # nipr's are opt-in because a consumer must choose between two, and there is nothing to choose
 # here. The vendors inside are one trust set, not a menu -- an attestation key chains to whichever
 # vendor made the part.
-default = ["tpm", "reqwest-client"]
-reqwest-client = ["certval_stores_core/reqwest-client"]
+default = ["tpm"]
 tpm = []
 
 

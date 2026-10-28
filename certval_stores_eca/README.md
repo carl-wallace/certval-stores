@@ -10,7 +10,7 @@ the department that need to interoperate with it.
 |---------|-----|---------|----------|
 | `eca` | `ECA` | 2 — ECA Root CA 4, 5 | 6 intermediates, 6 partial paths |
 
-`eca` is on by default, along with `reqwest-client`. This crate has one
+`eca` is on by default. This crate has one
 environment, so there is nothing for a consumer to choose between — unlike
 `certval_stores_nipr`, where neither environment is default and the consumer
 says which it wants.

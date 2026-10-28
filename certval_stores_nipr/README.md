@@ -10,9 +10,8 @@ NIPR (DoD PKI) trust stores for certval — the production and operational-test
 | `nipr` | `NIPR` | 4 — DoD Root CA 3, 4, 5, 6 | 41 intermediates, 41 partial paths |
 | `om_nipr` | `OM_NIPR` | 4 — DoD JITC Root CA 3, 4, 5, 6 | 53 intermediates, 53 partial paths |
 
-Neither is on by default: the crate's only default feature is `reqwest-client`,
-so a consumer elects the environment(s) it needs. With neither enabled the crate
-builds and its provider yields no entries.
+None is on by default, so a consumer elects the environment(s) it needs. With none
+enabled the crate builds and its provider yields no entries.
 
 | Anchor | Key | Expires | CAs beneath it |
 |--------|-----|---------|----------------|

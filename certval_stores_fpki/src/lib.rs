@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use certval_stores_core::{StoreEntry, TrustStoreProvider};
+use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "fpki")]
 static FPKI_ROOTS: &[&[u8]] = &[include_bytes!(
@@ -36,30 +36,27 @@ impl TrustStoreProvider for FpkiStores {
     fn entries(&self) -> Vec<StoreEntry> {
         let mut entries = Vec::new();
         #[cfg(feature = "fpki")]
-        entries.push(StoreEntry {
-            id: FPKI,
-            label: "U.S. Federal PKI (Common Policy CA G2)",
-            roots: FPKI_ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/fpki/fpki.cbor")),
+        entries.push(
             // A mesh states no publication date: each repository answers for itself, so the
             // store's date is the day it was walked, which is also the date it was validated at.
-            published: None,
-            collected: Some(FPKI_COLLECTED),
-        });
+            StoreEntry::new(FPKI, "U.S. Federal PKI (Common Policy CA G2)", FPKI_ROOTS)
+                .with_cert_store_cbor(include_bytes!("../cas/fpki/fpki.cbor"))
+                .with_collected(FPKI_COLLECTED),
+        );
         #[cfg(feature = "fpki_legacy")]
-        entries.push(StoreEntry {
-            id: FPKI_LEGACY,
-            label: "U.S. Federal PKI (legacy G1 mesh)",
-            roots: FPKI_LEGACY_ROOTS,
-            cert_store_cbor: None,
+        entries.push(
             // No publication date: the G1 mesh is no longer published, and the anchor was
             // fetched from `repo.fpki.gov` rather than out of a dated bundle. The
             // collection date is the day it reached this repository, which is the latest
             // it can have been fetched -- the honest direction to round for a date whose
             // purpose is to bound staleness.
-            published: None,
-            collected: Some("2026-08-13"),
-        });
+            StoreEntry::new(
+                FPKI_LEGACY,
+                "U.S. Federal PKI (legacy G1 mesh)",
+                FPKI_LEGACY_ROOTS,
+            )
+            .with_collected("2026-08-13"),
+        );
         entries
     }
 }

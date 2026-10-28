@@ -9,7 +9,7 @@ whose certificates all sit under `OU=WCF PKI,OU=DoD`.
 |---------|-----|---------|----------|
 | `wcf` | `WCF` | 1 — DoD WCF Root CA 1 | 11 intermediates, 11 partial paths |
 
-`wcf` is on by default, along with `reqwest-client`. This crate has one
+`wcf` is on by default. This crate has one
 environment, so there is nothing for a consumer to choose between — unlike
 `certval_stores_nipr`, where neither environment is default and the consumer
 says which it wants.

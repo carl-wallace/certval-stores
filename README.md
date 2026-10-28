@@ -14,7 +14,8 @@ material by trust community so the sensitive members can live in separate
 
 | Crate | Repo | Environments (features) |
 |-------|------|-------------------------|
-| [`certval_stores_core`](certval_stores_core/README.md)  | public `carl-wallace/certval-stores` | — (the provider trait + plumbing) |
+| [`certval_stores_provider_core`](certval_stores_provider_core/README.md) | public `carl-wallace/certval-stores` | — (`StoreEntry` and `TrustStoreProvider`; what a provider depends on) |
+| [`certval_stores_core`](certval_stores_core/README.md)  | public `carl-wallace/certval-stores` | — (what a consumer depends on: certval and reqwest plumbing, re-exporting the provider types) |
 | [`certval_stores_eca`](certval_stores_eca/README.md)    | public `carl-wallace/certval-stores` | `eca` (DoD External Certification Authority) |
 | [`certval_stores_fpki`](certval_stores_fpki/README.md)  | public `carl-wallace/certval-stores` | `fpki`, `fpki_legacy` (Federal PKI) |
 | [`certval_stores_msft`](certval_stores_msft/README.md)  | public `carl-wallace/certval-stores` | `msft_all`, `msft_tls`, `msft_client_auth`, `msft_email`, `msft_code_signing`, `msft_timestamping` (Microsoft root program) |

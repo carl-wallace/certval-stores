@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use certval_stores_core::{StoreEntry, TrustStoreProvider};
+use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "eca")]
 mod roots_prod;
@@ -27,14 +27,12 @@ impl TrustStoreProvider for EcaStores {
     fn entries(&self) -> Vec<StoreEntry> {
         let mut entries = Vec::new();
         #[cfg(feature = "eca")]
-        entries.push(StoreEntry {
-            id: ECA,
-            label: "U.S. DoD (ECA)",
-            roots: roots_prod::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/prod/prod.cbor")),
-            published: Some(ECA_PUBLISHED),
-            collected: Some(ECA_COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(ECA, "U.S. DoD (ECA)", roots_prod::ROOTS)
+                .with_cert_store_cbor(include_bytes!("../cas/prod/prod.cbor"))
+                .with_published(ECA_PUBLISHED)
+                .with_collected(ECA_COLLECTED),
+        );
         entries
     }
 }

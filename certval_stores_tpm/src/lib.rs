@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use certval_stores_core::{StoreEntry, TrustStoreProvider};
+use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 // The vendor roots the cabinet publishes, one `include_bytes!` each in the generated `roots_tpm`
 // module, which a refresh rewrites together with `roots/tpm/` so the list cannot fall behind the
@@ -33,14 +33,12 @@ impl TrustStoreProvider for TpmStores {
     fn entries(&self) -> Vec<StoreEntry> {
         let mut entries = Vec::new();
         #[cfg(feature = "tpm")]
-        entries.push(StoreEntry {
-            id: TPM,
-            label: "TPM vendor roots",
-            roots: roots_tpm::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/tpm/tpm.cbor")),
-            published: Some(TPM_PUBLISHED),
-            collected: Some(TPM_COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(TPM, "TPM vendor roots", roots_tpm::ROOTS)
+                .with_cert_store_cbor(include_bytes!("../cas/tpm/tpm.cbor"))
+                .with_published(TPM_PUBLISHED)
+                .with_collected(TPM_COLLECTED),
+        );
         entries
     }
 }

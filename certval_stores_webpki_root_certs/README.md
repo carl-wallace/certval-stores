@@ -77,8 +77,7 @@ should expect the same certificate to appear under two store names.
 
 ## Features
 
-`reqwest-client` is the only one, forwarded to `certval_stores_core`. The store
-itself is unconditional: this crate has one environment and the
+None. The store is unconditional: this crate has one environment and the
 `webpki-root-certs` dependency is the whole of it, so there is no configuration
 in which the crate is present and provides nothing.
 

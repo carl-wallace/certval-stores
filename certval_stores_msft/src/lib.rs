@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use certval_stores_core::{StoreEntry, TrustStoreProvider};
+use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 // One generated index per environment, each an `include_bytes!` list over the shared `roots/`
 // directory. Generated rather than hand-written, unlike every other provider in this family: at
@@ -82,59 +82,57 @@ impl TrustStoreProvider for MsftStores {
         // else. There are no intermediates to carry and so no partial paths to precompute, which
         // is what a consumer needs to know before selecting one of these to validate a chain.
         #[cfg(feature = "msft_all")]
-        entries.push(StoreEntry {
-            id: MSFT_ALL,
-            label: "Microsoft Root Program",
-            roots: env_all::ROOTS,
-            cert_store_cbor: None,
-            published: Some(PUBLISHED),
-            collected: Some(COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(MSFT_ALL, "Microsoft Root Program", env_all::ROOTS)
+                .with_published(PUBLISHED)
+                .with_collected(COLLECTED),
+        );
         #[cfg(feature = "msft_tls")]
-        entries.push(StoreEntry {
-            id: MSFT_TLS,
-            label: "Microsoft Root Program (TLS)",
-            roots: env_tls::ROOTS,
-            cert_store_cbor: None,
-            published: Some(PUBLISHED),
-            collected: Some(COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(MSFT_TLS, "Microsoft Root Program (TLS)", env_tls::ROOTS)
+                .with_published(PUBLISHED)
+                .with_collected(COLLECTED),
+        );
         #[cfg(feature = "msft_client_auth")]
-        entries.push(StoreEntry {
-            id: MSFT_CLIENT_AUTH,
-            label: "Microsoft Root Program (client authentication)",
-            roots: env_client_auth::ROOTS,
-            cert_store_cbor: None,
-            published: Some(PUBLISHED),
-            collected: Some(COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(
+                MSFT_CLIENT_AUTH,
+                "Microsoft Root Program (client authentication)",
+                env_client_auth::ROOTS,
+            )
+            .with_published(PUBLISHED)
+            .with_collected(COLLECTED),
+        );
         #[cfg(feature = "msft_email")]
-        entries.push(StoreEntry {
-            id: MSFT_EMAIL,
-            label: "Microsoft Root Program (S/MIME)",
-            roots: env_email::ROOTS,
-            cert_store_cbor: None,
-            published: Some(PUBLISHED),
-            collected: Some(COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(
+                MSFT_EMAIL,
+                "Microsoft Root Program (S/MIME)",
+                env_email::ROOTS,
+            )
+            .with_published(PUBLISHED)
+            .with_collected(COLLECTED),
+        );
         #[cfg(feature = "msft_code_signing")]
-        entries.push(StoreEntry {
-            id: MSFT_CODE_SIGNING,
-            label: "Microsoft Root Program (code signing)",
-            roots: env_code_signing::ROOTS,
-            cert_store_cbor: None,
-            published: Some(PUBLISHED),
-            collected: Some(COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(
+                MSFT_CODE_SIGNING,
+                "Microsoft Root Program (code signing)",
+                env_code_signing::ROOTS,
+            )
+            .with_published(PUBLISHED)
+            .with_collected(COLLECTED),
+        );
         #[cfg(feature = "msft_timestamping")]
-        entries.push(StoreEntry {
-            id: MSFT_TIMESTAMPING,
-            label: "Microsoft Root Program (timestamping)",
-            roots: env_timestamping::ROOTS,
-            cert_store_cbor: None,
-            published: Some(PUBLISHED),
-            collected: Some(COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(
+                MSFT_TIMESTAMPING,
+                "Microsoft Root Program (timestamping)",
+                env_timestamping::ROOTS,
+            )
+            .with_published(PUBLISHED)
+            .with_collected(COLLECTED),
+        );
         entries
     }
 }

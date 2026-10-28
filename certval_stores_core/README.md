@@ -1,13 +1,15 @@
 # certval_stores_core
 
-Provider trait and environment-agnostic plumbing shared by the
-`certval_stores_*` trust-store crates.
+Environment-agnostic plumbing that puts the `certval_stores_*` trust-store
+crates to use. This is the crate a consumer depends on; a provider depends on
+[`certval_stores_provider_core`](https://crates.io/crates/certval_stores_provider_core)
+instead, and this crate re-exports the two types defined there.
 
 A *provider* supplies trust material — trust-anchor certificates (DER) plus an
 optional serialized certval `CertSource` (CBOR: intermediate CAs and precomputed
 partial certification paths) — for one or more named environments. This crate
-defines the trait they implement and composes any set of them into a certval
-`PkiEnvironment` or a configured `reqwest` client.
+composes any set of them into a certval `PkiEnvironment`, a serialized store or a
+configured `reqwest` client.
 
 It is deliberately **environment-agnostic**: it has no knowledge of
 NIPR/SIPR/FPKI/etc. Providers *augment* its functions by being passed in
@@ -21,6 +23,7 @@ rendered rustdoc.
 ## The provider API
 
 ```rust,ignore
+#[non_exhaustive]
 pub struct StoreEntry {
     pub id: &'static str,                        // the store's name: "dod_nipr_prod", "webpki"
     pub label: &'static str,                     // what a person choosing a store reads
@@ -30,10 +33,19 @@ pub struct StoreEntry {
     pub collected: Option<&'static str>,         // when this material was taken, YYYY-MM-DD
 }
 
-pub trait TrustStoreProvider {
+pub trait TrustStoreProvider: Send + Sync {
     fn entries(&self) -> Vec<StoreEntry>;
 }
 ```
+
+Both are defined in `certval_stores_provider_core`, which has no dependencies, and
+re-exported here. A provider depends on that crate alone, so a certval or reqwest
+release that changes this crate leaves the providers' versions where they are, and
+a provider built against its 1.x fits any version of this crate.
+
+`StoreEntry` is `#[non_exhaustive]`, so a field can be added without a new major
+version. A provider builds one with `StoreEntry::new(id, label, roots)` and the
+`with_cert_store_cbor`, `with_published` and `with_collected` setters, all `const`.
 
 Each provider crate exposes `provider() -> &'static dyn TrustStoreProvider`.
 
@@ -118,19 +130,19 @@ it or builds its own `reqwest::Client`.
 `reqwest` is about 60% of this crate's dependency graph — 169 crates become 77
 without it, tokio, hyper and `url -> idna -> icu` among them. It is on by
 default, because the consumers that exist use those constructors. Turn it off to
-embed trust material without an HTTP client:
+use the providers without an HTTP client:
 
 ```toml
-certval_stores_nipr = { git = "…", default-features = false, features = ["nipr"] }
+certval_stores_core = { version = "0.1", default-features = false }
 ```
 
 **wasm consumers must turn it off**: reqwest's wasm backend is a thin `fetch()`
 wrapper with no `Identity`, no `Certificate`, and no `timeout` or
 `add_root_certificate` on its `ClientBuilder`, so the feature does not compile for
 `wasm32-*` at all. Enabling it there fails with one explanatory `compile_error!`
-rather than a cascade of missing methods. Each provider crate forwards the switch
-(`reqwest-client = ["certval_stores_core/reqwest-client"]`) — without that
-forwarding a consumer could not turn it off at all, features being additive.
+rather than a cascade of missing methods. The switch is this crate's alone: the
+provider crates do not depend on this one, so they carry no HTTP client and
+nothing for a consumer to turn off.
 
 ## What a trust store must satisfy
 
@@ -219,7 +231,8 @@ Freshness is a separate question, answered by each store's refresh procedure.
 
 ## Adding a provider
 
-1. Implement `TrustStoreProvider`, returning one `StoreEntry` per store, expose
+1. Depend on `certval_stores_provider_core` and nothing else at run time.
+   Implement `TrustStoreProvider`, returning one `StoreEntry` per store, expose
    `provider() -> &'static dyn TrustStoreProvider`, and export each store's id as
    a public constant for callers to pass.
 2. Add the harness and assert conformance:
@@ -267,21 +280,8 @@ Freshness is a separate question, answered by each store's refresh procedure.
    with the directory and the matching entry's `roots`. The compiler checks only
    one direction of that list: remove a file and the build breaks, add one and it
    ships looking like an anchor without being one.
-7. Forward the client switch, so a consumer can still turn the HTTP stack off:
-
-   ```toml
-   [dependencies]
-   certval_stores_core = { path = "…", default-features = false }
-
-   [features]
-   default = ["…your environments…", "reqwest-client"]
-   reqwest-client = ["certval_stores_core/reqwest-client"]
-   ```
-
-   Skipping this does not break your crate — it breaks everyone else's ability to
-   opt out, since features are additive and your default re-enables the core's.
-8. Add the provider to `certval_stores_core/tests/composition.rs`.
-9. Document how to refresh the material — a store nobody can regenerate is a
+7. Add the provider to `certval_stores_core/tests/composition.rs`.
+8. Document how to refresh the material — a store nobody can regenerate is a
    store that expires. Where the material is a moving snapshot rather than a
    constant, record where it comes from too, as `certval_stores_fpki` does; where
    it is stable, the refresh procedure is the part that earns its keep.

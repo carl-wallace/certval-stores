@@ -7,6 +7,7 @@ members = [
     "certval_stores_msft",
     "certval_stores_nipr",
     "certval_stores_pbdev",
+    "certval_stores_provider_core",
     "certval_stores_tpm",
     "certval_stores_wcf",
     "certval_stores_webpki_root_certs",

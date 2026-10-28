@@ -1,6 +1,6 @@
 [package]
 name = "certval_stores_msft"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
@@ -11,17 +11,13 @@ description = "Microsoft root program trust stores for certval, split by the pur
 include = ["src/**", "README.md", "build.rs", "roots/**/*.der", "provenance/collected.txt", "provenance/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
-certval_stores_core = { path = "../certval_stores_core", default-features = false }
+certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0" }
 
 [features]
 # `msft_all` rather than nothing, because unlike certval_stores_nipr there is a sensible default
 # here: every other environment is a subset of it, so a consumer who has not chosen gets the
 # program rather than an arbitrary slice of it.
-default = ["msft_all", "reqwest-client"]
-# Forwards the core crate's client switch. Without this a consumer could not turn the HTTP stack
-# off: features are additive, so this crate enabling the core default would re-enable it however
-# the consumer configured core.
-reqwest-client = ["certval_stores_core/reqwest-client"]
+default = ["msft_all"]
 
 # The six environments are views over one list, not six collections: every root comes from the
 # same signed trust list, and what differs is the purposes Microsoft grants it. A root granted

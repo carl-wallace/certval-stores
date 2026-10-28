@@ -1,6 +1,6 @@
 [package]
 name = "certval_stores_webpki_root_certs"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
@@ -10,7 +10,7 @@ description = "Mozilla TLS server root certificates for certval, taken from the 
 include = ["src/**", "README.md", "NOTICE", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
-certval_stores_core = { path = "../certval_stores_core", default-features = false }
+certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0" }
 # The material itself, as a dependency rather than as vendored bytes. This crate
 # carries no certificates of its own, so the roots move when this version moves
 # and there is no refresh procedure to run. The upstream data is
@@ -23,14 +23,6 @@ certval_stores_core = { path = "../certval_stores_core", default-features = fals
 # and a gate would only give `default-features = false` a way to silently yield
 # an empty provider.
 webpki-root-certs = "1.0.9"
-
-[features]
-default = ["reqwest-client"]
-# Forwards the core crate's client switch, and the only knob this crate has.
-# Without the forwarding a consumer could not turn the HTTP stack off: features
-# are additive, so this crate enabling the core default would re-enable it
-# however the consumer configured core.
-reqwest-client = ["certval_stores_core/reqwest-client"]
 
 [dev-dependencies]
 # default-features = false for the same reason as the core crate: certval's

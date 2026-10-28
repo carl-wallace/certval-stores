@@ -1,0 +1,149 @@
+#![doc = include_str!("../README.md")]
+
+/// Trust material for a single environment, carried by a [`TrustStoreProvider`].
+///
+/// All fields are `'static` because provider crates embed their material at
+/// compile time via `include_bytes!`.
+///
+/// `#[non_exhaustive]`, so a field can be added in a minor release: build one with
+/// [`StoreEntry::new`] and the `with_*` setters rather than a struct literal.
+#[non_exhaustive]
+pub struct StoreEntry {
+    /// Identifier for this store, e.g. `"dod_nipr_prod"`, `"webpki"`.
+    ///
+    /// The one name a store has. `certval_stores_core`'s `prepare_certval_environment`
+    /// and `serialize_environment` match it verbatim, and it is what a consumer
+    /// keys on to recognize two copies of the same material as the same store —
+    /// an application that embeds a serialized copy and a service that serves
+    /// one, which would otherwise offer a person the same trust anchors twice
+    /// under two spellings. There is no fixed set: a provider names its own
+    /// stores, and it must be unique across the providers a consumer loads
+    /// together.
+    ///
+    /// Each provider exports its ids as public constants, which is what a caller
+    /// should pass rather than a literal: the parameter is a `&str`, so a
+    /// spelling that no longer matches anything compiles and fails at run time.
+    ///
+    /// Treat it as published: changing one renames a store that consumers,
+    /// configuration and command lines may already refer to. Lowercase, with
+    /// words separated by underscores, since it travels through URLs, file names
+    /// and command lines.
+    pub id: &'static str,
+    /// Name for this store as a person choosing between them reads it, e.g.
+    /// `"U.S. DoD (NIPR)"`.
+    ///
+    /// The provider states it because the material is the provider's: only it
+    /// knows that `OM_NIPR` is what the department calls JITC, or that a root
+    /// set carrying both trust bits is not the same offer as a TLS-only one.
+    /// Free text, and expected to change as wording improves — unlike
+    /// [`id`](StoreEntry::id), nothing keys on it.
+    pub label: &'static str,
+    /// Trust anchors, each a DER-encoded RFC 5914 `TrustAnchorChoice`.
+    ///
+    /// All three alternatives are admitted. Note that `certificate` is the
+    /// untagged one, so a bare DER `Certificate` already is a conformant
+    /// `TrustAnchorChoice` and needs nothing done to it — which is what every
+    /// provider ships today.
+    ///
+    /// What an alternative costs is reach, not correctness. certval's `TaSource`
+    /// accepts all of them and builds paths from any, but only a certificate can
+    /// configure a TLS client: `certval_stores_core`'s `get_reqwest_client` hands
+    /// reqwest what it finds via `get_certificate_from_trust_anchor`, so an anchor
+    /// carrying no certificate — a `taInfo` with no `certPath` certificate — is in
+    /// the trust store and not in the TLS trust set. That is reported rather than
+    /// silent, and `conformance::check_roots_parse` fails a store in which no
+    /// anchor at all yields a certificate, since `tls_certs_only` would then
+    /// leave a client trusting nothing.
+    ///
+    /// `tbsCert` decodes and certval does not use it: it is indexed under no
+    /// key identifier, so it is unusable as an anchor.
+    pub roots: &'static [&'static [u8]],
+    /// Serialized certval `CertSource` (CBOR: intermediate CAs + partial
+    /// paths), or `None` for anchors-only providers (e.g. webpki-style roots).
+    pub cert_store_cbor: Option<&'static [u8]>,
+    /// The date the *source* states this material was published, `YYYY-MM-DD`,
+    /// or `None` where it states none.
+    ///
+    /// Separate from [`collected`](StoreEntry::collected) because the two answer
+    /// different questions and can be far apart: a DoD InstallRoot stream signed
+    /// in February and fetched in September is nine months of anchor changes the
+    /// fetch date would hide. This is what the source itself establishes — the
+    /// verified RFC 3161 timestamp on an InstallRoot stream, a CCADB report date,
+    /// the publication date of a crawler bundle — so it is the one that says how
+    /// current the material is.
+    ///
+    /// Optional because most publishers state nothing: a provider that cannot
+    /// answer honestly says nothing rather than offering a plausible-looking
+    /// date. It is never the date the crate was built, released or committed;
+    /// those describe this repository, not the trust material.
+    pub published: Option<&'static str>,
+    /// The date this material was collected from the source, `YYYY-MM-DD`, or
+    /// `None` where the provider does not record one.
+    ///
+    /// The bound on staleness the provider *can* always give: whatever the
+    /// publisher has done since this date is not in these bytes. For material
+    /// generated by `certval-store-gen` both dates are written by the generator
+    /// at generation time, so a refresh moves them without a hand edit.
+    pub collected: Option<&'static str>,
+}
+
+impl StoreEntry {
+    /// An entry carrying trust anchors only, with no CA store and no dates.
+    pub const fn new(
+        id: &'static str,
+        label: &'static str,
+        roots: &'static [&'static [u8]],
+    ) -> Self {
+        Self {
+            id,
+            label,
+            roots,
+            cert_store_cbor: None,
+            published: None,
+            collected: None,
+        }
+    }
+
+    /// Sets [`cert_store_cbor`](StoreEntry::cert_store_cbor).
+    pub const fn with_cert_store_cbor(self, cbor: &'static [u8]) -> Self {
+        Self {
+            cert_store_cbor: Some(cbor),
+            ..self
+        }
+    }
+
+    /// Sets [`published`](StoreEntry::published).
+    pub const fn with_published(self, date: &'static str) -> Self {
+        Self {
+            published: Some(date),
+            ..self
+        }
+    }
+
+    /// Sets [`collected`](StoreEntry::collected).
+    pub const fn with_collected(self, date: &'static str) -> Self {
+        Self {
+            collected: Some(date),
+            ..self
+        }
+    }
+}
+
+/// A source of trust material for one or more environments.
+///
+/// Implemented by each `certval_stores_*` provider crate. A provider's library
+/// is `include_bytes!` and a `Vec<StoreEntry>`: it depends on this crate alone,
+/// linking neither certval nor reqwest, so every certval and reqwest call made
+/// against the material at run time is made in `certval_stores_core`. Its *tests*
+/// are another matter — validating the material takes crypto, and which algorithms
+/// a community signs with is the provider's business, so a provider crate depends
+/// on certval directly to supply the environment `conformance` validates under.
+/// The set of entries a provider returns depends on the features it was built
+/// with.
+///
+/// `Send + Sync` so a list of providers can be shared across threads, as a
+/// validation service holds it.
+pub trait TrustStoreProvider: Send + Sync {
+    /// The environments this provider serves, given its enabled features.
+    fn entries(&self) -> Vec<StoreEntry>;
+}

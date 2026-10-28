@@ -1,6 +1,6 @@
 [package]
 name = "certval_stores_fpki"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
@@ -11,7 +11,7 @@ description = "Federal PKI trust store for certval — anchored at the Federal C
 include = ["src/**", "README.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
-certval_stores_core = { path = "../certval_stores_core", default-features = false }
+certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0" }
 
 [dev-dependencies]
 # The regeneration check: a dev-dependency so CI runs it and no consumer compiles it. Default
@@ -26,11 +26,7 @@ certval_stores_core = { path = "../certval_stores_core", default-features = fals
 certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, features = ["std", "rsa"], branch = "main" }
 
 [features]
-default = ["fpki", "reqwest-client"]
-# Forwards the core crate's client switch. Without this a consumer could not
-# turn the HTTP stack off: features are additive, so this crate enabling the
-# core default would re-enable it however the consumer configured core.
-reqwest-client = ["certval_stores_core/reqwest-client"]
+default = ["fpki"]
 # The Federal PKI as published today: Federal Common Policy CA G2 plus the
 # cross-certified mesh beneath it.
 fpki = []

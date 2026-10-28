@@ -126,14 +126,10 @@ fn paths_filed_under_the_wrong_key_are_reported() {
     struct Mangled(&'static [u8], &'static [&'static [u8]]);
     impl TrustStoreProvider for Mangled {
         fn entries(&self) -> Vec<certval_stores_core::StoreEntry> {
-            vec![certval_stores_core::StoreEntry {
-                id: "dod_wcf",
-                label: "Test",
-                roots: self.1,
-                cert_store_cbor: Some(self.0),
-                published: None,
-                collected: None,
-            }]
+            vec![
+                certval_stores_core::StoreEntry::new("dod_wcf", "Test", self.1)
+                    .with_cert_store_cbor(self.0),
+            ]
         }
     }
 

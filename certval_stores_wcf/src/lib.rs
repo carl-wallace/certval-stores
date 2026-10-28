@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-use certval_stores_core::{StoreEntry, TrustStoreProvider};
+use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "wcf")]
 mod roots_prod;
@@ -27,14 +27,12 @@ impl TrustStoreProvider for WcfStores {
     fn entries(&self) -> Vec<StoreEntry> {
         let mut entries = Vec::new();
         #[cfg(feature = "wcf")]
-        entries.push(StoreEntry {
-            id: WCF,
-            label: "U.S. DoD (WCF)",
-            roots: roots_prod::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/prod/prod.cbor")),
-            published: Some(WCF_PUBLISHED),
-            collected: Some(WCF_COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(WCF, "U.S. DoD (WCF)", roots_prod::ROOTS)
+                .with_cert_store_cbor(include_bytes!("../cas/prod/prod.cbor"))
+                .with_published(WCF_PUBLISHED)
+                .with_collected(WCF_COLLECTED),
+        );
         entries
     }
 }
