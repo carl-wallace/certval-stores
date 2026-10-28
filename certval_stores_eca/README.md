@@ -6,19 +6,19 @@ the department that need to interoperate with it.
 
 ## What this crate carries
 
-| Feature | Env | Anchors | CA store |
-|---------|-----|---------|----------|
-| `eca` | `ECA` | 2 — ECA Root CA 4, 5 | 6 intermediates, 6 partial paths |
+| Feature | Constant (id) | Anchors | CA store |
+|---------|---------------|---------|----------|
+| `eca` | `ECA` (`dod_eca`) | ECA Root CA 4, 5 | intermediates and partial paths |
 
 `eca` is on by default. This crate has one
 environment, so there is nothing for a consumer to choose between — unlike
 `certval_stores_nipr`, where neither environment is default and the consumer
 says which it wants.
 
-| Anchor | Key | Expires | CAs beneath it |
-|--------|-----|---------|----------------|
-| ECA Root CA 4 | RSA 2048, sha256 | 2029-12-30 | 3 |
-| ECA Root CA 5 | RSA 4096, sha384 | 2050-03-12 | 3 |
+| Anchor | Key | Expires |
+|--------|-----|---------|
+| ECA Root CA 4 | RSA 2048, sha256 | 2029-12-30 |
+| ECA Root CA 5 | RSA 4096, sha384 | 2050-03-12 |
 
 The CAs are the program's vendors: IdenTrust (`IdenTrust ECA S23`, `S24`, and the
 matching `Component` pair) and WidePoint (`WidePoint ECA 8`, `9`). The store is
@@ -74,6 +74,35 @@ They are not in this crate: that stream publishes no ECA CAs at all, so a test
 environment here would be two anchors and nothing beneath them. Add it if a
 consumer needs to validate ECA test certificates — `certval_stores_fpki`'s
 `fpki_legacy` is the precedent for an anchors-only entry.
+
+## Using it
+
+Load a store into a certval `PkiEnvironment` with `certval_stores_core`, naming the store by its
+constant:
+
+```rust
+# #[cfg(feature = "eca")] {
+use certval::{PkiEnvironment, TaSource};
+use certval_stores_core::prepare_certval_environment;
+
+let mut pe = PkiEnvironment::default();
+pe.populate_5280_pki_environment();
+let mut ta_store = TaSource::new();
+prepare_certval_environment(
+    &[certval_stores_eca::provider()],
+    &mut pe,
+    &mut ta_store,
+    certval_stores_eca::ECA,
+)?;
+# }
+# Ok::<(), certval::Error>(())
+```
+
+The trust material is embedded as it was committed, and nothing in this package lets you re-check
+where it came from: using it means trusting this crate's publisher, and the review each refresh
+received before it was merged. How the material is obtained and authenticated is described in this
+README and in the repository's
+[MAINTENANCE.md](https://github.com/carl-wallace/certval-stores/blob/main/MAINTENANCE.md).
 
 ## Versioning
 
@@ -144,6 +173,6 @@ make a change in trust material show up in review rather than arrive silently.
 pittv3 -b cas/prod/prod.cbor -t roots/prod --list-partial-paths
 ```
 
-For the committed material this reports `6 certificates yielded: 6 paths with
-1 certificate`. A CA that appears in no path is unreachable to an offline
+Every certificate in the store should yield a path, each of one certificate: the
+ECA intermediates are issued directly by the roots. A CA that appears in no path is unreachable to an offline
 consumer however well-connected it looks.

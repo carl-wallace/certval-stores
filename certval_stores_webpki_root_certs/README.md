@@ -8,8 +8,8 @@ so the roots move when that dependency moves.
 
 **Choose this crate over `certval_stores_mozilla` for the update cost, not for
 the contents.** The two ship the same anchors -- measured 2026-09-21, this
-crate's 121 certificates are byte-for-byte `certval_stores_mozilla::TLS_ROOTS`,
-identical sets with nothing on either side. What differs is what it takes to
+crate's certificates and `certval_stores_mozilla::TLS_ROOTS` were the same set,
+byte for byte, with nothing on either side. What differs is what it takes to
 move them forward:
 
 | | refreshing the roots | diff |
@@ -21,7 +21,7 @@ Two things that cuts both ways. Freshness becomes the rustls project's
 discipline rather than yours: nobody here runs anything, and equally nobody here
 decides when the trust material moves or reads a CCADB diff before it does. And
 the saving covers the **anchors only** -- the trust bits,
-`distrust_for_tls_after`, `mozilla_applied_constraints` and the 6.2 MB of CCADB
+`distrust_for_tls_after`, `mozilla_applied_constraints` and the CCADB
 intermediates exist because something scraped for them, and no `cargo update`
 produces them. This is not the cheap version of `certval_stores_mozilla`; it is
 the cheap version of its anchor slice.
@@ -57,8 +57,8 @@ RFC 5914 `TrustAnchorChoice`, which is what `StoreEntry::roots` takes.
 
 They overlap, and neither replaces the other.
 
-`certval_stores_mozilla` vendors its material, covers TLS **and** S/MIME roots
-(121 and 91, 170 in its combined set), ships CCADB intermediates as a CA store,
+`certval_stores_mozilla` vendors its material, covers TLS **and** S/MIME roots,
+ships CCADB intermediates as a CA store,
 and carries the trust bits and `distrust_for_tls_after` metadata that no webpki
 crate has. Reach for it when any of that matters, or when you want to control
 when the material moves.
@@ -90,6 +90,33 @@ dependency version recorded in `Cargo.lock`.
 
 Upstream data is licensed CDLA-Permissive-2.0; see `NOTICE`. This crate's own
 code is Apache-2.0 OR MIT, like the rest of the workspace.
+
+## Using it
+
+Load a store into a certval `PkiEnvironment` with `certval_stores_core`, naming the store by its
+constant:
+
+```rust
+use certval::{PkiEnvironment, TaSource};
+use certval_stores_core::prepare_certval_environment;
+
+let mut pe = PkiEnvironment::default();
+pe.populate_5280_pki_environment();
+let mut ta_store = TaSource::new();
+prepare_certval_environment(
+    &[certval_stores_webpki_root_certs::provider()],
+    &mut pe,
+    &mut ta_store,
+    certval_stores_webpki_root_certs::WEBPKI_ROOT_CERTS,
+)?;
+# Ok::<(), certval::Error>(())
+```
+
+The trust material is embedded as it was committed, and nothing in this package lets you re-check
+where it came from: using it means trusting this crate's publisher, and the review each refresh
+received before it was merged. How the material is obtained and authenticated is described in this
+README and in the repository's
+[MAINTENANCE.md](https://github.com/carl-wallace/certval-stores/blob/main/MAINTENANCE.md).
 
 ## Versioning
 

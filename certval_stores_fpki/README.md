@@ -11,10 +11,10 @@ Policy CA G2 — and every other participant (DoD, Treasury, Entrust, DigiCert,
 State, WidePoint/ORC, CertiPath, Boeing, Northrop Grumman, …) is reached through
 cross-certificates in the CA store. One root is the correct count, not a gap.
 
-| Feature | Env | Anchors | CA store |
-|---------|-----|---------|----------|
-| `fpki` (default) | `FPKI` | 1 — Federal Common Policy CA G2 | 133 intermediates, 142 partial paths |
-| `fpki_legacy` | `FPKI_LEGACY` | 1 — Federal Common Policy CA (G1, retired) | none |
+| Feature | Constant (id) | Anchors | CA store |
+|---------|---------------|---------|----------|
+| `fpki` (default) | `FPKI` (`fpki`) | Federal Common Policy CA G2 | intermediates and partial paths |
+| `fpki_legacy` | `FPKI_LEGACY` (`fpki_legacy`) | Federal Common Policy CA (G1, retired) | none |
 
 `fpki_legacy` is anchors-only: the G1 mesh is no longer published, so there is no
 CA store to pair with it. Enable it only to validate paths that predate the G2
@@ -56,6 +56,35 @@ single-anchor, so a second `.der` appearing in either directory is the drift it 
 Until 2026-10-27 the store was built from GSA's FPKI crawler bundle
 (`CACertificatesValidatingToFederalCommonPolicyG2.p7b`). The walk replaced it because that bundle
 lagged the mesh and left out the two Northrop Grumman signing CAs, whose repository serves BER.
+
+## Using it
+
+Load a store into a certval `PkiEnvironment` with `certval_stores_core`, naming the store by its
+constant:
+
+```rust
+# #[cfg(feature = "fpki")] {
+use certval::{PkiEnvironment, TaSource};
+use certval_stores_core::prepare_certval_environment;
+
+let mut pe = PkiEnvironment::default();
+pe.populate_5280_pki_environment();
+let mut ta_store = TaSource::new();
+prepare_certval_environment(
+    &[certval_stores_fpki::provider()],
+    &mut pe,
+    &mut ta_store,
+    certval_stores_fpki::FPKI,
+)?;
+# }
+# Ok::<(), certval::Error>(())
+```
+
+The trust material is embedded as it was committed, and nothing in this package lets you re-check
+where it came from: using it means trusting this crate's publisher, and the review each refresh
+received before it was merged. How the material is obtained and authenticated is described in this
+README and in the repository's
+[MAINTENANCE.md](https://github.com/carl-wallace/certval-stores/blob/main/MAINTENANCE.md).
 
 ## Versioning
 
@@ -113,8 +142,9 @@ cargo test -p certval_stores_fpki --all-features
 pittv3 -b cas/fpki/fpki.cbor -t roots/fpki -e <some-fpki-cert>.der -v
 ```
 
-For the 2026-08-12 snapshot, `--list-partial-paths` reports 133 certificates
-yielding 12 paths of 1 certificate, 45 of 2, 37 of 3, and 48 of 4.
+`--list-partial-paths` shows every certificate in the store yielding a path, of
+one to four certificates: the mesh reaches agency PKIs through the Federal Bridge
+and through cross-certified intermediates.
 
 Note that FPKI path validation reaches a lot of CRL distribution points across many
 agency repositories; `RevocationStatusNotDetermined` on a network-restricted host

@@ -70,18 +70,19 @@ ever the date the crate was built, released or committed, which describe this
 repository rather than the trust material. `check_entry_shape` requires
 `YYYY-MM-DD` and rejects a pair claiming collection before publication.
 
-Environment labels are the provider's to choose: there is no enumerated set, and
-this crate only compares the string. `certval_stores_fpki` added `FPKI` and
-`FPKI_LEGACY` without touching it, and a new community does the same. The one
-constraint is that no two providers a consumer loads together claim the same
-label, which `check_providers_compose` enforces.
+Store ids are the provider's to choose: there is no enumerated set, and this
+crate only compares the string. `certval_stores_fpki` added `fpki` and
+`fpki_legacy` without touching it, and a new community does the same. The one
+constraint is that no two providers a consumer loads together use the same id,
+which `check_providers_compose` enforces.
 
 The three entry points the former `pb_pki` crate offered, now taking a
 `&[&dyn TrustStoreProvider]`, plus a serializer:
 
 - `prepare_certval_environment(providers, pe, ta_store, id)` — id-selected;
   `Err(Error::Unrecognized)` if no provider carries that store.
-- `get_roots(providers)` — every trust-anchor DER across the providers.
+- `get_roots(providers)` — every trust anchor across the providers, decoded as
+  an RFC 5914 `TrustAnchorChoice`.
 - `serialize_environment(providers, id)` — the same material as `ta_cbor` /
   `ca_cbor`, for consumers that fetch artifacts rather than link a provider
   crate (a wasm frontend, where embedding the bytes is not an option). The CA
@@ -200,8 +201,8 @@ without a copy of the logic in a private repository.
 
 - Each is a DER `Certificate`. RFC 5914 permits `[1] tbsCert` and `[2] taInfo`
   as well, and certval would parse them, but `reqwest::Certificate::from_der`
-  accepts only a `Certificate` — so anything else builds paths normally while
-  silently dropping out of every TLS client this crate configures.
+  accepts only a `Certificate` — so anything else builds paths normally but is
+  left out of every TLS client this crate configures, with an error logged.
 - Each parses on *both* legs — as an x509-cert certificate and as a
   `reqwest::Certificate` — since a root that fails either is skipped with a log
   line rather than a build failure. The reqwest half of that check is compiled

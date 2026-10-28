@@ -5,18 +5,18 @@ whose certificates all sit under `OU=WCF PKI,OU=DoD`.
 
 ## What this crate carries
 
-| Feature | Env | Anchors | CA store |
-|---------|-----|---------|----------|
-| `wcf` | `WCF` | 1 — DoD WCF Root CA 1 | 11 intermediates, 11 partial paths |
+| Feature | Constant (id) | Anchors | CA store |
+|---------|---------------|---------|----------|
+| `wcf` | `WCF` (`dod_wcf`) | DoD WCF Root CA 1 | intermediates and partial paths |
 
 `wcf` is on by default. This crate has one
 environment, so there is nothing for a consumer to choose between — unlike
 `certval_stores_nipr`, where neither environment is default and the consumer
 says which it wants.
 
-| Anchor | Key | Expires | CAs beneath it |
-|--------|-----|---------|----------------|
-| DoD WCF Root CA 1 | RSA 2048, sha256 | 2030-12-30 | 11 |
+| Anchor | Key | Expires |
+|--------|-----|---------|
+| DoD WCF Root CA 1 | RSA 2048, sha256 | 2030-12-30 |
 
 **The store is two deep.** The root issues one intermediate,
 `DoD WCF Intermediate CA 2`, and that intermediate issues all ten signing CAs:
@@ -27,10 +27,10 @@ DoD WCF Root CA 1                       (anchor, expires 2030-12-30)
     └── DoD WCF Signing CA 1 … 10       (expire June 2027)
 ```
 
-So the store carries 11 buffers and 11 paths: one of a single certificate and
-ten of two. `certval_stores_eca` and `certval_stores_nipr`'s `nipr` and `om`
+So the store's paths are one of a single certificate, for the intermediate CA,
+and the rest of two. `certval_stores_eca` and `certval_stores_nipr`'s `nipr` and `om`
 environments are flat by contrast — every CA issued directly by a root — while
-nipr's interoperability environments each carry 35 two-certificate paths and
+nipr's interoperability environments add two-certificate paths and
 `certval_stores_fpki`'s mesh runs to four. `Intermediate CA 1` is not published
 and neither is `Signing CA` anything above 10 — what the stream carries is what
 is here.
@@ -87,6 +87,35 @@ being in the trust set.
 no WCF ones — so unlike the DoD material next door in `certval_stores_nipr`,
 there is no test counterpart to carry. `certval_stores_fpki`'s `fpki_legacy` is
 the precedent for an anchors-only entry if DISA ever publishes one.
+
+## Using it
+
+Load a store into a certval `PkiEnvironment` with `certval_stores_core`, naming the store by its
+constant:
+
+```rust
+# #[cfg(feature = "wcf")] {
+use certval::{PkiEnvironment, TaSource};
+use certval_stores_core::prepare_certval_environment;
+
+let mut pe = PkiEnvironment::default();
+pe.populate_5280_pki_environment();
+let mut ta_store = TaSource::new();
+prepare_certval_environment(
+    &[certval_stores_wcf::provider()],
+    &mut pe,
+    &mut ta_store,
+    certval_stores_wcf::WCF,
+)?;
+# }
+# Ok::<(), certval::Error>(())
+```
+
+The trust material is embedded as it was committed, and nothing in this package lets you re-check
+where it came from: using it means trusting this crate's publisher, and the review each refresh
+received before it was merged. How the material is obtained and authenticated is described in this
+README and in the repository's
+[MAINTENANCE.md](https://github.com/carl-wallace/certval-stores/blob/main/MAINTENANCE.md).
 
 ## Versioning
 
@@ -157,6 +186,6 @@ make a change in trust material show up in review rather than arrive silently.
 pittv3 -b cas/prod/prod.cbor -t roots/prod --list-partial-paths
 ```
 
-For the committed material this reports `11 certificates yielded: 1 paths with
-1 certificate; 10 paths with 2 certificates`. A CA that appears in no path is
+Every certificate in the store should yield a path, of one or two certificates:
+one intermediate is issued by the root and the rest by that intermediate. A CA that appears in no path is
 unreachable to an offline consumer however well-connected it looks.

@@ -5,9 +5,9 @@ anchored at the DoD Engineering roots.
 
 ## What this crate carries
 
-| Feature | Env | Anchors | CA store |
-|---------|-----|---------|----------|
-| `dev` (default) | `DEV` | 2 — DoD ENG Root CA 3, DoD ENG Root CA 6 | 4 intermediates, 4 partial paths |
+| Feature | Constant (id) | Anchors | CA store |
+|---------|---------------|---------|----------|
+| `dev` (default) | `PUREBRED_DEV` (`dod_purebred_dev`) | DoD ENG Root CA 3, DoD ENG Root CA 6 | intermediates and partial paths |
 
 With `dev` disabled the crate builds and its provider yields no entries.
 
@@ -50,6 +50,35 @@ the same reason the entry reports no publication date: there is no publisher to
 state one. It gives a collection date only, and a refresh has to move it by hand,
 since the `local` adapter below is handed a folder rather than a dated artifact.
 
+## Using it
+
+Load a store into a certval `PkiEnvironment` with `certval_stores_core`, naming the store by its
+constant:
+
+```rust
+# #[cfg(feature = "dev")] {
+use certval::{PkiEnvironment, TaSource};
+use certval_stores_core::prepare_certval_environment;
+
+let mut pe = PkiEnvironment::default();
+pe.populate_5280_pki_environment();
+let mut ta_store = TaSource::new();
+prepare_certval_environment(
+    &[certval_stores_pbdev::provider()],
+    &mut pe,
+    &mut ta_store,
+    certval_stores_pbdev::PUREBRED_DEV,
+)?;
+# }
+# Ok::<(), certval::Error>(())
+```
+
+The trust material is embedded as it was committed, and nothing in this package lets you re-check
+where it came from: using it means trusting this crate's publisher, and the review each refresh
+received before it was merged. How the material is obtained and authenticated is described in this
+README and in the repository's
+[MAINTENANCE.md](https://github.com/carl-wallace/certval-stores/blob/main/MAINTENANCE.md).
+
 ## Versioning
 
 This crate follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html), and the version
@@ -77,7 +106,7 @@ certval-store-gen --out-dir ./out local --tas roots/dev --cas cas/dev
 cp out/ca.cbor cas/dev/dev.cbor
 ```
 
-It reports `2 trust anchors, 4 intermediates`. `--cas` may point at the folder
+It reports how many trust anchors and intermediates it read. `--cas` may point at the folder
 that already holds the `.cbor`; non-certificate files are ignored. The `ta.cbor`
 it also writes is unused here — the anchors are embedded as DER, because
 `reqwest::Certificate::from_der` takes only a bare `Certificate`.
@@ -91,5 +120,5 @@ and re-run `cargo test -p certval_stores_pbdev --all-features`.
 pittv3 -b cas/dev/dev.cbor -t roots/dev --list-partial-paths
 ```
 
-For the committed material this reports `4 certificates yielded: 4 paths with
-1 certificate`, each rooted at DoD ENG Root CA 6.
+Every certificate in the store should yield a path of one certificate, each
+rooted at DoD ENG Root CA 6.

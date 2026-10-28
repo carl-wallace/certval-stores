@@ -19,16 +19,16 @@ transfer does not matter.
 ## Environments
 
 Six, all views over the same list, and the certificate itself is stored once in `roots/`
-regardless of how many grant it. Measured against the list published 2026-08-25:
+regardless of how many grant it:
 
-| feature | id | roots |
+| feature | constant (id) | roots |
 |---|---|---|
-| `msft_all` | `msft_all` | 357 |
-| `msft_client_auth` | `msft_client_auth` | 267 |
-| `msft_tls` | `msft_tls` | 234 |
-| `msft_email` | `msft_email` | 215 |
-| `msft_timestamping` | `msft_timestamping` | 162 |
-| `msft_code_signing` | `msft_code_signing` | 143 |
+| `msft_all` | `MSFT_ALL` (`msft_all`) | every root the program trusts |
+| `msft_client_auth` | `MSFT_CLIENT_AUTH` (`msft_client_auth`) | roots granted client authentication |
+| `msft_tls` | `MSFT_TLS` (`msft_tls`) | roots granted server authentication |
+| `msft_email` | `MSFT_EMAIL` (`msft_email`) | roots granted email protection |
+| `msft_timestamping` | `MSFT_TIMESTAMPING` (`msft_timestamping`) | roots granted timestamping |
+| `msft_code_signing` | `MSFT_CODE_SIGNING` (`msft_code_signing`) | roots granted code signing |
 
 No environment carries a CA store. Microsoft publishes roots and nothing else, so there are no
 intermediates and no precomputed partial paths — a chain validated against one of these needs its
@@ -36,12 +36,12 @@ intermediates supplied or retrieved.
 
 ## What is carried, and what is not
 
-The published list holds **562** entries; this crate carries **357**. Three rules account for the
+The published list holds more entries than this crate contains. Three rules account for the
 difference, and the first two are about not accumulating trust nobody intends:
 
-- **Expired roots are dropped** — 98 of them. Microsoft keeps them listed; `CDD4EEAE…`,
+- **Expired roots are dropped.** Microsoft keeps them listed; `CDD4EEAE…`,
   `CN=Microsoft Root Certificate Authority`, has been expired since 2021 and is still published.
-- **Restricted roots are dropped** — 107 of the remainder. A root can stay in the list while
+- **Restricted roots are dropped.** A root can stay in the list while
   Microsoft distrusts it from a given date, carried as property `1.3.6.1.4.1.311.10.11.104`. The
   2016-04-19 cohort is the SHA-1 deprecation; `DigiCert Baltimore Root` and
   `GeoTrust Universal CA` were restricted on 2026-09-15. Keeping them would mean shipping a root
@@ -64,27 +64,55 @@ both; it is left out of that environment and stays in `msft_all`.
 say that certificates issued after a date are not trusted for the listed purposes, while those
 issued before it still are. That depends on the issued certificate, not on the root, and has no
 equivalent in RFC 5280 path validation, so the environments contain these roots as the list grants
-them and the validity of the certificates themselves is what applies. On the list published
-2026-10-23, 50 roots in `msft_tls` feature such a date for serverAuth, among them the Entrust,
-AffirmTrust and Trustwave roots.
+them and the validity of the certificates themselves is what applies. Many roots in `msft_tls` have
+such a date for serverAuth, among them the Entrust, AffirmTrust and Trustwave roots.
 
 ## Things in this material worth knowing
 
-- **Seven roots are ML-DSA-87** (`2.16.840.1.101.3.4.3.19`) — pilot roots from DigiCert, HARICA,
+- **Some roots are ML-DSA-87** (`2.16.840.1.101.3.4.3.19`) — pilot roots from DigiCert, HARICA,
   IdenTrust, Sectigo, SSL.com, UniTrust and ComSign. certval can verify their self-signatures;
   most tooling cannot.
-- **41 of the 357 carried roots are SHA-1 signed**, so reading this crate's material needs
+- **Some of the carried roots are SHA-1 signed**, so reading this crate's material needs
   certval's `sha1_sig`. That, with the MD2 and MD5 roots the program also lists, is why the
   generator takes the signed list as the authority on what is a root rather than deciding by
   self-signature the way the PKCS#7 adapters do: an algorithm nobody can verify would file a root
   as an intermediate.
-- **Twenty roots carry a serial number of zero or a negative value**, against RFC 5280. x509-cert
+- **Some roots have a serial number of zero or a negative value**, against RFC 5280. x509-cert
   enforces the length limit and not positivity, so they decode; one, `SZAFIR ROOT CA`, has a
   21-byte serial and survives only because that limit is enforced as 21 on decode.
-- **Microsoft's own product roots grant nothing.** Six entries carry no purposes, and they are
+- **Microsoft's own product roots grant nothing.** The entries that list no purposes are
   `Microsoft Root Certificate Authority` 1997/2010/2011 and the ECC product roots. Windows trusts
   them intrinsically rather than through the program — so no store built from this list can verify
   Microsoft's own signed artifacts, including the trust list itself.
+
+## Using it
+
+Load a store into a certval `PkiEnvironment` with `certval_stores_core`, naming the store by its
+constant:
+
+```rust
+# #[cfg(feature = "msft_all")] {
+use certval::{PkiEnvironment, TaSource};
+use certval_stores_core::prepare_certval_environment;
+
+let mut pe = PkiEnvironment::default();
+pe.populate_5280_pki_environment();
+let mut ta_store = TaSource::new();
+prepare_certval_environment(
+    &[certval_stores_msft::provider()],
+    &mut pe,
+    &mut ta_store,
+    certval_stores_msft::MSFT_ALL,
+)?;
+# }
+# Ok::<(), certval::Error>(())
+```
+
+The trust material is embedded as it was committed, and nothing in this package lets you re-check
+where it came from: using it means trusting this crate's publisher, and the review each refresh
+received before it was merged. How the material is obtained and authenticated is described in this
+README and in the repository's
+[MAINTENANCE.md](https://github.com/carl-wallace/certval-stores/blob/main/MAINTENANCE.md).
 
 ## Versioning
 

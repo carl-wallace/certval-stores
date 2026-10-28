@@ -14,15 +14,15 @@ One Authenticode-signed cabinet, fetched from
 `https://go.microsoft.com/fwlink/?linkid=2097925` and committed at `inputs/TrustedTpm.cab`.
 
 **The cabinet vouches for its members**, which is the whole of the trust argument: it carries
-`flags 0x0004`, so its reserved area holds a signature covering everything inside, and none of the
-2,209 members is signed on its own. That is the opposite of the Microsoft root program's
+`flags 0x0004`, so its reserved area holds a signature covering everything inside, and none of its
+members is signed on its own. That is the opposite of the Microsoft root program's
 `authrootstl.cab`, which is unsigned packaging around a signed list — the two routes
 `certval-store-gen`'s `cab` module offers, and the reason it offers two.
 
 The publisher's own folder names say what each member is, and nothing here second-guesses them:
 
 ```text
-<vendor>\RootCA\<name>          48 members, 47 distinct anchors
+<vendor>\RootCA\<name>          the anchors
 <vendor>\IntermediateCA\<name>  the CAs beneath them
 version.txt setup.cmd setup.ps1 packaging
 ```
@@ -42,12 +42,12 @@ STMicro, Nuvoton, Atmel, QC), but they are one trust set rather than a menu: an 
 chains to whichever vendor made the part, and a relying party cannot know which in advance. The
 vendor survives only in each certificate's label.
 
-Measured against the cabinet published 2026-07-09: **47 roots, 2,480 intermediate CAs**, a 4.2 MB
-CA store.
+**A few dozen roots and over two thousand intermediate CAs**, in a CA store of several megabytes,
+which is roughly what enabling `tpm` adds to a binary.
 
 **The intermediates live only in that store**, unlike every other provider here, which also commits
-each one as loose DER for review. At 2,480 certificates that would be ten megabytes of the same
-material twice over, in a diff nobody reads. What replaces the review is
+each one as loose DER for review. At over two thousand certificates that would be megabytes of the
+same material twice over, in a diff nobody reads. What replaces the review is
 `the_store_is_what_the_committed_cabinet_generates`, which rebuilds the store from the committed
 cabinet and compares -- a stronger check than reading DER, and one CI runs on every change. The
 roots stay loose, because `src/roots_tpm.rs`, which a refresh writes with them, embeds them
@@ -55,9 +55,9 @@ individually and a test compares that list against the directory.
 
 ## What is not carried
 
-**42 intermediates that reach no root in the cabinet.** They are listed by name in
-`provenance/tpm/dropped.txt`, and the count is the thing to watch — down when a publisher fixes
-one, up when a vendor's root stops being carried.
+**Intermediates that reach no root in the cabinet.** They are listed by name in
+`provenance/tpm/dropped.txt`, and that list is the thing to watch — shorter when a publisher fixes
+one, longer when a vendor's root stops being carried.
 
 Most are AMD fTPM CAs whose issuers the cabinet does not include and whose AIA URIs serve a
 self-signed certificate rather than the issuer. Those CAs are real; this material simply cannot
@@ -70,8 +70,37 @@ would give up the property that catches a genuinely broken generation.
 The cabinet mixes DER and PEM **within a single vendor folder** — several hundred `.crt` and `.cer`
 members begin `0x2d`, the `-` of a `-----BEGIN CERTIFICATE-----` line. A reader that assumes DER
 loses a whole vendor's intermediates and reports it as a parse failure. Some PEM members hold more
-than one certificate, which is why 2,209 members yield 2,480 intermediates. There is also a
+than one certificate, which is why the cabinet yields more intermediates than it has members. There is also a
 `readme.txt` inside `AMD\IntermediateCA\`.
+
+## Using it
+
+Load a store into a certval `PkiEnvironment` with `certval_stores_core`, naming the store by its
+constant:
+
+```rust
+# #[cfg(feature = "tpm")] {
+use certval::{PkiEnvironment, TaSource};
+use certval_stores_core::prepare_certval_environment;
+
+let mut pe = PkiEnvironment::default();
+pe.populate_5280_pki_environment();
+let mut ta_store = TaSource::new();
+prepare_certval_environment(
+    &[certval_stores_tpm::provider()],
+    &mut pe,
+    &mut ta_store,
+    certval_stores_tpm::TPM,
+)?;
+# }
+# Ok::<(), certval::Error>(())
+```
+
+The trust material is embedded as it was committed, and nothing in this package lets you re-check
+where it came from: using it means trusting this crate's publisher, and the review each refresh
+received before it was merged. How the material is obtained and authenticated is described in this
+README and in the repository's
+[MAINTENANCE.md](https://github.com/carl-wallace/certval-stores/blob/main/MAINTENANCE.md).
 
 ## Versioning
 
@@ -114,6 +143,6 @@ earlier than the committed one is refused as a stale mirror rather than accepted
 
 **The guarantee that the shipped store is the validated output of the committed cabinet** is a
 test, not a build-script check — `the_store_is_what_the_committed_cabinet_generates`. Establishing
-it means classifying 2,209 members and building a path graph over 2,480 intermediates, which is far
-too much to put on every consumer's build; CI runs the tests on every change, which is where a
+it means classifying over two thousand members and building a path graph over as many
+intermediates, which is far too much to put on every consumer's build; CI runs the tests on every change, which is where a
 mismatch has to be caught.

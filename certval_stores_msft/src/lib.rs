@@ -4,8 +4,8 @@ use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 // One generated index per environment, each an `include_bytes!` list over the shared `roots/`
 // directory. Generated rather than hand-written, unlike every other provider in this family: at
-// 357 certificates across six overlapping views, a hand-kept list would be six places for the
-// same root to be forgotten. What keeps that honest is that the generator writes all of it from
+// hundreds of certificates across six overlapping views, a hand-kept list would be six places for
+// the same root to be forgotten. What keeps that honest is that the generator writes all of it from
 // one signed list, and `roots/` holds each certificate exactly once.
 #[cfg(feature = "msft_all")]
 mod env_all;

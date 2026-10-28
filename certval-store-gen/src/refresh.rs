@@ -7,9 +7,9 @@
 //! This is the refresh, and it is deliberately narrow. It fetches, requires the bytes to
 //! parse as a stream carrying the population asked for, and replaces the committed file only
 //! when the publisher's own date is newer than the date already in hand. Everything that
-//! decides *whether* to refresh lives in the caller: a build script gates this on being in a
-//! source checkout, because a consumer building a published crate must never reach the
-//! network. See `certval_stores_nipr`'s `build.rs`.
+//! decides *whether* to refresh lives in the caller: the scheduled refresh workflow, or a person
+//! running `certval-store-gen refresh`. A consumer building a published crate never runs it, so
+//! it never reaches the network.
 //!
 //! **A network failure is not an error.** The committed stream is still good material, and a
 //! build that failed because DISA was unreachable would be worse than one that builds last

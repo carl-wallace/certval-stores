@@ -178,12 +178,11 @@ crate serves is never buried in a lockfile pull request.
 - **`rustfmt`, and `clippy` twice** — default features and `--all-features`, because
   `--all-features` cannot catch a warning that exists only when a feature is *absent*.
 - **Ten generator feature shapes**, each with warnings fatal, `fail-fast: false`. This is the job
-  that catches dead code in the combinations between "nothing" and "everything" — a provider's
-  build script asks for a subset, and that is where an ungated unused function hid.
-- **`inputs-verified`** — every committed `.ir4` must verify. This is the gate that lets the
-  build-side check stay tolerant: a stream reaching `main` has been checked here, so a consumer's
-  build never has to decide what to do about one that has not. It needs egress to
-  `ocsp.sectigo.com` for the timestamp authority, which nothing staples.
+  that catches dead code in the combinations between "nothing" and "everything" — a provider
+  crate's tests ask for a subset (tpm's take the generator's `tpm` feature, which brings `fetch`
+  without `authroot`), and that is where an ungated unused function hid.
+- **`inputs-verified`** — every committed `.ir4` must verify before it reaches `main`. It needs
+  egress to `ocsp.sectigo.com` for the timestamp authority, which nothing staples.
 
 ## Versioning
 

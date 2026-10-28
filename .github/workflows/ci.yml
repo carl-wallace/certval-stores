@@ -5,8 +5,7 @@ on:
   push:
     branches: main
   # Manual re-runs via `gh workflow run ci.yml` (available once this file is
-  # on the default branch). The refresh workflows will also use it to start CI on
-  # the pull request they open, which a PR opened by a workflow does not do itself.
+  # on the default branch).
   workflow_dispatch:
 
 env:
@@ -113,8 +112,8 @@ jobs:
   # The shapes between "nothing" and "everything", which neither clippy run above reaches.
   #
   # `--all-features` hides code that is dead without a feature, and the default run only covers
-  # the default shape -- but a provider crate's build script asks for a *subset*: an InstallRoot
-  # provider takes `fetch` and not `authroot`, and that combination is the one that had
+  # the default shape -- but a provider crate's tests ask for a *subset*: tpm's take the `tpm`
+  # feature, which brings `fetch` without `authroot`, and that combination is the one that had
   # `fetch_if_modified` sitting unused behind no gate. Every combination a real consumer can
   # request is built here, with warnings fatal, so dead code has nowhere left to hide.
   #
@@ -148,11 +147,7 @@ jobs:
       - run: cargo clippy -p certval-store-gen --all-targets ${{ matrix.features }} -- -D warnings
 
   # The gate on what may enter the repository: every committed InstallRoot stream must
-  # verify. This is what lets the build scripts stay tolerant — `build_check` reports a
-  # stream it cannot parse as a skip rather than a failure, which is right for a consumer
-  # building a published crate and would be wrong as the only line of defence. A stream
-  # that reaches main has been checked here, so a consumer's build never has to decide
-  # what to do about one that has not.
+  # verify before it reaches main.
   #
   # Runs on every pull request. Almost all of it is local -- a stream carries its own signer's
   # certificate and the OCSP responses that settle its chain -- but this is the gate that also
