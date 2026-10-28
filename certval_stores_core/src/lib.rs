@@ -267,8 +267,7 @@ pub fn get_reqwest_client_rustls(
 ) -> Result<Client, reqwest::Error> {
     let builder = Client::builder()
         .timeout(Duration::from_secs(timeout_secs))
-        .use_rustls_tls()
-        .connection_verbose(true);
+        .use_rustls_tls();
     get_reqwest_client(providers, builder, identity)
 }
 
@@ -289,8 +288,7 @@ pub fn get_reqwest_client_native(
 ) -> Result<Client, reqwest::Error> {
     let builder = Client::builder()
         .timeout(Duration::from_secs(timeout_secs))
-        .use_native_tls()
-        .connection_verbose(true);
+        .use_native_tls();
     get_reqwest_client(providers, builder, identity)
 }
 
