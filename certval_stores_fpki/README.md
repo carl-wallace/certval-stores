@@ -1,5 +1,8 @@
 # certval_stores_fpki
 
+![Apache2/MIT licensed][license-image]
+![Rust Version][rustc-image]
+
 Federal PKI trust store for certval.
 
 ## What makes this one different
@@ -147,3 +150,6 @@ and through cross-certified intermediates.
 Note that FPKI path validation reaches a lot of CRL distribution points across many
 agency repositories; `RevocationStatusNotDetermined` on a network-restricted host
 usually means an unreachable CRL DP rather than a defective store.
+
+[license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg

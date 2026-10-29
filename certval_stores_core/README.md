@@ -1,5 +1,8 @@
 # certval_stores_core
 
+![Apache2/MIT licensed][license-image]
+![Rust Version][rustc-image]
+
 Environment-agnostic plumbing that puts the `certval_stores_*` trust-store
 crates to use. This is the crate a consumer depends on; a provider depends on
 [`certval_stores_provider_core`](https://crates.io/crates/certval_stores_provider_core)
@@ -346,3 +349,6 @@ types, so a breaking release of certval or reqwest is a breaking release of this
 provider crates depend on `certval_stores_provider_core`, not on this crate, so a new release of
 `certval_stores_core` does not require new releases of the providers. Each release's changes are
 listed in `CHANGELOG.md`.
+
+[license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg

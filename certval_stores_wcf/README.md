@@ -1,5 +1,8 @@
 # certval_stores_wcf
 
+![Apache2/MIT licensed][license-image]
+![Rust Version][rustc-image]
+
 WCF trust store for certval — the DoD sub-PKI that DISA publishes as `WCF.ir4`,
 whose certificates all sit under `OU=WCF PKI,OU=DoD`.
 
@@ -187,3 +190,6 @@ pittv3 -b cas/prod/prod.cbor -t roots/prod --list-partial-paths
 Every certificate in the store should yield a path, of one or two certificates:
 one intermediate is issued by the root and the rest by that intermediate. A CA that appears in no path is
 unreachable to an offline consumer however well-connected it looks.
+
+[license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg

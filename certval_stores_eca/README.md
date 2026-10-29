@@ -1,5 +1,8 @@
 # certval_stores_eca
 
+![Apache2/MIT licensed][license-image]
+![Rust Version][rustc-image]
+
 ECA trust store for certval — the DoD External Certification Authority program,
 under which commercial vendors issue certificates to people and systems outside
 the department that need to interoperate with it.
@@ -174,3 +177,6 @@ pittv3 -b cas/prod/prod.cbor -t roots/prod --list-partial-paths
 Every certificate in the store should yield a path, each of one certificate: the
 ECA intermediates are issued directly by the roots. A CA that appears in no path is unreachable to an offline
 consumer however well-connected it looks.
+
+[license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg

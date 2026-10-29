@@ -1,5 +1,8 @@
 # certval_stores_msft
 
+![Apache2/MIT licensed][license-image]
+![Rust Version][rustc-image]
+
 The Microsoft root program as certval trust stores, split by the purposes the program grants.
 
 Microsoft publishes its root program as a **certificate trust list** rather than as a bundle:
@@ -167,3 +170,6 @@ roots are judged as of the list's `thisUpdate`, not the day the refresh runs.
 `provenance/` records what the copy is: `published.txt` (the list's own `thisUpdate`),
 `collected.txt`, `sequence_number.txt` and `last_modified.txt` — the last two so a refresh can
 tell "the CDN re-served the same list" from "the program changed".
+
+[license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg
