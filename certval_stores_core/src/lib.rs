@@ -3,18 +3,16 @@
 //!
 //! # Example
 //! ```
-//! use certval::{PkiEnvironment, TaSource};
+//! use certval::PkiEnvironment;
 //! use certval_stores_core::{prepare_certval_environment, TrustStoreProvider};
 //!
 //! let mut pe = PkiEnvironment::default();
 //! pe.populate_5280_pki_environment();
-//! let mut ta_store = TaSource::new();
-//!
 //! // Assembled by the consumer from the provider crates it depends on.
 //! let providers: Vec<&dyn TrustStoreProvider> = vec![certval_stores_nipr::provider()];
 //! // The store id comes from the provider as a constant rather than as a literal, so a
 //! // renamed store fails to compile instead of failing to match.
-//! prepare_certval_environment(&providers, &mut pe, &mut ta_store, certval_stores_nipr::NIPR_PROD)?;
+//! prepare_certval_environment(&providers, &mut pe, certval_stores_nipr::NIPR_PROD)?;
 //! # Ok::<(), certval::Error>(())
 //! ```
 
@@ -58,17 +56,19 @@ pub use certval::{get_certificate_from_trust_anchor, PDVTrustAnchorChoice};
 // does not move the providers. Re-exported so a consumer names these types from here.
 pub use certval_stores_provider_core::{Date, StoreEntry, TrustStoreProvider};
 
-/// Populate `ta_store` (trust anchors) and `pe` (certificate sources) with the
-/// material the given `providers` carry for the store `id`.
+/// Add to `pe` the trust anchors and certificate sources the given `providers`
+/// carry for the store `id`: one trust anchor source holding the roots of every
+/// matching entry, and one certificate source per entry that carries a CA store.
 ///
-/// Preserves the historical `pb_pki::prepare_certval_environment` contract:
-/// returns [`Error::Unrecognized`] if no provider serves `id`.
+/// Nothing is added unless every matching entry loads, so an error leaves `pe` as
+/// it was. Returns [`Error::Unrecognized`] if no provider serves `id`.
 pub fn prepare_certval_environment(
     providers: &[&dyn TrustStoreProvider],
     pe: &mut PkiEnvironment,
-    ta_store: &mut TaSource,
     id: &str,
 ) -> Result<(), Error> {
+    let mut ta_store = TaSource::new();
+    let mut cert_sources = vec![];
     let mut acted = false;
     for provider in providers {
         for entry in provider.entries() {
@@ -85,7 +85,7 @@ pub fn prepare_certval_environment(
             if let Some(cbor) = entry.cert_store_cbor {
                 let mut cert_source = CertSource::new_from_cbor(cbor)?;
                 cert_source.initialize(&Default::default())?;
-                pe.add_certificate_source(Box::new(cert_source));
+                cert_sources.push(cert_source);
             }
         }
     }
@@ -94,12 +94,14 @@ pub fn prepare_certval_environment(
         error!(
             "The store id ({id}) passed to prepare_certval_environment did not match any provider."
         );
-        Err(Error::Unrecognized)
-    } else {
-        ta_store.initialize()?;
-        pe.add_trust_anchor_source(Box::new(ta_store.clone()));
-        Ok(())
+        return Err(Error::Unrecognized);
     }
+    ta_store.initialize()?;
+    for cert_source in cert_sources {
+        pe.add_certificate_source(Box::new(cert_source));
+    }
+    pe.add_trust_anchor_source(Box::new(ta_store));
+    Ok(())
 }
 
 /// Return every trust anchor carried by `providers` (across all environments

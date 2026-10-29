@@ -104,7 +104,7 @@ pub fn providers() -> Vec<&'static dyn TrustStoreProvider> {
 ```
 
 Call sites change from `pb_pki::prepare_certval_environment(pe, ta, env)` to
-`certval_stores_core::prepare_certval_environment(&providers(), pe, ta, id)`,
+`certval_stores_core::prepare_certval_environment(&providers(), pe, id)`,
 where `id` names a store rather than a Purebred environment — `certval_stores_nipr::NIPR_PROD`
 rather than `"NIPR"`. A consumer that has an environment to start from maps it to
 a store id once, which is also what lets a store with no environment behind it

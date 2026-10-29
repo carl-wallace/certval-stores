@@ -118,16 +118,14 @@ constant:
 
 ```rust
 # #[cfg(feature = "nipr")] {
-use certval::{PkiEnvironment, TaSource};
+use certval::PkiEnvironment;
 use certval_stores_core::prepare_certval_environment;
 
 let mut pe = PkiEnvironment::default();
 pe.populate_5280_pki_environment();
-let mut ta_store = TaSource::new();
 prepare_certval_environment(
     &[certval_stores_nipr::provider()],
     &mut pe,
-    &mut ta_store,
     certval_stores_nipr::NIPR_PROD,
 )?;
 # }

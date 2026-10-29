@@ -85,7 +85,7 @@ which `check_providers_compose` enforces.
 The three entry points the former `pb_pki` crate offered, now taking a
 `&[&dyn TrustStoreProvider]`, plus a serializer:
 
-- `prepare_certval_environment(providers, pe, ta_store, id)` — id-selected;
+- `prepare_certval_environment(providers, pe, id)` — id-selected;
   `Err(Error::Unrecognized)` if no provider carries that store.
 - `get_roots(providers)` — every trust anchor across the providers, decoded as
   an RFC 5914 `TrustAnchorChoice`.
