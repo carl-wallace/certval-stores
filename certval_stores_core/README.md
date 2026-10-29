@@ -20,6 +20,10 @@ for the family as a whole and for how a consumer wires providers to its own
 feature array — an absolute link, so it resolves both on GitHub and from the
 rendered rustdoc.
 
+For a short demonstration of this crate in use, see
+[certval-verify](https://github.com/carl-wallace/certval-verify): a certificate
+validator in one source file whose trust configuration is a list of providers.
+
 ## The provider API
 
 ```rust,ignore
