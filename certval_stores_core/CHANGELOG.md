@@ -2,7 +2,7 @@
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html), except that
 an increase to the minimum supported Rust version is not treated as a breaking change.
 
-## [0.1.0] - unreleased
+## [0.1.0-rc.1] - 2026-10-29
 
 Initial release: composes `certval_stores_*` providers into a certval `PkiEnvironment`
 (`prepare_certval_environment`), serialized stores (`serialize_environment`), trust anchors
