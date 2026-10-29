@@ -346,20 +346,21 @@ fn requested_cert_id(request: &[u8]) -> Option<Vec<u8>> {
     // Decoded under `Raw`, because `build_ocsp_request` encodes under `Raw`: the Rfc5280 profile
     // constrains serial-number length in a way that would silently drop a certificate whose serial
     // is longer than the RFC allows -- and such certificates are in service.
-    let request = x509_ocsp::OcspRequest::<x509_cert::certificate::Raw>::from_der(request).ok()?;
+    let request =
+        certval::ocsp::OcspRequest::<x509_cert::certificate::Raw>::from_der(request).ok()?;
     let first = request.tbs_request.request_list.first()?;
     first.req_cert.to_der().ok()
 }
 
 /// The encoded `CertID`s an OCSP response answers about.
 fn answered_cert_ids(response: &[u8]) -> Vec<Vec<u8>> {
-    let Ok(response) = x509_ocsp::OcspResponse::from_der(response) else {
+    let Ok(response) = certval::ocsp::OcspResponse::from_der(response) else {
         return vec![];
     };
     let Some(bytes) = response.response_bytes else {
         return vec![];
     };
-    let Ok(basic) = x509_ocsp::BasicOcspResponse::from_der(bytes.response.as_bytes()) else {
+    let Ok(basic) = certval::ocsp::BasicOcspResponse::from_der(bytes.response.as_bytes()) else {
         return vec![];
     };
     basic

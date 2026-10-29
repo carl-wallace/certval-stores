@@ -213,8 +213,7 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 [[package]]
 name = "cab"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "171228650e6721d5acc0868a462cd864f49ac5f64e4a42cde270406e64e404d2"
+source = "git+https://github.com/mdsteele/rust-cab.git?rev=6cf11ae8f78c06e379bdfb0451e53b8ddfc106bd#6cf11ae8f78c06e379bdfb0451e53b8ddfc106bd"
 dependencies = [
  "byteorder",
  "flate2",
@@ -236,8 +235,8 @@ dependencies = [
 
 [[package]]
 name = "certval"
-version = "0.2.0-pre"
-source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#99640ea0309ef8cefa3bf5e241ab939618cb8795"
+version = "0.2.0-rc.1"
+source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#fce27c361035b4cfff632e403baee3f126915914"
 dependencies = [
  "base64ct",
  "bitvec",
@@ -274,7 +273,6 @@ dependencies = [
  "walkdir",
  "webpki-roots",
  "x509-cert",
- "x509-ocsp",
 ]
 
 [[package]]
@@ -301,7 +299,6 @@ dependencies = [
  "ureq",
  "walkdir",
  "x509-cert",
- "x509-ocsp",
 ]
 
 [[package]]
@@ -539,7 +536,8 @@ dependencies = [
 [[package]]
 name = "cms"
 version = "0.3.0-rc.0"
-source = "git+https://github.com/RustCrypto/formats.git#4c5fadb155ebc05c4a8a3abc05e4e64a6a100614"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a7e16fb99a745fd8c7327eeb7deb9f667c03320f4f61d23c1927a55813b4466"
 dependencies = [
  "const-oid",
  "der",
@@ -1809,7 +1807,7 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 [[package]]
 name = "pkiprocmacros"
 version = "0.1.2"
-source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#99640ea0309ef8cefa3bf5e241ab939618cb8795"
+source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#fce27c361035b4cfff632e403baee3f126915914"
 dependencies = [
  "quote",
  "syn 2.0.119",

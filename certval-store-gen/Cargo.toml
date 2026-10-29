@@ -41,10 +41,6 @@ certval = { git = "https://github.com/carl-wallace/rust-pki.git", branch = "main
 rfc5934 = { git = "https://github.com/carl-wallace/rfc5934.git", branch = "main" }
 
 x509-cert = { version = "0.3.0", default-features = false, features = ["pem"] }
-# For reading the CertIDs of the OCSP responses a stream staples, so each one can be filed against
-# the certificate it answers about. Version tracked to certval's so the types are the same ones it
-# works with.
-x509-ocsp = { version = "0.3.0-pre", default-features = false }
 cms = "0.3.0-pre.2"
 der = { version = "0.8.1", features = ["alloc", "derive", "oid", "pem"] }
 const-oid = { version = "0.10.2", features = ["db"] }
@@ -78,7 +74,11 @@ ureq = { version = "3", optional = true }
 # checks the Authenticode signature over it against the Microsoft roots it carries, at the
 # timestamped signing time. Taken by git for the same reason certval is: it takes certval from
 # that same source, and a path or crates.io copy would put two certvals in one graph.
-cab = { version = "0.6", optional = true }
+#
+# `cab` is pinned to an upstream commit for `Cabinet::read_folder`, which decompresses a folder in one
+# pass; 0.6.0's `read_file` decompresses from the folder's start for every member. Back to a version
+# requirement once a release carries it.
+cab = { git = "https://github.com/mdsteele/rust-cab.git", rev = "6cf11ae8f78c06e379bdfb0451e53b8ddfc106bd", optional = true }
 tpm_cab_verify = { git = "https://github.com/carl-wallace/tpm_cab_verify.git", branch = "main", optional = true }
 # Behind `authroot`: Microsoft addresses each root in its trust list by SHA-1 thumbprint, and
 # checking that a served certificate matches the one the signed list asked for is that adapter's

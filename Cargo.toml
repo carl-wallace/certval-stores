@@ -14,16 +14,11 @@ members = [
     "certval-store-gen",
 ]
 
-# `certval` and some RustCrypto dependencies are consumed from git, so the patch
-# table below is required for these crates to build *standalone* (e.g. their own
-# CI). When these crates are consumed by a larger workspace (e.g. pbyk), that
-# top-level workspace's own [patch] table governs and this one is ignored.
-# Only the formats 0.3-pre line lacks a crates.io release and is internally
-# git-coupled (cms/x509-cert/x509-ocsp pin the stack together), so it stays on
-# git. Everything else certval needs (crypto-bigint, elliptic-curves, hashes,
-# traits/elliptic-curve, signatures/ecdsa) now resolves from crates.io stable.
+# Reached only by way of rfc5934, which certval-store-gen takes for the InstallRoot adapter and which
+# takes x509-ocsp's 0.3.0-pre line, not on crates.io. A patch table does not travel with a git
+# dependency, so this one governs builds of this workspace (e.g. its CI); a larger workspace that
+# consumes these crates (e.g. pbyk) applies its own.
 [patch.crates-io]
-cms        = { git = "https://github.com/RustCrypto/formats.git" }
 x509-ocsp  = { git = "https://github.com/RustCrypto/formats.git" }
 
 # Reached only under certval-store-gen's `cab` feature, by way of tpm_cab_verify, which verifies an

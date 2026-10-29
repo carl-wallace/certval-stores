@@ -136,22 +136,42 @@ pub fn members(bytes: &[u8]) -> Result<Vec<Member>> {
     let mut cabinet =
         ::cab::Cabinet::new(Cursor::new(bytes)).context("input is not a readable cabinet")?;
 
-    // Names first, bodies second, because reading a member takes the cabinet mutably while
-    // walking the directory borrows it.
-    let names: Vec<String> = cabinet
+    // A folder is one compressed stream holding its members back to back, so each folder is
+    // decompressed once, whole, and its members are sliced out by offset. Names and offsets first,
+    // bodies second, because reading a folder takes the cabinet mutably while walking the directory
+    // borrows it.
+    let folders: Vec<Vec<(String, usize, usize)>> = cabinet
         .folder_entries()
-        .flat_map(|folder| folder.file_entries().map(|file| file.name().to_string()))
+        .map(|folder| {
+            folder
+                .file_entries()
+                .map(|file| {
+                    (
+                        file.name().to_string(),
+                        file.uncompressed_offset() as usize,
+                        file.uncompressed_size() as usize,
+                    )
+                })
+                .collect()
+        })
         .collect();
 
-    let mut out = Vec::with_capacity(names.len());
-    for name in names {
-        let mut bytes = vec![];
+    let mut out = Vec::with_capacity(folders.iter().map(Vec::len).sum());
+    for (index, files) in folders.into_iter().enumerate() {
+        let mut data = vec![];
         cabinet
-            .read_file(&name)
-            .with_context(|| format!("{name} could not be read from the cabinet"))?
-            .read_to_end(&mut bytes)
-            .with_context(|| format!("{name} could not be decompressed"))?;
-        out.push(Member { name, bytes });
+            .read_folder(index)
+            .with_context(|| format!("folder {index} could not be read from the cabinet"))?
+            .read_to_end(&mut data)
+            .with_context(|| format!("folder {index} could not be decompressed"))?;
+        for (name, offset, size) in files {
+            let bytes = offset
+                .checked_add(size)
+                .and_then(|end| data.get(offset..end))
+                .ok_or_else(|| anyhow!("{name} lies outside its folder's decompressed data"))?
+                .to_vec();
+            out.push(Member { name, bytes });
+        }
     }
     Ok(out)
 }
