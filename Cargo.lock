@@ -237,7 +237,7 @@ dependencies = [
 [[package]]
 name = "certval"
 version = "0.2.0-pre"
-source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#99640ea0309ef8cefa3bf5e241ab939618cb8795"
+source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#a5fbf8beafee54b0f4c8c3d352cfc0320e15195a"
 dependencies = [
  "base64ct",
  "bitvec",
@@ -274,7 +274,6 @@ dependencies = [
  "walkdir",
  "webpki-roots",
  "x509-cert",
- "x509-ocsp",
 ]
 
 [[package]]
@@ -1809,7 +1808,7 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 [[package]]
 name = "pkiprocmacros"
 version = "0.1.2"
-source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#99640ea0309ef8cefa3bf5e241ab939618cb8795"
+source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#a5fbf8beafee54b0f4c8c3d352cfc0320e15195a"
 dependencies = [
  "quote",
  "syn 2.0.119",
