@@ -15,7 +15,7 @@ use std::path::Path;
 
 #[cfg(feature = "fpki")]
 use certval::{CertSource, CertVector};
-use certval::{Error, PkiEnvironment, TaSource};
+use certval::{Error, PkiEnvironment};
 use certval_stores_core::{conformance, prepare_certval_environment, TrustStoreProvider};
 
 /// The anchors an environment advertises, for the checks that take them
@@ -108,25 +108,16 @@ fn embedded_ca_store_deserializes_and_initializes() {
 fn prepare_environment_accepts_fpki() {
     let mut pe = PkiEnvironment::default();
     pe.populate_5280_pki_environment();
-    let mut ta_store = TaSource::new();
-
-    prepare_certval_environment(
-        &providers(),
-        &mut pe,
-        &mut ta_store,
-        certval_stores_fpki::FPKI,
-    )
-    .expect("FPKI must be a recognized store id");
-    assert_eq!(ta_store.len(), 1);
+    prepare_certval_environment(&providers(), &mut pe, certval_stores_fpki::FPKI)
+        .expect("FPKI must be a recognized store id");
+    assert_eq!(pe.get_trust_anchors().len(), 1);
 }
 
 #[test]
 fn prepare_environment_rejects_unknown_environment() {
     let mut pe = PkiEnvironment::default();
     pe.populate_5280_pki_environment();
-    let mut ta_store = TaSource::new();
-
-    let r = prepare_certval_environment(&providers(), &mut pe, &mut ta_store, "NOT_AN_ENV");
+    let r = prepare_certval_environment(&providers(), &mut pe, "NOT_AN_ENV");
     assert!(matches!(r, Err(Error::Unrecognized)));
 }
 

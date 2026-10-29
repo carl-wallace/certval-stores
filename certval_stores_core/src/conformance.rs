@@ -640,14 +640,13 @@ pub fn check_prepare_environment(provider: &dyn TrustStoreProvider) -> Vec<Strin
         let id = entry.id;
         let mut pe = PkiEnvironment::default();
         pe.populate_5280_pki_environment();
-        let mut ta_store = TaSource::new();
-        match prepare_certval_environment(&providers, &mut pe, &mut ta_store, id) {
+        match prepare_certval_environment(&providers, &mut pe, id) {
             Ok(()) => {
-                if ta_store.len() != entry.roots.len() {
+                let installed = pe.get_trust_anchors().len();
+                if installed != entry.roots.len() {
                     failures.push(format!(
-                        "entry {id:?} advertises {} anchors but installed {} — duplicate anchor bytes?",
+                        "entry {id:?} advertises {} anchors but installed {installed} — duplicate anchor bytes?",
                         entry.roots.len(),
-                        ta_store.len()
                     ));
                 }
             }
@@ -659,8 +658,7 @@ pub fn check_prepare_environment(provider: &dyn TrustStoreProvider) -> Vec<Strin
 
     let mut pe = PkiEnvironment::default();
     pe.populate_5280_pki_environment();
-    let mut ta_store = TaSource::new();
-    let r = prepare_certval_environment(&providers, &mut pe, &mut ta_store, NO_SUCH_ENV);
+    let r = prepare_certval_environment(&providers, &mut pe, NO_SUCH_ENV);
     if !matches!(r, Err(Error::Unrecognized)) {
         failures.push(format!(
             "prepare_certval_environment did not return Unrecognized for {NO_SUCH_ENV:?}"
