@@ -177,6 +177,12 @@ jobs:
           # bundle. A .p7c carries no publication date to compare, so a fetched bundle replaces
           # the committed copy when it parses as PKCS#7 and its bytes differ. A failed fetch or an
           # unparseable body keeps the committed copy and warns.
+          #
+          # The bundles come over plain HTTP: crl.disa.mil answers https:// with a redirect back to
+          # http://, so the transport cannot be authenticated. A tampered bundle does not get through:
+          # the conformance checks fail a CA that is in no partial path or does not validate, so the
+          # refresh PR's CI turns red. What HTTP can do is serve a stale bundle, which can only leave
+          # CAs out.
           fetch_bundle() {
             local tmp
             tmp="$(mktemp)"
