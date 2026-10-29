@@ -1,5 +1,8 @@
 # certval_stores_nipr
 
+![Apache2/MIT licensed][license-image]
+![Rust Version][rustc-image]
+
 NIPR (DoD PKI) trust stores for certval — the production and operational-test
 (JITC) environments.
 
@@ -215,3 +218,6 @@ that appears in no path is unreachable to an offline consumer however
 well-connected it looks — which is why generation disables the time of interest:
 an expired CA that was serialized without a path would be missing from a
 validation run against an earlier time, when it was current.
+
+[license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg

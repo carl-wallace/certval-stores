@@ -1,5 +1,8 @@
 # certval_stores_webpki_root_certs
 
+![Apache2/MIT licensed][license-image]
+![Rust Version][rustc-image]
+
 The Mozilla root program's TLS server roots, as a `certval` trust store.
 
 The material comes from the [`webpki-root-certs`](https://crates.io/crates/webpki-root-certs)
@@ -142,3 +145,6 @@ a minimum so that it never conflicts with other crates in your build that also d
 `webpki-root-certs`.
 
 Each release's changes are listed in `CHANGELOG.md`.
+
+[license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg

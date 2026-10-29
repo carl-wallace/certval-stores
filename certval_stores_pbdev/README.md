@@ -1,5 +1,8 @@
 # certval_stores_pbdev
 
+![Apache2/MIT licensed][license-image]
+![Rust Version][rustc-image]
+
 Development trust store for certval — the Purebred development environment,
 anchored at the DoD Engineering roots.
 
@@ -113,3 +116,6 @@ pittv3 -b cas/dev/dev.cbor -t roots/dev --list-partial-paths
 
 Every certificate in the store should yield a path of one certificate, each
 rooted at DoD ENG Root CA 6.
+
+[license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg

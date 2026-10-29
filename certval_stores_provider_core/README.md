@@ -1,5 +1,8 @@
 # certval_stores_provider_core
 
+![Apache2/MIT licensed][license-image]
+![Rust Version][rustc-image]
+
 The contract between the `certval_stores_*` trust-store crates and the code that uses
 them: `StoreEntry`, the trust material for one store, and `TrustStoreProvider`, the trait
 a provider crate implements to hand its entries out.
@@ -54,3 +57,6 @@ This crate follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). `
 `#[non_exhaustive]`, so code outside this crate builds an entry with `StoreEntry::new` rather than
 a struct literal, and a new field can be added in a minor release without breaking any provider. Each release's changes are listed
 in `CHANGELOG.md`.
+
+[license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg

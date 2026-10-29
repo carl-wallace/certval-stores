@@ -1,5 +1,8 @@
 # certval_stores_tpm
 
+![Apache2/MIT licensed][license-image]
+![Rust Version][rustc-image]
+
 The TPM vendor trust material Microsoft redistributes as `TrustedTpm.cab`, as a certval trust
 store.
 
@@ -148,3 +151,6 @@ test, not a build-script check — `the_store_is_what_the_committed_cabinet_gene
 it means classifying over two thousand members and building a path graph over as many
 intermediates, which is far too much to put on every consumer's build; CI runs the tests on every change, which is where a
 mismatch has to be caught.
+
+[license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg
