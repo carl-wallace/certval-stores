@@ -1,6 +1,9 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
-use certval_stores_core::{StoreEntry, TrustStoreProvider};
+#[cfg(feature = "eca")]
+use certval_stores_provider_core::Date;
+use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "eca")]
 mod roots_prod;
@@ -9,12 +12,15 @@ mod roots_prod;
 // timestamp on the InstallRoot messages read, `collected` the day the stream was fetched. See the
 // same pair in `certval_stores_nipr` for why they are files rather than literals.
 #[cfg(feature = "eca")]
-const ECA_PUBLISHED: &str = include_str!("../provenance/prod/published.txt").trim_ascii_end();
+const ECA_PUBLISHED: Date =
+    Date::parse(include_str!("../provenance/prod/published.txt").trim_ascii_end())
+        .expect("provenance/prod/published.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "eca")]
-const ECA_COLLECTED: &str = include_str!("../provenance/prod/collected.txt").trim_ascii_end();
+const ECA_COLLECTED: Date =
+    Date::parse(include_str!("../provenance/prod/collected.txt").trim_ascii_end())
+        .expect("provenance/prod/collected.txt is not a YYYY-MM-DD date");
 
-/// Trust-store provider for the ECA (DoD External Certification Authority) program.
-pub struct EcaStores;
+struct EcaStores;
 
 /// Store id for the ECA store, to pass to `prepare_certval_environment`
 /// or `serialize_environment` rather than spelling it out: the parameter is a
@@ -27,23 +33,19 @@ impl TrustStoreProvider for EcaStores {
     fn entries(&self) -> Vec<StoreEntry> {
         let mut entries = Vec::new();
         #[cfg(feature = "eca")]
-        entries.push(StoreEntry {
-            id: ECA,
-            label: "U.S. DoD (ECA)",
-            roots: roots_prod::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/prod/prod.cbor")),
-            published: Some(ECA_PUBLISHED),
-            collected: Some(ECA_COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(ECA, "U.S. DoD (ECA)", roots_prod::ROOTS)
+                .with_cert_store_cbor(include_bytes!("../cas/prod/prod.cbor"))
+                .with_published(ECA_PUBLISHED)
+                .with_collected(ECA_COLLECTED),
+        );
         entries
     }
 }
 
-/// The provider instance.
-pub static PROVIDER: EcaStores = EcaStores;
-
-/// Convenience accessor returning the provider as a trait object, for adding to
-/// a provider list passed to `certval_stores_core`.
+/// The trust-store provider for the ECA (DoD External Certification Authority) program.
+///
+/// Add it to the list of providers passed to `certval_stores_core`.
 pub fn provider() -> &'static dyn TrustStoreProvider {
-    &PROVIDER
+    &EcaStores
 }

@@ -11,10 +11,10 @@ Policy CA G2 — and every other participant (DoD, Treasury, Entrust, DigiCert,
 State, WidePoint/ORC, CertiPath, Boeing, Northrop Grumman, …) is reached through
 cross-certificates in the CA store. One root is the correct count, not a gap.
 
-| Feature | Env | Anchors | CA store |
-|---------|-----|---------|----------|
-| `fpki` (default) | `FPKI` | 1 — Federal Common Policy CA G2 | 133 intermediates, 142 partial paths |
-| `fpki_legacy` | `FPKI_LEGACY` | 1 — Federal Common Policy CA (G1, retired) | none |
+| Feature | Constant (id) | Anchors | CA store |
+|---------|---------------|---------|----------|
+| `fpki` (default) | `FPKI` (`fpki`) | Federal Common Policy CA G2 | intermediates and partial paths |
+| `fpki_legacy` | `FPKI_LEGACY` (`fpki_legacy`) | Federal Common Policy CA (G1, retired) | none |
 
 `fpki_legacy` is anchors-only: the G1 mesh is no longer published, so there is no
 CA store to pair with it. Enable it only to validate paths that predate the G2
@@ -57,6 +57,54 @@ Until 2026-10-27 the store was built from GSA's FPKI crawler bundle
 (`CACertificatesValidatingToFederalCommonPolicyG2.p7b`). The walk replaced it because that bundle
 lagged the mesh and left out the two Northrop Grumman signing CAs, whose repository serves BER.
 
+## Using it
+
+Load a store into a certval `PkiEnvironment` with `certval_stores_core`, naming the store by its
+constant:
+
+```rust
+# #[cfg(feature = "fpki")] {
+use certval::{PkiEnvironment, TaSource};
+use certval_stores_core::prepare_certval_environment;
+
+let mut pe = PkiEnvironment::default();
+pe.populate_5280_pki_environment();
+let mut ta_store = TaSource::new();
+prepare_certval_environment(
+    &[certval_stores_fpki::provider()],
+    &mut pe,
+    &mut ta_store,
+    certval_stores_fpki::FPKI,
+)?;
+# }
+# Ok::<(), certval::Error>(())
+```
+
+The trust material is embedded as it was committed, and nothing in this package lets you re-check
+where it came from: using it means trusting this crate's publisher, and the review each refresh
+received before it was merged. How the material is obtained and authenticated is described in this
+README and in the repository's
+[MAINTENANCE.md](https://github.com/carl-wallace/certval-stores/blob/main/MAINTENANCE.md).
+
+## Versioning
+
+This crate follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html), and the version
+number also says what changed in the trust material:
+
+- A **patch** release (1.0.0 to 1.0.1) changes intermediate CA certificates, partial paths, or a
+  store's dates or label. No store's trust anchors change.
+- A **minor** release (1.0.x to 1.1.0) adds or removes trust anchors in a store, adds a store, or
+  adds to the API without breaking code that uses it.
+- A **major** release (1.x to 2.0.0) changes the API in a way that breaks code that uses it, for
+  example by removing a store along with its feature and constant.
+
+With an ordinary requirement such as `certval_stores_fpki = "1.0"`, `cargo update` takes every
+1.x release, including a minor release that adds or removes trust anchors. With
+`certval_stores_fpki = "~1.0"`, `cargo update` takes 1.0.1, 1.0.2 and so on, which change only
+intermediate CA certificates, partial paths or dates, and does not take 1.1.0, so the trust anchors
+stay those of 1.0 until the requirement is changed to `~1.1`. Each release's changes are listed in
+`CHANGELOG.md`.
+
 ## Refreshing
 
 The mesh moves whenever a participant's cross-certificates change, so treat the embedded store
@@ -94,8 +142,9 @@ cargo test -p certval_stores_fpki --all-features
 pittv3 -b cas/fpki/fpki.cbor -t roots/fpki -e <some-fpki-cert>.der -v
 ```
 
-For the 2026-08-12 snapshot, `--list-partial-paths` reports 133 certificates
-yielding 12 paths of 1 certificate, 45 of 2, 37 of 3, and 48 of 4.
+`--list-partial-paths` shows every certificate in the store yielding a path, of
+one to four certificates: the mesh reaches agency PKIs through the Federal Bridge
+and through cross-certified intermediates.
 
 Note that FPKI path validation reaches a lot of CRL distribution points across many
 agency repositories; `RevocationStatusNotDetermined` on a network-restricted host

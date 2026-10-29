@@ -34,8 +34,8 @@
 //! trustworthy.** Expired roots stay listed -- `CDD4EEAE…` has been expired since 2021, and a
 //! VeriSign timestamping root since 2004 -- and a root can remain listed while the program
 //! distrusts it from a date, carried as [`ATTR_DISALLOWED_AFTER`]. [`build`] drops both, so what
-//! it yields is what the program trusts on the day it runs. Carrying either would mean shipping
-//! `DigiCert Baltimore Root` as trusted after Microsoft retired it on 2026-09-15.
+//! it yields is what the program trusted on the day the list was published. Carrying either would
+//! mean shipping `DigiCert Baltimore Root` as trusted after Microsoft retired it on 2026-09-15.
 //!
 //! ## The published list, measured 2026-09-22
 //!
@@ -48,7 +48,8 @@
 //! ```
 //!
 //! Per-entry properties, by how many of the 562 entries carry them — the ones this adapter reads
-//! are `…11.9` and `…11.11`, and the rest are left alone rather than guessed at:
+//! are `…11.9`, `…11.11`, `…11.104` and `…11.122`, and the rest are left alone rather than guessed
+//! at:
 //!
 //! ```text
 //! 562  …10.11.29    562  …10.11.20    562  …10.11.98    562  …10.11.11  friendly name
@@ -120,6 +121,13 @@ const ATTR_FRIENDLY_NAME: ObjectIdentifier =
 /// CA` on 2026-09-15. A date-added property would look like none of that.
 const ATTR_DISALLOWED_AFTER: ObjectIdentifier =
     ObjectIdentifier::new_unwrap("1.3.6.1.4.1.311.10.11.104");
+
+/// `CERT_DISALLOWED_ENHKEY_USAGE_PROP_ID` (122): EKUs the program withdraws from this root, in the
+/// same doubly wrapped form as [`ATTR_EKU`]. It overrides that grant: on the list published
+/// 2026-10-23, ANCERT Certificados CGN V2 and Saudi National Root CA carry serverAuth in both, and
+/// Microsoft does not trust either for it.
+const ATTR_DISALLOWED_EKU: ObjectIdentifier =
+    ObjectIdentifier::new_unwrap("1.3.6.1.4.1.311.10.11.122");
 
 /// Seconds between the `FILETIME` epoch (1601-01-01) and the Unix epoch.
 const FILETIME_TO_UNIX: u64 = 11_644_473_600;
@@ -196,6 +204,8 @@ pub struct Entry {
     /// The purposes Microsoft grants this root. Empty means the entry states none, which is not
     /// the same as "none are granted" — treat it as unknown rather than as a denial.
     pub ekus: Vec<ObjectIdentifier>,
+    /// The purposes Microsoft withdraws from this root, which win over [`ekus`](Entry::ekus).
+    pub disallowed_ekus: Vec<ObjectIdentifier>,
     /// Microsoft's display name for the root, where it gives one.
     pub friendly_name: Option<String>,
     /// Unix seconds after which the program no longer trusts this root, where it says so.
@@ -219,7 +229,7 @@ impl Entry {
 
     /// Whether Microsoft grants this root `eku`.
     pub fn grants(&self, eku: ObjectIdentifier) -> bool {
-        self.ekus.contains(&eku)
+        self.ekus.contains(&eku) && !self.disallowed_ekus.contains(&eku)
     }
 }
 
@@ -492,6 +502,7 @@ pub fn parse_ctl(ctl_der: &[u8]) -> Result<Ctl> {
     for subject in ctl.trusted_subjects.unwrap_or_default() {
         let thumbprint = subject.subject_identifier.as_bytes().to_vec();
         let mut ekus = vec![];
+        let mut disallowed_ekus = vec![];
         let mut friendly_name = None;
         let mut disallowed_after = None;
         for attr in subject
@@ -502,15 +513,12 @@ pub fn parse_ctl(ctl_der: &[u8]) -> Result<Ctl> {
             // An unreadable property is skipped rather than failing the list: Microsoft carries
             // more of them than this adapter names, and a new one must not cost the whole program.
             if attr.oid == ATTR_EKU {
-                // Doubly wrapped, measured on the published list: the attribute value is an OCTET
-                // STRING whose contents are a SEQUENCE OF OID. Reading it as the sequence directly
-                // yields no purposes for any root, which is the empty-store failure `build` guards.
-                if let Some(v) = attr.values.iter().next() {
-                    if let Ok(wrapped) = v.decode_as::<OctetString>() {
-                        if let Ok(list) = Vec::<ObjectIdentifier>::from_der(wrapped.as_bytes()) {
-                            ekus = list;
-                        }
-                    }
+                if let Some(list) = eku_list(&attr) {
+                    ekus = list;
+                }
+            } else if attr.oid == ATTR_DISALLOWED_EKU {
+                if let Some(list) = eku_list(&attr) {
+                    disallowed_ekus = list;
                 }
             } else if attr.oid == ATTR_FRIENDLY_NAME {
                 if let Some(v) = attr.values.iter().next() {
@@ -529,6 +537,7 @@ pub fn parse_ctl(ctl_der: &[u8]) -> Result<Ctl> {
         entries.push(Entry {
             thumbprint,
             ekus,
+            disallowed_ekus,
             friendly_name,
             disallowed_after,
         });
@@ -539,6 +548,15 @@ pub fn parse_ctl(ctl_der: &[u8]) -> Result<Ctl> {
         sequence_number,
         entries,
     })
+}
+
+/// The EKUs an [`ATTR_EKU`] or [`ATTR_DISALLOWED_EKU`] attribute carries. Doubly wrapped, measured on
+/// the published list: the attribute value is an OCTET STRING whose contents are a SEQUENCE OF OID.
+/// Reading it as the sequence directly yields no purposes for any root, which is the empty-store
+/// failure `build` guards.
+fn eku_list(attr: &Attribute) -> Option<Vec<ObjectIdentifier>> {
+    let wrapped = attr.values.iter().next()?.decode_as::<OctetString>().ok()?;
+    Vec::<ObjectIdentifier>::from_der(wrapped.as_bytes()).ok()
 }
 
 /// A Windows `FILETIME` -- 100-nanosecond ticks since 1601 -- as Unix seconds. `None` for a zero
@@ -776,6 +794,7 @@ mod tests {
         let e = Entry {
             thumbprint: vec![0xcd, 0xd4, 0xee, 0xae],
             ekus: vec![EKU_SERVER_AUTH],
+            disallowed_ekus: vec![],
             friendly_name: None,
             disallowed_after: None,
         };
@@ -783,6 +802,20 @@ mod tests {
         assert!(e.url().ends_with("/CDD4EEAE.crt"));
         assert!(e.grants(EKU_SERVER_AUTH));
         assert!(!e.grants(EKU_EMAIL_PROTECTION));
+    }
+
+    /// A withdrawn purpose wins over a granted one, as it does for ANCERT Certificados CGN V2.
+    #[test]
+    fn a_disallowed_eku_overrides_the_grant() {
+        let e = Entry {
+            thumbprint: vec![0x7e, 0xb1, 0xa0, 0x42],
+            ekus: vec![EKU_SERVER_AUTH, EKU_EMAIL_PROTECTION],
+            disallowed_ekus: vec![EKU_SERVER_AUTH],
+            friendly_name: None,
+            disallowed_after: None,
+        };
+        assert!(!e.grants(EKU_SERVER_AUTH));
+        assert!(e.grants(EKU_EMAIL_PROTECTION));
     }
 
     /// The name is decoration; mangled text would travel into file names and a store's labels.
@@ -802,6 +835,7 @@ mod tests {
             entries: vec![Entry {
                 thumbprint: vec![0u8; 20],
                 ekus: vec![],
+                disallowed_ekus: vec![],
                 friendly_name: Some("not what was asked for".to_string()),
                 disallowed_after: None,
             }],

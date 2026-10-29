@@ -13,9 +13,16 @@
 //! conditional GET authrootstl.cab
 //!   304                          -> nothing to do; the committed copy is current
 //!   200, same sequenceNumber     -> nothing to do; the CDN re-served the same list
-//!   200, changed                 -> fetch every listed certificate, verify each thumbprint,
-//!                                   rewrite roots/ and src/env_*.rs wholesale
+//!   200, older than committed    -> refused, nothing written: a stale mirror or a replay
+//!   200, newer                   -> fetch every listed certificate, verify each thumbprint,
+//!                                   rewrite roots/ and src/env_*.rs wholesale, and commit the
+//!                                   cabinet as inputs/authrootstl.cab
 //! ```
+//!
+//! **The committed cabinet is the reference.** A fetched list is compared with the list inside
+//! `inputs/authrootstl.cab`, the one the committed store was generated from. Its signature does
+//! not settle the question, because an older list is validly signed as of its own `thisUpdate`, so
+//! a lower `sequenceNumber` or an earlier `thisUpdate` than the committed list's is refused.
 //!
 //! Two staleness checks rather than one, because they fail differently: `Last-Modified` is a
 //! property of the transfer and can move without the material changing, while the list's own
@@ -26,6 +33,7 @@
 //! says which entry and why. Without that rule one bad morning of DNS would empty the store, and
 //! the diff would look like Microsoft had dropped three hundred roots.
 
+use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
@@ -44,6 +52,10 @@ use crate::adapters::authroot::{self, Ctl, Options};
 /// writes here -- these files are the one part of the crate a regeneration cannot touch, the same
 /// footing the hand-carried DoD interoperability roots sit on.
 const ANCHORS_DIR: &str = "inputs";
+
+/// The cabinet the committed store was generated from, as it was fetched. A refresh measures a
+/// fetched list against the list inside it.
+const COMMITTED_CAB: &str = "inputs/authrootstl.cab";
 
 /// One generated environment: a name, and the purpose it filters the program by.
 pub struct Env {
@@ -170,21 +182,13 @@ fn refresh(published_at: &str, envs: &[Env]) -> Result<Outcome> {
             })
         }
     }
-    let members = match crate::cab::members(&cab) {
-        Ok(members) => members,
+    let stl = match stl_from_cab(&cab) {
+        Ok(stl) => stl,
         Err(e) => {
             return Ok(Outcome::Kept {
-                why: format!("the cabinet fetched from {published_at} did not unpack: {e:#}"),
+                why: format!("the cabinet fetched from {published_at}: {e:#}"),
             })
         }
-    };
-    let Some(stl) = members
-        .into_iter()
-        .find(|m| m.name.eq_ignore_ascii_case(authroot::STL_MEMBER))
-    else {
-        return Ok(Outcome::Kept {
-            why: format!("the cabinet holds no {}", authroot::STL_MEMBER),
-        });
     };
     // The only signature in this chain of custody. Everything below trusts the list because of
     // this call, so a failure keeps what is committed rather than proceeding with unverified
@@ -198,13 +202,13 @@ fn refresh(published_at: &str, envs: &[Env]) -> Result<Outcome> {
         }
     };
     let borrowed: Vec<&[u8]> = anchors.iter().map(Vec::as_slice).collect();
-    if let Err(e) = authroot::verify_stl(&stl.bytes, &borrowed) {
+    if let Err(e) = authroot::verify_stl(&stl, &borrowed) {
         return Ok(Outcome::Kept {
             why: format!("{} was refused: {e:#}", authroot::STL_MEMBER),
         });
     }
 
-    let ctl = match authroot::parse_stl(&stl.bytes) {
+    let ctl = match authroot::parse_stl(&stl) {
         Ok(ctl) => ctl,
         Err(e) => {
             return Ok(Outcome::Kept {
@@ -213,15 +217,57 @@ fn refresh(published_at: &str, envs: &[Env]) -> Result<Outcome> {
         }
     };
 
-    // The publisher's own version, which is what decides. A `Last-Modified` that moved while the
-    // sequence number did not means the CDN re-served the same list.
-    let committed = read_provenance("sequence_number.txt");
-    if committed.is_some() && committed == ctl.sequence_number {
-        write_provenance("last_modified.txt", last_modified.as_deref())?;
-        return Ok(Outcome::Unchanged(format!(
-            "sequence number {} is the committed one",
-            committed.unwrap_or_default()
-        )));
+    // The publisher's own version, which is what decides, measured against the list committed
+    // with the store. A `Last-Modified` that moved while the sequence number did not means the CDN
+    // re-served the same list. Before a cabinet is committed, the recorded sequence number is all
+    // there is to compare with, and it can say only "the same" or "different".
+    match committed_ctl() {
+        Err(e) => {
+            return Ok(Outcome::Kept {
+                why: format!("{COMMITTED_CAB} could not be read: {e:#}"),
+            })
+        }
+        Ok(Some(have)) => {
+            if let (Some(got), Some(had)) = (&ctl.sequence_number, &have.sequence_number) {
+                match sequence_order(got, had) {
+                    Ordering::Less => {
+                        return Ok(Outcome::Kept {
+                            why: format!(
+                                "the list served has sequence number {got}, lower than the \
+                                 committed {had}; that is a stale mirror or a replay, not an \
+                                 update"
+                            ),
+                        })
+                    }
+                    Ordering::Equal => {
+                        write_provenance("last_modified.txt", last_modified.as_deref())?;
+                        return Ok(Outcome::Unchanged(format!(
+                            "sequence number {got} is the committed one"
+                        )));
+                    }
+                    Ordering::Greater => {}
+                }
+            }
+            if ctl.published < have.published {
+                return Ok(Outcome::Kept {
+                    why: format!(
+                        "the list served is published {}, before the committed {}; that is a \
+                         stale mirror or a replay, not an update",
+                        ctl.published, have.published
+                    ),
+                });
+            }
+        }
+        Ok(None) => {
+            let committed = read_provenance("sequence_number.txt");
+            if committed.is_some() && committed == ctl.sequence_number {
+                write_provenance("last_modified.txt", last_modified.as_deref())?;
+                return Ok(Outcome::Unchanged(format!(
+                    "sequence number {} is the committed one",
+                    committed.unwrap_or_default()
+                )));
+            }
+        }
     }
 
     let (fetched, absent, unreachable) = authroot::fetch_certificates(&ctl.entries);
@@ -244,6 +290,8 @@ fn refresh(published_at: &str, envs: &[Env]) -> Result<Outcome> {
     }
 
     let carried = write_material(&ctl, &fetched, envs)?;
+    fs::write(COMMITTED_CAB, &cab)
+        .with_context(|| format!("{COMMITTED_CAB} could not be written"))?;
     write_provenance("published.txt", Some(&ctl.published))?;
     write_provenance("collected.txt", Some(&crate::provider::today()))?;
     write_provenance("sequence_number.txt", ctl.sequence_number.as_deref())?;
@@ -261,7 +309,9 @@ fn refresh(published_at: &str, envs: &[Env]) -> Result<Outcome> {
 /// That is the same thing the InstallRoot providers do, and it is what makes the claim "everything
 /// here came from this fetch" true rather than nearly true.
 fn write_material(ctl: &Ctl, fetched: &[(Vec<u8>, Vec<u8>)], envs: &[Env]) -> Result<usize> {
-    let now = now_unix();
+    // Expired and disallowed are judged as of the list's own publication date rather than now, as
+    // the TPM store is, so the store is a function of the list alone.
+    let as_of = crate::core::published_as_time_of_interest(&ctl.published)?.as_unix_secs();
     let roots = Path::new("roots");
     if roots.exists() {
         fs::remove_dir_all(roots).context("roots/ could not be emptied")?;
@@ -277,7 +327,14 @@ fn write_material(ctl: &Ctl, fetched: &[(Vec<u8>, Vec<u8>)], envs: &[Env]) -> Re
             ),
             None => None,
         };
-        let (inputs, missing) = authroot::build(ctl, fetched, &Options { eku, now_unix: now })?;
+        let (inputs, missing) = authroot::build(
+            ctl,
+            fetched,
+            &Options {
+                eku,
+                now_unix: as_of,
+            },
+        )?;
         if !missing.is_empty() {
             bail!(
                 "{}: {} entries produced nothing: {missing:?}",
@@ -411,9 +468,50 @@ fn write_provenance(name: &str, value: Option<&str>) -> Result<()> {
         .with_context(|| format!("provenance/{name} could not be written"))
 }
 
-fn now_unix() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or_default()
+/// `authroot.stl` out of a cabinet.
+fn stl_from_cab(cab: &[u8]) -> Result<Vec<u8>> {
+    let members = crate::cab::members(cab).context("the cabinet did not unpack")?;
+    members
+        .into_iter()
+        .find(|m| m.name.eq_ignore_ascii_case(authroot::STL_MEMBER))
+        .map(|m| m.bytes)
+        .ok_or_else(|| anyhow!("the cabinet holds no {}", authroot::STL_MEMBER))
+}
+
+/// The list inside the committed cabinet, or `None` before one has been committed. Its signature
+/// was verified when it was fetched, and this reads it only for its version.
+fn committed_ctl() -> Result<Option<Ctl>> {
+    let cab = match fs::read(COMMITTED_CAB) {
+        Ok(cab) => cab,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e).context("unreadable"),
+    };
+    Ok(Some(authroot::parse_stl(&stl_from_cab(&cab)?)?))
+}
+
+/// Order two sequence numbers, written as uppercase hex the way [`Ctl::sequence_number`] is.
+/// Compared as numbers: leading zeros are ignored, and a longer number is the larger.
+fn sequence_order(a: &str, b: &str) -> Ordering {
+    let a = a.trim_start_matches('0');
+    let b = b.trim_start_matches('0');
+    a.len().cmp(&b.len()).then_with(|| a.cmp(b))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sequence_numbers_compare_as_numbers() {
+        assert_eq!(
+            sequence_order("1401DD3462C779AEC7", "1401DD3462C779AEC7"),
+            Ordering::Equal
+        );
+        assert_eq!(
+            sequence_order("1401DD3462C779AEC8", "1401DD3462C779AEC7"),
+            Ordering::Greater
+        );
+        assert_eq!(sequence_order("FF", "0100"), Ordering::Less);
+        assert_eq!(sequence_order("00FF", "FF"), Ordering::Equal);
+    }
 }

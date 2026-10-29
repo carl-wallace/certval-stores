@@ -306,7 +306,7 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_core"
-version = "0.1.0"
+version = "0.1.0-rc.1"
 dependencies = [
  "certval",
  "certval_stores_core",
@@ -315,6 +315,7 @@ dependencies = [
  "certval_stores_msft",
  "certval_stores_nipr",
  "certval_stores_pbdev",
+ "certval_stores_provider_core",
  "certval_stores_tpm",
  "certval_stores_wcf",
  "ciborium",
@@ -327,28 +328,31 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_eca"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
+ "certval_stores_provider_core",
 ]
 
 [[package]]
 name = "certval_stores_fpki"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
+ "certval_stores_provider_core",
 ]
 
 [[package]]
 name = "certval_stores_msft"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval_stores_core",
+ "certval_stores_provider_core",
  "der",
  "sha1",
  "x509-cert",
@@ -356,48 +360,57 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_nipr"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
+ "certval_stores_provider_core",
 ]
 
 [[package]]
 name = "certval_stores_pbdev"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
+ "certval_stores_provider_core",
 ]
 
 [[package]]
+name = "certval_stores_provider_core"
+version = "1.0.0-rc.1"
+
+[[package]]
 name = "certval_stores_tpm"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
+ "certval_stores_provider_core",
  "tokio",
  "tpm_cab_verify",
 ]
 
 [[package]]
 name = "certval_stores_wcf"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval-store-gen",
  "certval_stores_core",
+ "certval_stores_provider_core",
 ]
 
 [[package]]
 name = "certval_stores_webpki_root_certs"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval_stores_core",
+ "certval_stores_provider_core",
  "webpki-root-certs",
 ]
 
@@ -631,9 +644,9 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
 name = "crypto-bigint"
-version = "0.7.5"
+version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a52aa3fcda4e6302a9f48734f234d35d4721b96f8fe07d073f07ce9df4f0271"
+checksum = "9c035cb64cba03dad2fb921f3e218785e8cf9a41790da5eb3a1400f62fa2be11"
 dependencies = [
  "cpubits",
  "ctutils",
@@ -688,9 +701,9 @@ dependencies = [
 
 [[package]]
 name = "ctutils"
-version = "0.4.2"
+version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d5515a3834141de9eafb9717ad39eea8247b5674e6066c404e8c4b365d2a29e"
+checksum = "fe3e9d21d39e6f39ff46e03d5b621424f88ee23d8a1672c6bfc9ccc7f2da4f6a"
 dependencies = [
  "cmov",
  "subtle",
@@ -1543,9 +1556,6 @@ name = "log"
 version = "0.4.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
-dependencies = [
- "serde_core",
-]
 
 [[package]]
 name = "lru-slab"
@@ -2994,9 +3004,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-root-certs"
-version = "1.0.9"
+version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b96554aa2acc8ccdb7e1c9a58a7a68dd5d13bccc69cd124cb09406db612a1c9b"
+checksum = "e49d0e65abc00c142e8f9428da991da9f1a250c39be97459901eb12b9b49f62a"
 dependencies = [
  "rustls-pki-types",
 ]

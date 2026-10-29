@@ -1,11 +1,21 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
-use certval_stores_core::{StoreEntry, TrustStoreProvider};
+#[cfg(any(
+    feature = "msft_all",
+    feature = "msft_tls",
+    feature = "msft_client_auth",
+    feature = "msft_email",
+    feature = "msft_code_signing",
+    feature = "msft_timestamping"
+))]
+use certval_stores_provider_core::Date;
+use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 // One generated index per environment, each an `include_bytes!` list over the shared `roots/`
 // directory. Generated rather than hand-written, unlike every other provider in this family: at
-// 357 certificates across six overlapping views, a hand-kept list would be six places for the
-// same root to be forgotten. What keeps that honest is that the generator writes all of it from
+// hundreds of certificates across six overlapping views, a hand-kept list would be six places for
+// the same root to be forgotten. What keeps that honest is that the generator writes all of it from
 // one signed list, and `roots/` holds each certificate exactly once.
 #[cfg(feature = "msft_all")]
 mod env_all;
@@ -34,7 +44,8 @@ mod env_tls;
     feature = "msft_code_signing",
     feature = "msft_timestamping"
 ))]
-const PUBLISHED: &str = include_str!("../provenance/published.txt").trim_ascii_end();
+const PUBLISHED: Date = Date::parse(include_str!("../provenance/published.txt").trim_ascii_end())
+    .expect("provenance/published.txt is not a YYYY-MM-DD date");
 #[cfg(any(
     feature = "msft_all",
     feature = "msft_tls",
@@ -43,10 +54,10 @@ const PUBLISHED: &str = include_str!("../provenance/published.txt").trim_ascii_e
     feature = "msft_code_signing",
     feature = "msft_timestamping"
 ))]
-const COLLECTED: &str = include_str!("../provenance/collected.txt").trim_ascii_end();
+const COLLECTED: Date = Date::parse(include_str!("../provenance/collected.txt").trim_ascii_end())
+    .expect("provenance/collected.txt is not a YYYY-MM-DD date");
 
-/// Trust-store provider for the Microsoft root program.
-pub struct MsftStores;
+struct MsftStores;
 
 /// Store id for every root in the program. Pass this rather than a literal: the parameter is a
 /// `&str`, so a stale spelling compiles and fails at run time.
@@ -82,68 +93,64 @@ impl TrustStoreProvider for MsftStores {
         // else. There are no intermediates to carry and so no partial paths to precompute, which
         // is what a consumer needs to know before selecting one of these to validate a chain.
         #[cfg(feature = "msft_all")]
-        entries.push(StoreEntry {
-            id: MSFT_ALL,
-            label: "Microsoft Root Program",
-            roots: env_all::ROOTS,
-            cert_store_cbor: None,
-            published: Some(PUBLISHED),
-            collected: Some(COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(MSFT_ALL, "Microsoft Root Program", env_all::ROOTS)
+                .with_published(PUBLISHED)
+                .with_collected(COLLECTED),
+        );
         #[cfg(feature = "msft_tls")]
-        entries.push(StoreEntry {
-            id: MSFT_TLS,
-            label: "Microsoft Root Program (TLS)",
-            roots: env_tls::ROOTS,
-            cert_store_cbor: None,
-            published: Some(PUBLISHED),
-            collected: Some(COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(MSFT_TLS, "Microsoft Root Program (TLS)", env_tls::ROOTS)
+                .with_published(PUBLISHED)
+                .with_collected(COLLECTED),
+        );
         #[cfg(feature = "msft_client_auth")]
-        entries.push(StoreEntry {
-            id: MSFT_CLIENT_AUTH,
-            label: "Microsoft Root Program (client authentication)",
-            roots: env_client_auth::ROOTS,
-            cert_store_cbor: None,
-            published: Some(PUBLISHED),
-            collected: Some(COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(
+                MSFT_CLIENT_AUTH,
+                "Microsoft Root Program (client authentication)",
+                env_client_auth::ROOTS,
+            )
+            .with_published(PUBLISHED)
+            .with_collected(COLLECTED),
+        );
         #[cfg(feature = "msft_email")]
-        entries.push(StoreEntry {
-            id: MSFT_EMAIL,
-            label: "Microsoft Root Program (S/MIME)",
-            roots: env_email::ROOTS,
-            cert_store_cbor: None,
-            published: Some(PUBLISHED),
-            collected: Some(COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(
+                MSFT_EMAIL,
+                "Microsoft Root Program (S/MIME)",
+                env_email::ROOTS,
+            )
+            .with_published(PUBLISHED)
+            .with_collected(COLLECTED),
+        );
         #[cfg(feature = "msft_code_signing")]
-        entries.push(StoreEntry {
-            id: MSFT_CODE_SIGNING,
-            label: "Microsoft Root Program (code signing)",
-            roots: env_code_signing::ROOTS,
-            cert_store_cbor: None,
-            published: Some(PUBLISHED),
-            collected: Some(COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(
+                MSFT_CODE_SIGNING,
+                "Microsoft Root Program (code signing)",
+                env_code_signing::ROOTS,
+            )
+            .with_published(PUBLISHED)
+            .with_collected(COLLECTED),
+        );
         #[cfg(feature = "msft_timestamping")]
-        entries.push(StoreEntry {
-            id: MSFT_TIMESTAMPING,
-            label: "Microsoft Root Program (timestamping)",
-            roots: env_timestamping::ROOTS,
-            cert_store_cbor: None,
-            published: Some(PUBLISHED),
-            collected: Some(COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(
+                MSFT_TIMESTAMPING,
+                "Microsoft Root Program (timestamping)",
+                env_timestamping::ROOTS,
+            )
+            .with_published(PUBLISHED)
+            .with_collected(COLLECTED),
+        );
         entries
     }
 }
 
-/// The provider instance.
-pub static PROVIDER: MsftStores = MsftStores;
-
-/// Convenience accessor returning the provider as a trait object, for adding to a provider list
-/// passed to `certval_stores_core`.
+/// The trust-store provider for the Microsoft root program.
+///
+/// Add it to the list of providers passed to `certval_stores_core`.
 pub fn provider() -> &'static dyn TrustStoreProvider {
-    &PROVIDER
+    &MsftStores
 }

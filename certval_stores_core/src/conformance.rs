@@ -36,7 +36,7 @@ use certval::{
     PDVTrustAnchorChoice, PkiEnvironment, TaSource, TimeOfInterest,
 };
 
-#[cfg(feature = "reqwest-client")]
+#[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
 use crate::get_reqwest_client;
 use crate::{prepare_certval_environment, StoreEntry, TrustStoreProvider};
 
@@ -146,28 +146,10 @@ pub fn check_entry_shape(provider: &dyn TrustStoreProvider) -> Vec<String> {
                 }
             }
         }
-        // The dates are shown to a user as a statement about how current the material
-        // is, so a malformed one is worse than none: it reads as an answer. Both are
-        // written by the generator into files the provider `include_str!`s, which is
-        // where a stray newline or a half-finished hand edit would arrive from.
-        for (what, value) in [
-            ("published", entry.published),
-            ("collected", entry.collected),
-        ] {
-            let Some(value) = value else {
-                continue;
-            };
-            if !is_iso_date(value) {
-                failures.push(format!(
-                    "entry {id:?} {what} date {value:?} is not an ISO 8601 calendar date (YYYY-MM-DD)"
-                ));
-            }
-        }
-        // Lexicographic comparison is a date comparison for this format, which is most
-        // of why the format is required above. Collecting material before its publisher
-        // published it is not a thing that happened, so one of the two is wrong.
+        // Collecting material before its publisher published it is not a thing that
+        // happened, so one of the two dates is wrong, or they were swapped.
         if let (Some(published), Some(collected)) = (entry.published, entry.collected) {
-            if is_iso_date(published) && is_iso_date(collected) && published > collected {
+            if published > collected {
                 failures.push(format!(
                     "entry {id:?} says it was published {published} and collected {collected}, which is before it existed"
                 ));
@@ -177,31 +159,9 @@ pub fn check_entry_shape(provider: &dyn TrustStoreProvider) -> Vec<String> {
     failures
 }
 
-/// Whether `value` is a `YYYY-MM-DD` calendar date.
-///
-/// Syntax and range only: this rejects `2026-13-01` and `2026-08-32`, and accepts
-/// `2026-02-31`, which no publisher emits and which nothing here would do anything
-/// different about. A full calendar is not worth carrying to check a date a human
-/// reads.
-fn is_iso_date(value: &str) -> bool {
-    let bytes = value.as_bytes();
-    if bytes.len() != 10 || bytes[4] != b'-' || bytes[7] != b'-' {
-        return false;
-    }
-    if !bytes
-        .iter()
-        .enumerate()
-        .all(|(i, b)| i == 4 || i == 7 || b.is_ascii_digit())
-    {
-        return false;
-    }
-    let part = |from: usize, to: usize| value[from..to].parse::<u32>().unwrap_or(0);
-    (1..=12).contains(&part(5, 7)) && (1..=31).contains(&part(8, 10))
-}
-
 /// Check that every trust anchor parses as an x509-cert `Certificate` (the
-/// certval path-building leg) and, under the `reqwest-client` feature, as a
-/// `reqwest::Certificate` (the TLS leg).
+/// certval path-building leg) and, under either client feature (`reqwest-rustls`
+/// or `reqwest-native`), as a `reqwest::Certificate` (the TLS leg).
 ///
 /// The reqwest leg is load-bearing where it applies: [`get_reqwest_client`] logs
 /// and continues when a root fails to parse, so an unparseable root silently
@@ -228,7 +188,7 @@ pub fn check_roots_parse(provider: &dyn TrustStoreProvider) -> Vec<String> {
                     // and so is the buffer itself. A certificate carried inside a
                     // `taInfo` is not what reqwest is being handed, and rejecting
                     // it here would fail a store for a shape the contract admits.
-                    #[cfg(feature = "reqwest-client")]
+                    #[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
                     if let Ok(_cert) = parse_cert(root, id) {
                         let label = get_leaf_rdn(_cert.decoded().tbs_certificate().subject());
                         if reqwest::Certificate::from_der(root).is_err() {
@@ -257,7 +217,7 @@ pub fn check_roots_parse(provider: &dyn TrustStoreProvider) -> Vec<String> {
         // it exists for: a store whose anchors are well-formed and carry no
         // certificate. Anchors that failed to decode are already reported once
         // each above, and saying it again adds nothing.
-        #[cfg(feature = "reqwest-client")]
+        #[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
         if decoded > 0 && with_certificate == 0 {
             failures.push(format!(
                 "entry {id:?} has no anchor carrying a certificate, so a TLS client configured from it would trust nothing"
@@ -711,22 +671,28 @@ pub fn check_prepare_environment(provider: &dyn TrustStoreProvider) -> Vec<Strin
 
 /// Check that a `reqwest` client can be built from the provider's anchors.
 ///
-/// Only meaningful under the `reqwest-client` feature; without it there is no
+/// Only meaningful under a client feature (`reqwest-rustls` or `reqwest-native`); without it there is no
 /// client to build and this reports nothing.
 ///
 /// Backend selection is left to the caller elsewhere in this crate; this uses a
 /// default builder so the check exercises anchor installation rather than the
 /// TLS backend the host happens to have compiled in.
 pub fn check_client_builds(provider: &dyn TrustStoreProvider) -> Vec<String> {
-    #[cfg(not(feature = "reqwest-client"))]
+    #[cfg(not(any(feature = "reqwest-rustls", feature = "reqwest-native")))]
     {
         let _ = provider;
         vec![]
     }
-    #[cfg(feature = "reqwest-client")]
+    #[cfg(any(feature = "reqwest-rustls", feature = "reqwest-native"))]
     {
+        // Every store the provider returns; with none, there is no client to build.
+        let entries = provider.entries();
+        if entries.is_empty() {
+            return vec![];
+        }
+        let ids: Vec<&str> = entries.iter().map(|entry| entry.id).collect();
         let providers: [&dyn TrustStoreProvider; 1] = [provider];
-        match get_reqwest_client(&providers, reqwest::Client::builder(), None) {
+        match get_reqwest_client(&providers, &ids, reqwest::Client::builder(), None) {
             Ok(_) => vec![],
             Err(e) => vec![format!("failed to build a reqwest client: {e:?}")],
         }
@@ -1178,16 +1144,17 @@ fn rewrite_pin(source: &str, name: &str, literal: &str) -> Result<String, String
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Date;
 
     /// A provider assembled from whatever entries a test hands it.
-    struct Fake(Box<dyn Fn() -> Vec<StoreEntry>>);
+    struct Fake(Box<dyn Fn() -> Vec<StoreEntry> + Send + Sync>);
     impl TrustStoreProvider for Fake {
         fn entries(&self) -> Vec<StoreEntry> {
             (self.0)()
         }
     }
 
-    fn fake(entries: impl Fn() -> Vec<StoreEntry> + 'static) -> Fake {
+    fn fake(entries: impl Fn() -> Vec<StoreEntry> + Send + Sync + 'static) -> Fake {
         Fake(Box::new(entries))
     }
 
@@ -1222,30 +1189,9 @@ mod tests {
     fn entry_shape_catches_missing_and_empty_anchors() {
         let failures = check_entry_shape(&fake(|| {
             vec![
-                StoreEntry {
-                    id: "nipr",
-                    label: "Test",
-                    roots: NO_ROOTS,
-                    cert_store_cbor: None,
-                    published: None,
-                    collected: None,
-                },
-                StoreEntry {
-                    id: "dev",
-                    label: "Test",
-                    roots: EMPTY_ROOT,
-                    cert_store_cbor: None,
-                    published: None,
-                    collected: None,
-                },
-                StoreEntry {
-                    id: "dev_2",
-                    label: "Test",
-                    roots: EMPTY_ROOT,
-                    cert_store_cbor: None,
-                    published: None,
-                    collected: None,
-                },
+                StoreEntry::new("nipr", "Test", NO_ROOTS),
+                StoreEntry::new("dev", "Test", EMPTY_ROOT),
+                StoreEntry::new("dev_2", "Test", EMPTY_ROOT),
             ]
         }));
         assert_eq!(failures.len(), 3, "{failures:#?}");
@@ -1255,26 +1201,8 @@ mod tests {
     /// the id -- which is the case a per-provider check cannot see.
     #[test]
     fn two_providers_claiming_one_id_are_reported() {
-        let one = fake(|| {
-            vec![StoreEntry {
-                id: "dod_nipr_prod",
-                label: "Test",
-                roots: ROOTS_ONE_BAD,
-                cert_store_cbor: None,
-                published: None,
-                collected: None,
-            }]
-        });
-        let two = fake(|| {
-            vec![StoreEntry {
-                id: "dod_nipr_prod",
-                label: "Test",
-                roots: ROOTS_ONE_BAD,
-                cert_store_cbor: None,
-                published: None,
-                collected: None,
-            }]
-        });
+        let one = fake(|| vec![StoreEntry::new("dod_nipr_prod", "Test", ROOTS_ONE_BAD)]);
+        let two = fake(|| vec![StoreEntry::new("dod_nipr_prod", "Test", ROOTS_ONE_BAD)]);
         let failures = check_providers_compose(&[&one, &two]);
         assert_eq!(failures.len(), 1, "{failures:#?}");
         assert!(failures[0].contains("both claim id"), "{failures:#?}");
@@ -1287,40 +1215,12 @@ mod tests {
     fn entry_shape_catches_unusable_identifiers() {
         let failures = check_entry_shape(&fake(|| {
             vec![
-                StoreEntry {
-                    // Reads fine to a person and survives nothing else: a space in a
-                    // URL path, a capital in a case-sensitive lookup.
-                    id: "DoD NIPR",
-                    label: "Test",
-                    roots: ROOTS_ONE_BAD,
-                    cert_store_cbor: None,
-                    published: None,
-                    collected: None,
-                },
-                StoreEntry {
-                    id: " dev",
-                    label: "Test",
-                    roots: ROOTS_ONE_BAD,
-                    cert_store_cbor: None,
-                    published: None,
-                    collected: None,
-                },
-                StoreEntry {
-                    id: "dev",
-                    label: "",
-                    roots: ROOTS_ONE_BAD,
-                    cert_store_cbor: None,
-                    published: None,
-                    collected: None,
-                },
-                StoreEntry {
-                    id: "dev",
-                    label: "Test",
-                    roots: ROOTS_ONE_BAD,
-                    cert_store_cbor: None,
-                    published: None,
-                    collected: None,
-                },
+                // Reads fine to a person and survives nothing else: a space in a
+                // URL path, a capital in a case-sensitive lookup.
+                StoreEntry::new("DoD NIPR", "Test", ROOTS_ONE_BAD),
+                StoreEntry::new(" dev", "Test", ROOTS_ONE_BAD),
+                StoreEntry::new("dev", "", ROOTS_ONE_BAD),
+                StoreEntry::new("dev", "Test", ROOTS_ONE_BAD),
             ]
         }));
         assert_eq!(failures.len(), 4, "{failures:#?}");
@@ -1344,37 +1244,17 @@ mod tests {
         );
     }
 
-    /// `ROOTS_ONE_BAD` so neither entry trips the anchor checks: what is under test
-    /// is the dates alone, and a third failure here would mean something else fired.
+    /// `ROOTS_ONE_BAD` so the entry trips none of the anchor checks: what is under
+    /// test is the dates alone, and a second failure here would mean something else
+    /// fired.
     #[test]
-    fn a_malformed_date_and_one_collected_before_it_was_published_are_reported() {
+    fn an_entry_collected_before_it_was_published_is_reported() {
         let failures = check_entry_shape(&fake(|| {
-            vec![
-                StoreEntry {
-                    id: "dev",
-                    label: "Test",
-                    roots: ROOTS_ONE_BAD,
-                    cert_store_cbor: None,
-                    // The trailing newline an `include_str!` of a generated file brings
-                    // with it when nothing trims it.
-                    published: Some("2026-08-13\n"),
-                    collected: None,
-                },
-                StoreEntry {
-                    id: "nipr",
-                    label: "Test",
-                    roots: ROOTS_ONE_BAD,
-                    cert_store_cbor: None,
-                    published: Some("2026-09-11"),
-                    collected: Some("2026-06-12"),
-                },
-            ]
+            vec![StoreEntry::new("nipr", "Test", ROOTS_ONE_BAD)
+                .with_published(Date::parse("2026-09-11").unwrap())
+                .with_collected(Date::parse("2026-06-12").unwrap())]
         }));
-        assert_eq!(failures.len(), 2, "{failures:#?}");
-        assert!(
-            failures.iter().any(|f| f.contains("ISO 8601")),
-            "{failures:#?}"
-        );
+        assert_eq!(failures.len(), 1, "{failures:#?}");
         assert!(
             failures.iter().any(|f| f.contains("before it existed")),
             "{failures:#?}"
@@ -1384,14 +1264,7 @@ mod tests {
     #[test]
     fn roots_that_do_not_parse_are_reported() {
         let failures = check_roots_parse(&fake(|| {
-            vec![StoreEntry {
-                id: "dev",
-                label: "Test",
-                roots: ROOTS_ONE_BAD,
-                cert_store_cbor: None,
-                published: None,
-                collected: None,
-            }]
+            vec![StoreEntry::new("dev", "Test", ROOTS_ONE_BAD)]
         }));
         assert_eq!(failures.len(), 1, "{failures:#?}");
     }
@@ -1399,14 +1272,7 @@ mod tests {
     #[test]
     fn a_root_included_twice_is_reported() {
         let failures = check_roots_parse(&fake(|| {
-            vec![StoreEntry {
-                id: "dev",
-                label: "Test",
-                roots: DUPLICATE_ROOTS,
-                cert_store_cbor: None,
-                published: None,
-                collected: None,
-            }]
+            vec![StoreEntry::new("dev", "Test", DUPLICATE_ROOTS)]
         }));
         // One parse failure per copy, plus the duplication itself.
         assert_eq!(failures.len(), 3, "{failures:#?}");
@@ -1415,14 +1281,7 @@ mod tests {
     #[test]
     fn a_corrupt_cert_store_is_reported() {
         let failures = check_cert_stores_load(&fake(|| {
-            vec![StoreEntry {
-                id: "dev",
-                label: "Test",
-                roots: NO_ROOTS,
-                cert_store_cbor: Some(b"\x00truncated"),
-                published: None,
-                collected: None,
-            }]
+            vec![StoreEntry::new("dev", "Test", NO_ROOTS).with_cert_store_cbor(b"\x00truncated")]
         }));
         assert_eq!(failures.len(), 1, "{failures:#?}");
     }
@@ -1433,14 +1292,7 @@ mod tests {
     fn a_store_carrying_no_serialized_paths_is_reported() {
         let cbor = store(vec![buffer("orphan.der")], vec![]);
         let failures = check_partial_paths(&fake(move || {
-            vec![StoreEntry {
-                id: "dev",
-                label: "Test",
-                roots: NO_ROOTS,
-                cert_store_cbor: Some(cbor),
-                published: None,
-                collected: None,
-            }]
+            vec![StoreEntry::new("dev", "Test", NO_ROOTS).with_cert_store_cbor(cbor)]
         }));
         assert_eq!(failures.len(), 1, "{failures:#?}");
         assert!(
@@ -1461,14 +1313,7 @@ mod tests {
         )])];
         let cbor = store(vec![buffer("covered.der"), buffer("orphan.der")], paths);
         let failures = check_partial_paths(&fake(move || {
-            vec![StoreEntry {
-                id: "dev",
-                label: "Test",
-                roots: NO_ROOTS,
-                cert_store_cbor: Some(cbor),
-                published: None,
-                collected: None,
-            }]
+            vec![StoreEntry::new("dev", "Test", NO_ROOTS).with_cert_store_cbor(cbor)]
         }));
         assert_eq!(failures.len(), 2, "{failures:#?}");
         assert!(
@@ -1493,14 +1338,7 @@ mod tests {
         let paths = vec![BTreeMap::from([("SKID".to_string(), vec![vec![0, 1]])])];
         let cbor = store(vec![buffer("a.der"), buffer("b.der")], paths);
         let failures = check_partial_paths(&fake(move || {
-            vec![StoreEntry {
-                id: "dev",
-                label: "Test",
-                roots: NO_ROOTS,
-                cert_store_cbor: Some(cbor),
-                published: None,
-                collected: None,
-            }]
+            vec![StoreEntry::new("dev", "Test", NO_ROOTS).with_cert_store_cbor(cbor)]
         }));
         assert_eq!(failures.len(), 1, "{failures:#?}");
         assert!(

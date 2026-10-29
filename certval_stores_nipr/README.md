@@ -5,25 +5,26 @@ NIPR (DoD PKI) trust stores for certval — the production and operational-test
 
 ## What this crate carries
 
-| Feature | Env | Anchors | CA store |
-|---------|-----|---------|----------|
-| `nipr` | `NIPR` | 4 — DoD Root CA 3, 4, 5, 6 | 41 intermediates, 41 partial paths |
-| `om_nipr` | `OM_NIPR` | 4 — DoD JITC Root CA 3, 4, 5, 6 | 53 intermediates, 53 partial paths |
+| Feature | Constant (id) | Anchors | CA store |
+|---------|---------------|---------|----------|
+| `nipr` | `NIPR_PROD` (`dod_nipr_prod`) | DoD Root CA 3, 4, 5, 6 | intermediates and partial paths |
+| `om_nipr` | `NIPR_OM` (`dod_nipr_om`) | DoD JITC Root CA 3, 4, 5, 6 | intermediates and partial paths |
+| `nipr_interop` | `NIPR_INTEROP` (`dod_nipr_interop`) | DoD Root CA 3, 4, 5, 6 and DoD Interoperability Root CA 2 | intermediates and partial paths, reaching ECA and the federal mesh |
+| `nipr_cceb_interop` | `NIPR_CCEB_INTEROP` (`dod_nipr_cceb_interop`) | DoD Root CA 3, 4, 5, 6 and US DoD CCEB Interoperability Root CA 2 | intermediates and partial paths, reaching allied national PKIs |
 
-Neither is on by default: the crate's only default feature is `reqwest-client`,
-so a consumer elects the environment(s) it needs. With neither enabled the crate
-builds and its provider yields no entries.
+None is on by default, so a consumer elects the environment(s) it needs. With none
+enabled the crate builds and its provider yields no entries.
 
-| Anchor | Key | Expires | CAs beneath it |
-|--------|-----|---------|----------------|
-| DoD Root CA 3 | RSA 2048, sha256 | 2029-12-30 | 14 |
-| DoD Root CA 4 | ECDSA P-256, sha256 | 2032-07-25 | 0 |
-| DoD Root CA 5 | ECDSA P-384, sha384 | 2041-06-14 | 6 |
-| DoD Root CA 6 | RSA 4096, sha384 | 2053-01-24 | 21 |
-| DoD JITC Root CA 3 | RSA 2048, sha256 | 2029-12-30 | 17 |
-| DoD JITC Root CA 4 | ECDSA P-256, sha256 | 2032-05-31 | 0 |
-| DoD JITC Root CA 5 | ECDSA P-384, sha384 | 2041-05-31 | 7 |
-| DoD JITC Root CA 6 | RSA 4096, sha384 | 2053-01-11 | 29 |
+| Anchor | Key | Expires |
+|--------|-----|---------|
+| DoD Root CA 3 | RSA 2048, sha256 | 2029-12-30 |
+| DoD Root CA 4 | ECDSA P-256, sha256 | 2032-07-25 |
+| DoD Root CA 5 | ECDSA P-384, sha384 | 2041-06-14 |
+| DoD Root CA 6 | RSA 4096, sha384 | 2053-01-24 |
+| DoD JITC Root CA 3 | RSA 2048, sha256 | 2029-12-30 |
+| DoD JITC Root CA 4 | ECDSA P-256, sha256 | 2032-05-31 |
+| DoD JITC Root CA 5 | ECDSA P-384, sha384 | 2041-05-31 |
+| DoD JITC Root CA 6 | RSA 4096, sha384 | 2053-01-11 |
 
 Root CA 4 carries no subordinate CAs in either environment. It is published as an
 anchor and installed as one; whether anything is issued beneath it is the
@@ -110,6 +111,54 @@ of renames. New certificates are named from their common name. The anchors under
 `roots/` are named by the generator throughout, since their `include_bytes!` list
 is rewritten with them.
 
+## Using it
+
+Load a store into a certval `PkiEnvironment` with `certval_stores_core`, naming the store by its
+constant:
+
+```rust
+# #[cfg(feature = "nipr")] {
+use certval::{PkiEnvironment, TaSource};
+use certval_stores_core::prepare_certval_environment;
+
+let mut pe = PkiEnvironment::default();
+pe.populate_5280_pki_environment();
+let mut ta_store = TaSource::new();
+prepare_certval_environment(
+    &[certval_stores_nipr::provider()],
+    &mut pe,
+    &mut ta_store,
+    certval_stores_nipr::NIPR_PROD,
+)?;
+# }
+# Ok::<(), certval::Error>(())
+```
+
+The trust material is embedded as it was committed, and nothing in this package lets you re-check
+where it came from: using it means trusting this crate's publisher, and the review each refresh
+received before it was merged. How the material is obtained and authenticated is described in this
+README and in the repository's
+[MAINTENANCE.md](https://github.com/carl-wallace/certval-stores/blob/main/MAINTENANCE.md).
+
+## Versioning
+
+This crate follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html), and the version
+number also says what changed in the trust material:
+
+- A **patch** release (1.0.0 to 1.0.1) changes intermediate CA certificates, partial paths, or a
+  store's dates or label. No store's trust anchors change.
+- A **minor** release (1.0.x to 1.1.0) adds or removes trust anchors in a store, adds a store, or
+  adds to the API without breaking code that uses it.
+- A **major** release (1.x to 2.0.0) changes the API in a way that breaks code that uses it, for
+  example by removing a store along with its feature and constant.
+
+With an ordinary requirement such as `certval_stores_nipr = "1.0"`, `cargo update` takes every
+1.x release, including a minor release that adds or removes trust anchors. With
+`certval_stores_nipr = "~1.0"`, `cargo update` takes 1.0.1, 1.0.2 and so on, which change only
+intermediate CA certificates, partial paths or dates, and does not take 1.1.0, so the trust anchors
+stay those of 1.0 until the requirement is changed to `~1.1`. Each release's changes are listed in
+`CHANGELOG.md`.
+
 ## Refreshing
 
 A scheduled workflow does it: `.github/workflows/refresh.yml` asks the publisher for each stream,
@@ -162,8 +211,8 @@ pittv3 -b cas/prod/prod.cbor -t roots/prod --list-partial-paths
 pittv3 -b cas/om/om.cbor     -t roots/om   --list-partial-paths
 ```
 
-For the committed material these report `41 certificates yielded: 41 paths with
-1 certificate` and `53 certificates yielded: 53 paths with 1 certificate`. A CA
+Every certificate in each store should yield a path of one certificate: the DoD
+intermediates are issued directly by the roots. A CA
 that appears in no path is unreachable to an offline consumer however
 well-connected it looks — which is why generation disables the time of interest:
 an expired CA that was serialized without a path would be missing from a

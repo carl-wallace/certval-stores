@@ -77,10 +77,15 @@ jobs:
           moved="$(bash .github/scripts/store-diff.sh ${{ matrix.crate }} --features cli,authroot,tpm)"
           # The anchors added, removed or replaced, by subject. Empty when no root moved.
           roots="$(bash .github/scripts/roots-diff.sh ${{ matrix.crate }})"
+          # The version bump this calls for under the crate's Versioning rule, first in the
+          # description, since batched releases take the largest one merged since the last.
+          bump="$(bash .github/scripts/suggested-bump.sh ${{ matrix.crate }})"
           # The tool's own summary leads the description: it states what was carried, what was
           # dropped and what the publisher dated it, which is what a reviewer needs before opening
           # a single certificate. The rest is the review guidance.
           cat > "$RUNNER_TEMP/body.md" <<EOF
+          $bump
+
           $(grep -E 'rewritten|carried|dropped' refresh.log || true)
 
           $moved
@@ -208,7 +213,12 @@ jobs:
           moved="$(bash .github/scripts/store-diff.sh ${{ matrix.crate }} --features cli)"
           # The anchors added, removed or replaced, by subject. Empty when no root moved.
           roots="$(bash .github/scripts/roots-diff.sh ${{ matrix.crate }})"
+          # The version bump this calls for under the crate's Versioning rule, first in the
+          # description, since batched releases take the largest one merged since the last.
+          bump="$(bash .github/scripts/suggested-bump.sh ${{ matrix.crate }})"
           cat > "$RUNNER_TEMP/body.md" <<EOF
+          $bump
+
           $moved
 
           $roots

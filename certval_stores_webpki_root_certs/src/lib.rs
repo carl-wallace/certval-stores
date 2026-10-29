@@ -1,8 +1,9 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
 use std::sync::LazyLock;
 
-use certval_stores_core::{StoreEntry, TrustStoreProvider};
+use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 /// The roots in the shape [`StoreEntry`] takes: DER buffers borrowed from the
 /// dependency's own `'static` data.
@@ -27,9 +28,7 @@ static ROOTS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
         .collect()
 });
 
-/// Trust-store provider for the Mozilla TLS server roots as `webpki-root-certs`
-/// publishes them.
-pub struct WebpkiRootCertsStores;
+struct WebpkiRootCertsStores;
 
 /// Store id for the TLS server root set, to pass to
 /// `prepare_certval_environment` or `serialize_environment` rather than
@@ -50,22 +49,18 @@ impl TrustStoreProvider for WebpkiRootCertsStores {
         // consumer has is the dependency version in Cargo.lock, which is a
         // better answer than a build date and the field documentation rules
         // that out anyway.
-        vec![StoreEntry {
-            id: WEBPKI_ROOT_CERTS,
-            label: "Web PKI (Mozilla roots, TLS servers, via webpki-root-certs)",
-            roots: ROOTS.as_slice(),
-            cert_store_cbor: None,
-            published: None,
-            collected: None,
-        }]
+        vec![StoreEntry::new(
+            WEBPKI_ROOT_CERTS,
+            "Web PKI (Mozilla roots, TLS servers, via webpki-root-certs)",
+            ROOTS.as_slice(),
+        )]
     }
 }
 
-/// The provider instance.
-pub static PROVIDER: WebpkiRootCertsStores = WebpkiRootCertsStores;
-
-/// Convenience accessor returning the provider as a trait object, for adding to
-/// a provider list passed to `certval_stores_core`.
+/// The trust-store provider for the Mozilla TLS server roots as `webpki-root-certs`
+/// publishes them.
+///
+/// Add it to the list of providers passed to `certval_stores_core`.
 pub fn provider() -> &'static dyn TrustStoreProvider {
-    &PROVIDER
+    &WebpkiRootCertsStores
 }

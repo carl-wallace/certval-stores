@@ -220,9 +220,10 @@ fn every_intermediate_validates_to_a_root() {
 
     let entry = entry();
     let as_of = certval_store_gen::core::published_as_time_of_interest(
-        entry
+        &entry
             .published
-            .expect("the tpm entry states a publication date"),
+            .expect("the tpm entry states a publication date")
+            .to_string(),
     )
     .expect("the publication date must convert");
     let mut cps = CertificationPathSettings::new();

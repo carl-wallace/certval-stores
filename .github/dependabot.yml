@@ -5,8 +5,7 @@
 # dependency moves. Without this, the crate whose entire advantage over `certval_stores_mozilla`
 # is update cost had nothing that updated it.
 #
-# Weekly, on the same day as the provider refresh, so a maintainer reads all of the week's trust
-# movement in one sitting rather than two.
+# Monthly.
 version: 2
 updates:
   - package-ecosystem: cargo

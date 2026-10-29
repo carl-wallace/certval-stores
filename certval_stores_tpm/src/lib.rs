@@ -1,6 +1,9 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
-use certval_stores_core::{StoreEntry, TrustStoreProvider};
+#[cfg(feature = "tpm")]
+use certval_stores_provider_core::Date;
+use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 // The vendor roots the cabinet publishes, one `include_bytes!` each in the generated `roots_tpm`
 // module, which a refresh rewrites together with `roots/tpm/` so the list cannot fall behind the
@@ -15,12 +18,15 @@ mod roots_tpm;
 // the contents last changed, `collected` the day it was fetched. Files rather than literals so a
 // refresh carries the dates with the material instead of leaving them to a hand edit.
 #[cfg(feature = "tpm")]
-const TPM_PUBLISHED: &str = include_str!("../provenance/tpm/published.txt").trim_ascii_end();
+const TPM_PUBLISHED: Date =
+    Date::parse(include_str!("../provenance/tpm/published.txt").trim_ascii_end())
+        .expect("provenance/tpm/published.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "tpm")]
-const TPM_COLLECTED: &str = include_str!("../provenance/tpm/collected.txt").trim_ascii_end();
+const TPM_COLLECTED: Date =
+    Date::parse(include_str!("../provenance/tpm/collected.txt").trim_ascii_end())
+        .expect("provenance/tpm/collected.txt is not a YYYY-MM-DD date");
 
-/// Trust-store provider for the TPM vendor roots.
-pub struct TpmStores;
+struct TpmStores;
 
 /// Store id for the TPM vendor environment, to pass to `prepare_certval_environment` or
 /// `serialize_environment` rather than spelling it out: the parameter is a `&str`, so a stale
@@ -33,23 +39,19 @@ impl TrustStoreProvider for TpmStores {
     fn entries(&self) -> Vec<StoreEntry> {
         let mut entries = Vec::new();
         #[cfg(feature = "tpm")]
-        entries.push(StoreEntry {
-            id: TPM,
-            label: "TPM vendor roots",
-            roots: roots_tpm::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/tpm/tpm.cbor")),
-            published: Some(TPM_PUBLISHED),
-            collected: Some(TPM_COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(TPM, "TPM vendor roots", roots_tpm::ROOTS)
+                .with_cert_store_cbor(include_bytes!("../cas/tpm/tpm.cbor"))
+                .with_published(TPM_PUBLISHED)
+                .with_collected(TPM_COLLECTED),
+        );
         entries
     }
 }
 
-/// The provider instance.
-pub static PROVIDER: TpmStores = TpmStores;
-
-/// Convenience accessor returning the provider as a trait object, for adding to a provider list
-/// passed to `certval_stores_core`.
+/// The trust-store provider for the TPM vendor roots.
+///
+/// Add it to the list of providers passed to `certval_stores_core`.
 pub fn provider() -> &'static dyn TrustStoreProvider {
-    &PROVIDER
+    &TpmStores
 }

@@ -1,26 +1,28 @@
 [package]
 name = "certval_stores_tpm"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 edition = "2021"
 rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/carl-wallace/certval-stores"
 description = "TPM vendor trust store for certval, from Microsoft's TrustedTpm.cab"
-# Only what the build reads: the sources, the README lib.rs takes its docs from, the embedded
-# certificates and stores, and the provenance dates. inputs/ and tests/ are read only by the tests,
-# as are the .der files under cas/, which are the generator's inputs for the .cbor beside them.
-include = ["src/**", "README.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "provenance/**/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
+keywords = ["x509", "tpm", "trust-anchor", "attestation", "certval"]
+categories = ["cryptography"]
+# What the build reads, plus the changelog: the sources, the README lib.rs takes its docs from, the
+# embedded certificates and stores, and the provenance dates. inputs/ and tests/ are read only by
+# the tests, as are the .der files under cas/, which are the generator's inputs for the .cbor beside
+# them.
+include = ["src/**", "README.md", "CHANGELOG.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "provenance/**/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
-certval_stores_core = { path = "../certval_stores_core", default-features = false }
+certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0-rc.1" }
 
 [features]
 # One environment, on by default, following certval_stores_eca rather than certval_stores_nipr:
 # nipr's are opt-in because a consumer must choose between two, and there is nothing to choose
 # here. The vendors inside are one trust set, not a menu -- an attestation key chains to whichever
 # vendor made the part.
-default = ["tpm", "reqwest-client"]
-reqwest-client = ["certval_stores_core/reqwest-client"]
+default = ["tpm"]
 tpm = []
 
 
@@ -40,3 +42,7 @@ certval-store-gen = { path = "../certval-store-gen", default-features = false, f
 # its signature.
 tpm_cab_verify = { git = "https://github.com/carl-wallace/tpm_cab_verify.git", branch = "main" }
 tokio = { version = "1.52.4", features = ["macros", "rt-multi-thread"] }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

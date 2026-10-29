@@ -87,9 +87,10 @@ fn environment(extra_anchors: &[&[u8]]) -> (PkiEnvironment, CertificationPathSet
     let mut cps = CertificationPathSettings::default();
     cps.set_time_of_interest(
         certval_store_gen::core::published_as_time_of_interest(
-            entry
+            &entry
                 .published
-                .expect("the tpm entry states a publication date"),
+                .expect("the tpm entry states a publication date")
+                .to_string(),
         )
         .expect("the publication date must convert"),
     );

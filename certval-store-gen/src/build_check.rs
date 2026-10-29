@@ -1,5 +1,5 @@
 //! Checks a provider crate's committed store against what its inputs produce, for use
-//! from a `build.rs`.
+//! from the provider crate's tests.
 //!
 //! The stores in this workspace are generated, not written: `cas/<env>/<env>.cbor` is what
 //! this crate produces from the material beside it. Nothing enforced that, so a store and
@@ -196,7 +196,7 @@ fn subjects(set: &[Vec<u8>], other: &[Vec<u8>]) -> Vec<String> {
 
 /// Run [`tamp_store`], report through cargo, and fail the build on a mismatch.
 ///
-/// Panicking is how a build script fails, and a mismatch is worth failing on: it can only
+/// Panicking is how a test fails, and a mismatch is worth failing on: it can only
 /// mean the committed material no longer matches the input it claims to come from.
 pub fn assert_tamp_store(stream: &str, population: &str, committed: &str) {
     assert_tamp_store_with(stream, population, &[], &[], committed)

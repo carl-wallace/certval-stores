@@ -3,8 +3,8 @@
 The Microsoft root program as certval trust stores, split by the purposes the program grants.
 
 Microsoft publishes its root program as a **certificate trust list** rather than as a bundle:
-`authrootstl.cab` is an Authenticode-signed cabinet holding one file, `authroot.stl`, which lists
-SHA-1 thumbprints and per-root metadata and carries no certificates at all. Each certificate is
+`authrootstl.cab` is a cabinet holding one file, `authroot.stl`, a list signed with CMS that gives
+SHA-1 thumbprints and per-root metadata and contains no certificates at all. Each certificate is
 served separately, at a URL named after its own thumbprint. This crate carries the result of
 following that, and `certval-store-gen`'s `authroot` adapter is what follows it.
 
@@ -19,16 +19,16 @@ transfer does not matter.
 ## Environments
 
 Six, all views over the same list, and the certificate itself is stored once in `roots/`
-regardless of how many grant it. Measured against the list published 2026-08-25:
+regardless of how many grant it:
 
-| feature | id | roots |
+| feature | constant (id) | roots |
 |---|---|---|
-| `msft_all` | `msft_all` | 357 |
-| `msft_client_auth` | `msft_client_auth` | 267 |
-| `msft_tls` | `msft_tls` | 234 |
-| `msft_email` | `msft_email` | 215 |
-| `msft_timestamping` | `msft_timestamping` | 162 |
-| `msft_code_signing` | `msft_code_signing` | 143 |
+| `msft_all` | `MSFT_ALL` (`msft_all`) | every root the program trusts |
+| `msft_client_auth` | `MSFT_CLIENT_AUTH` (`msft_client_auth`) | roots granted client authentication |
+| `msft_tls` | `MSFT_TLS` (`msft_tls`) | roots granted server authentication |
+| `msft_email` | `MSFT_EMAIL` (`msft_email`) | roots granted email protection |
+| `msft_timestamping` | `MSFT_TIMESTAMPING` (`msft_timestamping`) | roots granted timestamping |
+| `msft_code_signing` | `MSFT_CODE_SIGNING` (`msft_code_signing`) | roots granted code signing |
 
 No environment carries a CA store. Microsoft publishes roots and nothing else, so there are no
 intermediates and no precomputed partial paths — a chain validated against one of these needs its
@@ -36,12 +36,12 @@ intermediates supplied or retrieved.
 
 ## What is carried, and what is not
 
-The published list holds **562** entries; this crate carries **357**. Three rules account for the
+The published list holds more entries than this crate contains. Three rules account for the
 difference, and the first two are about not accumulating trust nobody intends:
 
-- **Expired roots are dropped** — 98 of them. Microsoft keeps them listed; `CDD4EEAE…`,
+- **Expired roots are dropped.** Microsoft keeps them listed; `CDD4EEAE…`,
   `CN=Microsoft Root Certificate Authority`, has been expired since 2021 and is still published.
-- **Restricted roots are dropped** — 107 of the remainder. A root can stay in the list while
+- **Restricted roots are dropped.** A root can stay in the list while
   Microsoft distrusts it from a given date, carried as property `1.3.6.1.4.1.311.10.11.104`. The
   2016-04-19 cohort is the SHA-1 deprecation; `DigiCert Baltimore Root` and
   `GeoTrust Universal CA` were restricted on 2026-09-15. Keeping them would mean shipping a root
@@ -55,23 +55,83 @@ None of the three is a decision the list makes for us, and the first two could b
 consumer verifying an *old* Authenticode signature legitimately needs a root that was restricted
 after that signature was timestamped. `msft_code_signing` cannot do that today. Ask if you need it.
 
+Each environment other than `msft_all` contains a root when the list grants that environment's
+purpose (property `…10.11.9`) and does not withdraw it (property `…10.11.122`). Microsoft adds a
+withdrawal on top of the original grant rather than editing it, so a root can list a purpose in
+both; it is left out of that environment and stays in `msft_all`.
+
+**Microsoft's NotBefore restrictions are not applied.** Properties `…10.11.126` and `…10.11.127`
+say that certificates issued after a date are not trusted for the listed purposes, while those
+issued before it still are. That depends on the issued certificate, not on the root, and has no
+equivalent in RFC 5280 path validation, so the environments contain these roots as the list grants
+them and the validity of the certificates themselves is what applies. Many roots in `msft_tls` have
+such a date for serverAuth, among them the Entrust, AffirmTrust and Trustwave roots.
+
 ## Things in this material worth knowing
 
-- **Seven roots are ML-DSA-87** (`2.16.840.1.101.3.4.3.19`) — pilot roots from DigiCert, HARICA,
+- **Some roots are ML-DSA-87** (`2.16.840.1.101.3.4.3.19`) — pilot roots from DigiCert, HARICA,
   IdenTrust, Sectigo, SSL.com, UniTrust and ComSign. certval can verify their self-signatures;
   most tooling cannot.
-- **41 of the 357 carried roots are SHA-1 signed**, so reading this crate's material needs
+- **Some of the carried roots are SHA-1 signed**, so reading this crate's material needs
   certval's `sha1_sig`. That, with the MD2 and MD5 roots the program also lists, is why the
   generator takes the signed list as the authority on what is a root rather than deciding by
   self-signature the way the PKCS#7 adapters do: an algorithm nobody can verify would file a root
   as an intermediate.
-- **Twenty roots carry a serial number of zero or a negative value**, against RFC 5280. x509-cert
+- **Some roots have a serial number of zero or a negative value**, against RFC 5280. x509-cert
   enforces the length limit and not positivity, so they decode; one, `SZAFIR ROOT CA`, has a
   21-byte serial and survives only because that limit is enforced as 21 on decode.
-- **Microsoft's own product roots grant nothing.** Six entries carry no purposes, and they are
+- **Microsoft's own product roots grant nothing.** The entries that list no purposes are
   `Microsoft Root Certificate Authority` 1997/2010/2011 and the ECC product roots. Windows trusts
   them intrinsically rather than through the program — so no store built from this list can verify
   Microsoft's own signed artifacts, including the trust list itself.
+
+## Using it
+
+Load a store into a certval `PkiEnvironment` with `certval_stores_core`, naming the store by its
+constant:
+
+```rust
+# #[cfg(feature = "msft_all")] {
+use certval::{PkiEnvironment, TaSource};
+use certval_stores_core::prepare_certval_environment;
+
+let mut pe = PkiEnvironment::default();
+pe.populate_5280_pki_environment();
+let mut ta_store = TaSource::new();
+prepare_certval_environment(
+    &[certval_stores_msft::provider()],
+    &mut pe,
+    &mut ta_store,
+    certval_stores_msft::MSFT_ALL,
+)?;
+# }
+# Ok::<(), certval::Error>(())
+```
+
+The trust material is embedded as it was committed, and nothing in this package lets you re-check
+where it came from: using it means trusting this crate's publisher, and the review each refresh
+received before it was merged. How the material is obtained and authenticated is described in this
+README and in the repository's
+[MAINTENANCE.md](https://github.com/carl-wallace/certval-stores/blob/main/MAINTENANCE.md).
+
+## Versioning
+
+This crate follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html), and the version
+number also says what changed in the trust material:
+
+- A **patch** release (1.0.0 to 1.0.1) changes intermediate CA certificates, partial paths, or a
+  store's dates or label. No store's trust anchors change.
+- A **minor** release (1.0.x to 1.1.0) adds or removes trust anchors in a store, adds a store, or
+  adds to the API without breaking code that uses it.
+- A **major** release (1.x to 2.0.0) changes the API in a way that breaks code that uses it, for
+  example by removing a store along with its feature and constant.
+
+With an ordinary requirement such as `certval_stores_msft = "1.0"`, `cargo update` takes every
+1.x release, including a minor release that adds or removes trust anchors. With
+`certval_stores_msft = "~1.0"`, `cargo update` takes 1.0.1, 1.0.2 and so on, which change only
+intermediate CA certificates, partial paths or dates, and does not take 1.1.0, so the trust anchors
+stay those of 1.0 until the requirement is changed to `~1.1`. Each release's changes are listed in
+`CHANGELOG.md`.
 
 ## Refreshing
 
@@ -99,6 +159,12 @@ design: the counts below are pinned, so a change names itself and a person reads
 diff before it lands.
 
 `certval-store-gen authroot --check-only` verifies the committed material and fetches nothing.
+
+`inputs/authrootstl.cab` is the cabinet the committed store was generated from, exactly as it was
+fetched. A refresh compares the list it fetches with the list inside that cabinet, and refuses one
+with a lower sequence number or an earlier `thisUpdate`, writing nothing: an older list is validly
+signed as of its own date, so its signature alone does not rule it out. Expired and disallowed
+roots are judged as of the list's `thisUpdate`, not the day the refresh runs.
 
 `provenance/` records what the copy is: `published.txt` (the list's own `thisUpdate`),
 `collected.txt`, `sequence_number.txt` and `last_modified.txt` — the last two so a refresh can

@@ -1,6 +1,14 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
-use certval_stores_core::{StoreEntry, TrustStoreProvider};
+#[cfg(any(
+    feature = "nipr",
+    feature = "om_nipr",
+    feature = "nipr_interop",
+    feature = "nipr_cceb_interop"
+))]
+use certval_stores_provider_core::Date;
+use certval_stores_provider_core::{StoreEntry, TrustStoreProvider};
 
 #[cfg(feature = "om_nipr")]
 mod roots_om;
@@ -26,28 +34,39 @@ mod roots_cceb_interop;
 // the material instead of leaving them to a hand edit -- the gap the two answer is real
 // here, `JITC.ir4` having been signed well over a year before it was fetched.
 #[cfg(feature = "nipr")]
-const NIPR_PUBLISHED: &str = include_str!("../provenance/prod/published.txt").trim_ascii_end();
+const NIPR_PUBLISHED: Date =
+    Date::parse(include_str!("../provenance/prod/published.txt").trim_ascii_end())
+        .expect("provenance/prod/published.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "nipr")]
-const NIPR_COLLECTED: &str = include_str!("../provenance/prod/collected.txt").trim_ascii_end();
+const NIPR_COLLECTED: Date =
+    Date::parse(include_str!("../provenance/prod/collected.txt").trim_ascii_end())
+        .expect("provenance/prod/collected.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "om_nipr")]
-const OM_NIPR_PUBLISHED: &str = include_str!("../provenance/om/published.txt").trim_ascii_end();
+const OM_NIPR_PUBLISHED: Date =
+    Date::parse(include_str!("../provenance/om/published.txt").trim_ascii_end())
+        .expect("provenance/om/published.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "om_nipr")]
-const OM_NIPR_COLLECTED: &str = include_str!("../provenance/om/collected.txt").trim_ascii_end();
+const OM_NIPR_COLLECTED: Date =
+    Date::parse(include_str!("../provenance/om/collected.txt").trim_ascii_end())
+        .expect("provenance/om/collected.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "nipr_interop")]
-const NIPR_INTEROP_PUBLISHED: &str =
-    include_str!("../provenance/interop/published.txt").trim_ascii_end();
+const NIPR_INTEROP_PUBLISHED: Date =
+    Date::parse(include_str!("../provenance/interop/published.txt").trim_ascii_end())
+        .expect("provenance/interop/published.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "nipr_interop")]
-const NIPR_INTEROP_COLLECTED: &str =
-    include_str!("../provenance/interop/collected.txt").trim_ascii_end();
+const NIPR_INTEROP_COLLECTED: Date =
+    Date::parse(include_str!("../provenance/interop/collected.txt").trim_ascii_end())
+        .expect("provenance/interop/collected.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "nipr_cceb_interop")]
-const NIPR_CCEB_INTEROP_PUBLISHED: &str =
-    include_str!("../provenance/cceb_interop/published.txt").trim_ascii_end();
+const NIPR_CCEB_INTEROP_PUBLISHED: Date =
+    Date::parse(include_str!("../provenance/cceb_interop/published.txt").trim_ascii_end())
+        .expect("provenance/cceb_interop/published.txt is not a YYYY-MM-DD date");
 #[cfg(feature = "nipr_cceb_interop")]
-const NIPR_CCEB_INTEROP_COLLECTED: &str =
-    include_str!("../provenance/cceb_interop/collected.txt").trim_ascii_end();
+const NIPR_CCEB_INTEROP_COLLECTED: Date =
+    Date::parse(include_str!("../provenance/cceb_interop/collected.txt").trim_ascii_end())
+        .expect("provenance/cceb_interop/collected.txt is not a YYYY-MM-DD date");
 
-/// Trust-store provider for the NIPR (DoD PKI) environments.
-pub struct NiprStores;
+struct NiprStores;
 
 /// Store id for the NIPR operational-test (JITC) store, to pass to `prepare_certval_environment`
 /// or `serialize_environment` rather than spelling it out: the parameter is a
@@ -83,50 +102,48 @@ impl TrustStoreProvider for NiprStores {
     fn entries(&self) -> Vec<StoreEntry> {
         let mut entries = Vec::new();
         #[cfg(feature = "om_nipr")]
-        entries.push(StoreEntry {
-            id: NIPR_OM,
-            label: "U.S. DoD (JITC)",
-            roots: roots_om::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/om/om.cbor")),
-            published: Some(OM_NIPR_PUBLISHED),
-            collected: Some(OM_NIPR_COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(NIPR_OM, "U.S. DoD (JITC)", roots_om::ROOTS)
+                .with_cert_store_cbor(include_bytes!("../cas/om/om.cbor"))
+                .with_published(OM_NIPR_PUBLISHED)
+                .with_collected(OM_NIPR_COLLECTED),
+        );
         #[cfg(feature = "nipr")]
-        entries.push(StoreEntry {
-            id: NIPR_PROD,
-            label: "U.S. DoD (NIPR)",
-            roots: roots_prod::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/prod/prod.cbor")),
-            published: Some(NIPR_PUBLISHED),
-            collected: Some(NIPR_COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(NIPR_PROD, "U.S. DoD (NIPR)", roots_prod::ROOTS)
+                .with_cert_store_cbor(include_bytes!("../cas/prod/prod.cbor"))
+                .with_published(NIPR_PUBLISHED)
+                .with_collected(NIPR_COLLECTED),
+        );
         #[cfg(feature = "nipr_interop")]
-        entries.push(StoreEntry {
-            id: NIPR_INTEROP,
-            label: "U.S. DoD (NIPR + Interoperability)",
-            roots: roots_interop::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/interop/interop.cbor")),
-            published: Some(NIPR_INTEROP_PUBLISHED),
-            collected: Some(NIPR_INTEROP_COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(
+                NIPR_INTEROP,
+                "U.S. DoD (NIPR + Interoperability)",
+                roots_interop::ROOTS,
+            )
+            .with_cert_store_cbor(include_bytes!("../cas/interop/interop.cbor"))
+            .with_published(NIPR_INTEROP_PUBLISHED)
+            .with_collected(NIPR_INTEROP_COLLECTED),
+        );
         #[cfg(feature = "nipr_cceb_interop")]
-        entries.push(StoreEntry {
-            id: NIPR_CCEB_INTEROP,
-            label: "U.S. DoD (NIPR + CCEB Interoperability)",
-            roots: roots_cceb_interop::ROOTS,
-            cert_store_cbor: Some(include_bytes!("../cas/cceb_interop/cceb_interop.cbor")),
-            published: Some(NIPR_CCEB_INTEROP_PUBLISHED),
-            collected: Some(NIPR_CCEB_INTEROP_COLLECTED),
-        });
+        entries.push(
+            StoreEntry::new(
+                NIPR_CCEB_INTEROP,
+                "U.S. DoD (NIPR + CCEB Interoperability)",
+                roots_cceb_interop::ROOTS,
+            )
+            .with_cert_store_cbor(include_bytes!("../cas/cceb_interop/cceb_interop.cbor"))
+            .with_published(NIPR_CCEB_INTEROP_PUBLISHED)
+            .with_collected(NIPR_CCEB_INTEROP_COLLECTED),
+        );
         entries
     }
 }
 
-/// The provider instance.
-pub static PROVIDER: NiprStores = NiprStores;
-
-/// Convenience accessor returning the provider as a trait object, for adding to
-/// a provider list passed to `certval_stores_core`.
+/// The trust-store provider for the NIPR (DoD PKI) environments.
+///
+/// Add it to the list of providers passed to `certval_stores_core`.
 pub fn provider() -> &'static dyn TrustStoreProvider {
-    &PROVIDER
+    &NiprStores
 }

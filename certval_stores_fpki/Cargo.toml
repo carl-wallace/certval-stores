@@ -1,17 +1,19 @@
 [package]
 name = "certval_stores_fpki"
-version = "0.1.0"
+version = "1.0.0-rc.1"
 edition = "2021"
 rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/carl-wallace/certval-stores"
 description = "Federal PKI trust store for certval — anchored at the Federal Common Policy CA G2"
-# Only what the build reads: the sources, the README lib.rs takes its docs from, the embedded
-# certificates and store, and the walk date. inputs/ and tests/ are read only by the tests.
-include = ["src/**", "README.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "LICENSE-APACHE", "LICENSE-MIT"]
+keywords = ["x509", "pki", "trust-anchor", "fpki", "certval"]
+categories = ["cryptography"]
+# What the build reads, plus the changelog: the sources, the README lib.rs takes its docs from, the
+# embedded certificates and store, and the walk date. inputs/ and tests/ are read only by the tests.
+include = ["src/**", "README.md", "CHANGELOG.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
-certval_stores_core = { path = "../certval_stores_core", default-features = false }
+certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0-rc.1" }
 
 [dev-dependencies]
 # The regeneration check: a dev-dependency so CI runs it and no consumer compiles it. Default
@@ -21,19 +23,19 @@ certval-store-gen = { path = "../certval-store-gen", default-features = false }
 certval_stores_core = { path = "../certval_stores_core", default-features = false, features = ["test-util"] }
 # default-features = false for the same reason as the core crate: certval's
 # defaults pull reqwest, and a dev-dependency taking them puts the HTTP stack
-# back into the test graph however `reqwest-client` is configured, so a
+# back into the test graph however core's client features are configured, so a
 # --no-default-features test run would not build the shape it claims to.
 certval = { git = "https://github.com/carl-wallace/rust-pki.git", default-features = false, features = ["std", "rsa"], branch = "main" }
 
 [features]
-default = ["fpki", "reqwest-client"]
-# Forwards the core crate's client switch. Without this a consumer could not
-# turn the HTTP stack off: features are additive, so this crate enabling the
-# core default would re-enable it however the consumer configured core.
-reqwest-client = ["certval_stores_core/reqwest-client"]
+default = ["fpki"]
 # The Federal PKI as published today: Federal Common Policy CA G2 plus the
 # cross-certified mesh beneath it.
 fpki = []
 # The retired Federal Common Policy CA (G1). Anchors-only, no CA store; enable
 # only to validate paths that predate the G2 migration.
 fpki_legacy = []
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

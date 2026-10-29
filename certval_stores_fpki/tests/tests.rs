@@ -22,7 +22,7 @@ use certval_stores_core::{conformance, prepare_certval_environment, TrustStorePr
 /// alongside the directory they were loaded from.
 #[cfg(any(feature = "fpki", feature = "fpki_legacy"))]
 fn roots_for(id: &str) -> &'static [&'static [u8]] {
-    certval_stores_fpki::PROVIDER
+    certval_stores_fpki::provider()
         .entries()
         .iter()
         .find(|e| e.id == id)
@@ -47,7 +47,7 @@ const EXPECTED_INTERMEDIATE_SET: &str =
 #[test]
 #[cfg(feature = "fpki")]
 fn the_intermediate_set_is_what_was_reviewed() {
-    let entries = certval_stores_fpki::PROVIDER.entries();
+    let entries = certval_stores_fpki::provider().entries();
     let cbor = entries
         .iter()
         .find(|e| e.id == certval_stores_fpki::FPKI)
@@ -74,7 +74,7 @@ fn provider_is_conformant() {
 #[test]
 #[cfg(feature = "fpki")]
 fn fpki_entry_has_one_anchor_and_a_ca_store() {
-    let entries = certval_stores_fpki::PROVIDER.entries();
+    let entries = certval_stores_fpki::provider().entries();
     let fpki = entries
         .iter()
         .find(|e| e.id == certval_stores_fpki::FPKI)
@@ -89,7 +89,7 @@ fn fpki_entry_has_one_anchor_and_a_ca_store() {
 #[test]
 #[cfg(feature = "fpki")]
 fn embedded_ca_store_deserializes_and_initializes() {
-    let entries = certval_stores_fpki::PROVIDER.entries();
+    let entries = certval_stores_fpki::provider().entries();
     let cbor = entries
         .iter()
         .find(|e| e.id == certval_stores_fpki::FPKI)
@@ -133,7 +133,7 @@ fn prepare_environment_rejects_unknown_environment() {
 #[test]
 #[cfg(feature = "fpki_legacy")]
 fn legacy_entry_is_anchors_only() {
-    let entries = certval_stores_fpki::PROVIDER.entries();
+    let entries = certval_stores_fpki::provider().entries();
     let legacy = entries
         .iter()
         .find(|e| e.id == certval_stores_fpki::FPKI_LEGACY)

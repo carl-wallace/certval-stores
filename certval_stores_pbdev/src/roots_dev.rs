@@ -4,6 +4,5 @@
 /// The trust anchors of this environment, one per file, in file name order.
 #[rustfmt::skip]
 pub(crate) static ROOTS: &[&[u8]] = &[
-    include_bytes!("../roots/dev/DOD_ENG_Root-3.der"),
     include_bytes!("../roots/dev/DOD_ENG_Root-6.der"),
 ];
