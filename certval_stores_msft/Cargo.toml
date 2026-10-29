@@ -1,6 +1,6 @@
 [package]
 name = "certval_stores_msft"
-version = "1.0.0"
+version = "1.0.0-rc.1"
 edition = "2021"
 rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
@@ -14,7 +14,7 @@ categories = ["cryptography"]
 include = ["src/**", "README.md", "CHANGELOG.md", "build.rs", "roots/**/*.der", "provenance/collected.txt", "provenance/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
-certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0" }
+certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0-rc.1" }
 
 [features]
 # `msft_all` rather than nothing, because unlike certval_stores_nipr there is a sensible default

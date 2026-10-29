@@ -306,7 +306,7 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_core"
-version = "0.1.0"
+version = "0.1.0-rc.1"
 dependencies = [
  "certval",
  "certval_stores_core",
@@ -328,7 +328,7 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_eca"
-version = "1.0.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval-store-gen",
@@ -338,7 +338,7 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_fpki"
-version = "1.0.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval-store-gen",
@@ -348,7 +348,7 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_msft"
-version = "1.0.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval_stores_core",
@@ -360,7 +360,7 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_nipr"
-version = "1.0.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval-store-gen",
@@ -370,7 +370,7 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_pbdev"
-version = "1.0.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval-store-gen",
@@ -380,11 +380,11 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_provider_core"
-version = "1.0.0"
+version = "1.0.0-rc.1"
 
 [[package]]
 name = "certval_stores_tpm"
-version = "1.0.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval-store-gen",
@@ -396,7 +396,7 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_wcf"
-version = "1.0.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval-store-gen",
@@ -406,7 +406,7 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_webpki_root_certs"
-version = "1.0.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "certval",
  "certval_stores_core",
