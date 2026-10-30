@@ -19,7 +19,7 @@ log = "0.4.33"
 # would drag the HTTP stack in behind the back of the client features below,
 # leaving nothing for a consumer to turn off. A provider that wants certval's webpki
 # roots or its revocation support enables `certval/webpki` or `certval/remote` itself.
-certval = { git = "https://github.com/carl-wallace/rust-pki.git", version = "0.2.0-rc.1", default-features = false, branch = "main" }
+certval = { version = "0.2.0-rc.1", default-features = false }
 
 # Used by the conformance harness to read the partial paths serialized beside a
 # store's buffers, which CertSource does not expose.

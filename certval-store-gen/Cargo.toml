@@ -20,7 +20,7 @@ publish = false  # until the move to a public repo settles
 #
 # Versions of the shared ASN.1 crates below are pinned to match certval's so the
 # x509-cert / der / cms types unify across the crate boundary.
-certval = { git = "https://github.com/carl-wallace/rust-pki.git", branch = "main", default-features = false, features = [
+certval = { version = "0.2.0-rc.1", default-features = false, features = [
     "std",
     "webpki",
     "rsa",
