@@ -59,6 +59,11 @@ jobs:
             "$RUNNER_TEMP/fpki.log" | while IFS= read -r line; do
               echo "::warning title=FPKI repository did not answer::${line}"
             done || true
+          # A repository whose servers hold different copies; the walk kept the newest, but a
+          # stale server is the publisher's to fix, so it is raised every week it persists.
+          grep -E 'served [0-9]+ versions across' "$RUNNER_TEMP/fpki.log" | while IFS= read -r line; do
+              echo "::warning title=FPKI repository served more than one version::${line}"
+            done || true
 
       - name: Open a pull request if the material moved
         env:
@@ -75,8 +80,15 @@ jobs:
           # The version bump this calls for under the crate's Versioning rule, first in the
           # description, since batched releases take the largest one merged since the last.
           bump="$(bash .github/scripts/suggested-bump.sh certval_stores_fpki)"
+          # Repositories whose servers disagreed, so a reviewer weighing a removal sees them.
+          disagreed="$(grep -oE '[^ ]+ served [0-9]+ versions across .*' "$RUNNER_TEMP/fpki.log" | sed 's/^/- /' || true)"
+          if [ -n "$disagreed" ]; then
+            disagreed="$(printf 'Repositories that served more than one version during the walk (the copy with the newest Last-Modified was kept):\n\n%s' "$disagreed")"
+          fi
           cat > "$RUNNER_TEMP/body.md" <<EOF
           $bump
+
+          $disagreed
 
           $moved
 

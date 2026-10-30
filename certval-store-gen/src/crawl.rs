@@ -19,6 +19,14 @@
 //! and the walk continues through that copy; what it fell back for is reported in
 //! [`Crawled::fell_back`]. What it could neither fetch nor stand in for is reported in
 //! [`Crawled::unreachable`].
+//!
+//! **Nor should a stale server.** One host can sit in front of servers holding different copies:
+//! on 2026-10-30 Entrust's SIA URL served a current bundle and a 2020 copy without one of its
+//! certificates, about half the time each, so a single fetch decided whether that certificate was
+//! in the store. A bundle that differs from the caller's earlier copy is therefore fetched
+//! [`RESAMPLES`] more times and the copy with the newest `Last-Modified` kept: a stale server can
+//! only serve something older. Repositories seen serving more than one version are reported in
+//! [`Crawled::disagreed`].
 
 use std::collections::BTreeSet;
 
@@ -74,6 +82,10 @@ pub struct Crawled {
     /// Repositories that gave no usable answer and were read from the caller's earlier copy
     /// instead, so the walk continued through them.
     pub fell_back: Vec<String>,
+    /// Repositories whose servers returned more than one version across the fetches of one walk,
+    /// with the `Last-Modified` of each and which was kept. One that keeps appearing here has a
+    /// stale server behind it, which is the publisher's to fix.
+    pub disagreed: Vec<String>,
     /// True when a limit stopped the walk, so the result is short for that reason instead.
     pub truncated: bool,
     /// What each repository served, as `(uri, bytes)`, for every fetch that read as a bundle.
@@ -111,6 +123,7 @@ pub fn from_anchors_with(
         absent: vec![],
         unreachable: vec![],
         fell_back: vec![],
+        disagreed: vec![],
         truncated: false,
         bundles: vec![],
     };
@@ -137,7 +150,16 @@ pub fn from_anchors_with(
         head += 1;
 
         let bytes = match fetch_with_retries(&uri) {
-            Ok(b) => b,
+            // The usual case costs one request: the repository served what it served last time.
+            Ok((first, _)) if fallback(&uri).as_deref() == Some(first.as_slice()) => first,
+            Ok((first, last_modified)) => {
+                let (kept, disagreement) = newest_copy(&uri, (first, last_modified));
+                if let Some(d) = disagreement {
+                    log::warn!("{d}");
+                    out.disagreed.push(d);
+                }
+                kept
+            }
             Err(crate::refresh::FetchError::Absent(why)) => {
                 out.absent.push(why);
                 continue;
@@ -199,10 +221,10 @@ const RETRIES: u64 = 2;
 
 /// Fetch `uri`, asking again after a pause when nothing answered. A 4xx is the publisher's answer
 /// about its own repository and asking again cannot change it, so it is returned at once.
-fn fetch_with_retries(uri: &str) -> Result<Vec<u8>, crate::refresh::FetchError> {
+fn fetch_with_retries(uri: &str) -> Result<Served, crate::refresh::FetchError> {
     let mut attempt = 0;
     loop {
-        let why = match crate::refresh::fetch(uri) {
+        let why = match crate::refresh::fetch_with_last_modified(uri) {
             Err(crate::refresh::FetchError::Unreachable(why)) => why,
             other => return other,
         };
@@ -213,6 +235,91 @@ fn fetch_with_retries(uri: &str) -> Result<Vec<u8>, crate::refresh::FetchError> 
         log::info!("{why}; asking again ({attempt} of {RETRIES})");
         std::thread::sleep(std::time::Duration::from_secs(5 * attempt));
     }
+}
+
+/// One fetched copy of a bundle: its bytes and the `Last-Modified` it was served with.
+type Served = (Vec<u8>, Option<String>);
+
+/// Further fetches of a bundle that differs from the caller's earlier copy. Against a host whose
+/// servers are stale half the time, as Entrust's was, the chance that this many more fetches and
+/// the first all reach the stale one is about 1 in 32.
+const RESAMPLES: usize = 4;
+
+/// Fetch `uri` [`RESAMPLES`] more times, each over a new connection, and keep the newest of those
+/// copies and `first`, with a description of the disagreement when the copies differ. A fetch that
+/// fails is skipped: `first` already answered, so a later failure says nothing about what the
+/// repository holds.
+fn newest_copy(uri: &str, first: Served) -> (Vec<u8>, Option<String>) {
+    let mut copies = vec![first];
+    for _ in 0..RESAMPLES {
+        if let Ok(copy) = crate::refresh::fetch_fresh_with_last_modified(uri) {
+            copies.push(copy);
+        }
+    }
+    let kept = newest(&copies);
+    let mut versions: Vec<&Served> = vec![];
+    for copy in &copies {
+        if !versions.iter().any(|v| v.0 == copy.0) {
+            versions.push(copy);
+        }
+    }
+    let disagreement = (versions.len() > 1).then(|| {
+        let dates: Vec<String> = versions
+            .iter()
+            .map(|(bytes, lm)| {
+                format!(
+                    "{} ({} bytes)",
+                    lm.as_deref().unwrap_or("no Last-Modified"),
+                    bytes.len()
+                )
+            })
+            .collect();
+        format!(
+            "{uri} served {} versions across {} fetches: {}; kept the one dated {}",
+            versions.len(),
+            copies.len(),
+            dates.join(", "),
+            copies[kept].1.as_deref().unwrap_or("no Last-Modified"),
+        )
+    });
+    (copies.swap_remove(kept).0, disagreement)
+}
+
+/// Which of `copies` to keep: the one with the newest `Last-Modified`, the first among equals.
+/// A copy with no usable `Last-Modified` sorts before every dated one, so it is kept only when
+/// none is dated, and then the first copy is.
+fn newest(copies: &[Served]) -> usize {
+    let mut best = 0;
+    for (i, (_, lm)) in copies.iter().enumerate().skip(1) {
+        let key = lm.as_deref().and_then(http_date_key);
+        let best_key = copies[best].1.as_deref().and_then(http_date_key);
+        if key > best_key {
+            best = i;
+        }
+    }
+    best
+}
+
+/// A sortable key for an HTTP date in its fixed form (`Mon, 20 Jan 2020 22:07:08 GMT`, RFC 9110
+/// §5.6.7), or `None` for anything else.
+fn http_date_key(date: &str) -> Option<(u16, u8, u8, u8, u8, u8)> {
+    const MONTHS: [&str; 12] = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    let parts: Vec<&str> = date.split_whitespace().collect();
+    let [_weekday, day, month, year, time, "GMT"] = parts.as_slice() else {
+        return None;
+    };
+    let month = MONTHS.iter().position(|m| m == month)? as u8 + 1;
+    let hms: Vec<u8> = time
+        .split(':')
+        .map(str::parse)
+        .collect::<Result<_, _>>()
+        .ok()?;
+    let [h, m, s] = hms.as_slice() else {
+        return None;
+    };
+    Some((year.parse().ok()?, month, day.parse().ok()?, *h, *m, *s))
 }
 
 /// The bundle URIs a certificate names: SIA `caRepository` and AIA `caIssuers`.
@@ -348,5 +455,64 @@ fn describe(der: &[u8]) -> String {
             cert.tbs_certificate().serial_number()
         ),
         Err(_) => "<unparseable>".to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // The two versions Entrust's SIA URL served on 2026-10-30.
+    const STALE: &str = "Mon, 20 Jan 2020 22:07:08 GMT";
+    const CURRENT: &str = "Sat, 13 Nov 2021 02:12:55 GMT";
+
+    fn served(body: &[u8], lm: Option<&str>) -> Served {
+        (body.to_vec(), lm.map(str::to_string))
+    }
+
+    #[test]
+    fn http_dates_sort_by_time() {
+        assert_eq!(http_date_key(STALE), Some((2020, 1, 20, 22, 7, 8)));
+        assert!(http_date_key(CURRENT) > http_date_key(STALE));
+        assert!(
+            http_date_key("Wed, 31 Dec 2025 23:59:59 GMT")
+                < http_date_key("Thu, 01 Jan 2026 00:00:00 GMT")
+        );
+    }
+
+    #[test]
+    fn anything_but_the_fixed_form_is_not_a_date() {
+        for s in [
+            "",
+            "garbage",
+            "Mon, 20 Jan 2020 22:07:08 UTC",
+            "Mon, 20 Foo 2020 22:07:08 GMT",
+            "Mon, 20 Jan 2020 22:07 GMT",
+            "Monday, 20-Jan-20 22:07:08 GMT",
+        ] {
+            assert_eq!(http_date_key(s), None, "{s}");
+        }
+    }
+
+    #[test]
+    fn the_newest_copy_is_kept_wherever_it_falls() {
+        let copies = [
+            served(b"old", Some(STALE)),
+            served(b"new", Some(CURRENT)),
+            served(b"old", Some(STALE)),
+        ];
+        assert_eq!(newest(&copies), 1);
+        let copies = [served(b"new", Some(CURRENT)), served(b"old", Some(STALE))];
+        assert_eq!(newest(&copies), 0);
+    }
+
+    #[test]
+    fn a_dated_copy_beats_an_undated_one_and_ties_keep_the_first() {
+        let copies = [served(b"a", None), served(b"b", Some(STALE))];
+        assert_eq!(newest(&copies), 1);
+        let copies = [served(b"a", None), served(b"b", None)];
+        assert_eq!(newest(&copies), 0);
+        let copies = [served(b"a", Some(CURRENT)), served(b"b", Some(CURRENT))];
+        assert_eq!(newest(&copies), 0);
     }
 }

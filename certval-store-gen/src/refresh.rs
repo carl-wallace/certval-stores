@@ -54,6 +54,21 @@ static AGENT: LazyLock<ureq::Agent> = LazyLock::new(|| {
         .into()
 });
 
+/// [`AGENT`], keeping no connection open between requests, so each request is a new connection.
+///
+/// For asking a repository again when its servers may disagree: a load balancer picks a server per
+/// connection, so requests over a reused connection reach the same server and cannot tell. Measured
+/// 2026-10-30, when five fetches of Entrust's SIA bundle through [`AGENT`] all reached its stale
+/// server while separate connections reached either about half the time.
+static FRESH_AGENT: LazyLock<ureq::Agent> = LazyLock::new(|| {
+    ureq::Agent::config_builder()
+        .timeout_connect(Some(Duration::from_secs(30)))
+        .timeout_global(Some(Duration::from_secs(300)))
+        .max_idle_connections(0)
+        .build()
+        .into()
+});
+
 /// What a refresh did, and why.
 ///
 /// Every variant is a normal outcome. A caller logs these and carries on; none of them is a
@@ -267,7 +282,24 @@ pub(crate) fn fetch_if_modified(url: &str, since: Option<&str>) -> Result<Condit
 
 /// GET `url` into memory, bounded by [`MAX_STREAM_BYTES`].
 pub(crate) fn fetch(url: &str) -> Result<Vec<u8>, FetchError> {
-    let mut response = AGENT.get(url).call().map_err(|e| {
+    fetch_with_last_modified(url).map(|(bytes, _)| bytes)
+}
+
+/// [`fetch`], also returning the response's `Last-Modified` where the server sends one: the
+/// crawl uses it to choose between copies when a repository's servers do not agree.
+pub(crate) fn fetch_with_last_modified(url: &str) -> Result<(Vec<u8>, Option<String>), FetchError> {
+    get(&AGENT, url)
+}
+
+/// [`fetch_with_last_modified`] over a new connection, through [`FRESH_AGENT`].
+pub(crate) fn fetch_fresh_with_last_modified(
+    url: &str,
+) -> Result<(Vec<u8>, Option<String>), FetchError> {
+    get(&FRESH_AGENT, url)
+}
+
+fn get(agent: &ureq::Agent, url: &str) -> Result<(Vec<u8>, Option<String>), FetchError> {
+    let mut response = agent.get(url).call().map_err(|e| {
         let message = format!("{url} could not be fetched: {e}");
         // 4xx is the server's own answer about its own repository. Everything else -- 5xx
         // included, since a server erroring is not a server saying "nothing here" -- leaves the
@@ -281,10 +313,18 @@ pub(crate) fn fetch(url: &str) -> Result<Vec<u8>, FetchError> {
         }
     })?;
 
-    response
+    let last_modified = response
+        .headers()
+        .get("last-modified")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_string);
+
+    let bytes = response
         .body_mut()
         .with_config()
         .limit(MAX_STREAM_BYTES)
         .read_to_vec()
-        .map_err(|e| FetchError::Unreachable(format!("{url} could not be read: {e}")))
+        .map_err(|e| FetchError::Unreachable(format!("{url} could not be read: {e}")))?;
+
+    Ok((bytes, last_modified))
 }

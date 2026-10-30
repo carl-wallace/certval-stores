@@ -352,12 +352,14 @@ fn main() -> Result<()> {
             }
             let crawled = certval_store_gen::crawl::from_anchors(&anchors, &limits);
             log::info!(
-                "walked {} repositories from {} anchor(s): {} certificate(s), {} absent, {} unreachable{}",
+                "walked {} repositories from {} anchor(s): {} certificate(s), {} absent, {} unreachable, \
+                 {} serving more than one version{}",
                 crawled.fetched,
                 anchors.len(),
                 crawled.certificates.len(),
                 crawled.absent.len(),
                 crawled.unreachable.len(),
+                crawled.disagreed.len(),
                 if crawled.truncated {
                     ", TRUNCATED by a limit"
                 } else {
