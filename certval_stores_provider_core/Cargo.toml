@@ -9,7 +9,7 @@ description = "The StoreEntry type and TrustStoreProvider trait that certval_sto
 keywords = ["x509", "pki", "trust-store", "certval"]
 categories = ["cryptography"]
 # What the build reads, plus the changelog: the sources and the README lib.rs takes its docs from.
-include = ["src/**", "README.md", "CHANGELOG.md", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["src/**/*.rs", "README.md", "CHANGELOG.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 # No dependencies, on purpose: a provider crate depends on this one alone, so nothing a
 # certval or reqwest release changes can force a new major version of the providers.

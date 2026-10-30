@@ -128,8 +128,8 @@ stay those of 1.0 until the requirement is changed to `~1.1`. Each release's cha
 
 A scheduled workflow does it: `.github/workflows/refresh.yml` asks the publisher for the stream,
 regenerates `roots/`, `cas/` and `provenance/` when it moved, and opens a pull request. CI on that
-pull request is expected to fail — the pinned counts below are what make a change in trust material
-announce itself.
+pull request is expected to fail — the tests pin the counts and a digest of the certificate set,
+which is what makes a change in trust material announce itself (see `MAINTENANCE.md`).
 
 Locally it is two commands. `refresh` fetches the stream and replaces `inputs/ECA.ir4` when the
 publisher's own date is newer; a stream published older than the committed one is refused as a

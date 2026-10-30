@@ -10,7 +10,7 @@ keywords = ["x509", "pki", "trust-anchor", "webpki", "certval"]
 categories = ["cryptography"]
 # What the build reads, plus NOTICE and the changelog: the sources and the README lib.rs takes its
 # docs from.
-include = ["src/**", "README.md", "CHANGELOG.md", "NOTICE", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["src/**/*.rs", "README.md", "CHANGELOG.md", "NOTICE", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0-rc.1" }

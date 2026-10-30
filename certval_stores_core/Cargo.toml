@@ -9,7 +9,7 @@ description = "Composes certval_stores_* trust-store providers into a certval Pk
 keywords = ["x509", "pki", "trust-store", "certval", "tls"]
 categories = ["cryptography"]
 # What the build reads, plus the changelog: the sources and the README lib.rs takes its docs from.
-include = ["src/**", "README.md", "CHANGELOG.md", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["src/**/*.rs", "README.md", "CHANGELOG.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0-rc.1" }

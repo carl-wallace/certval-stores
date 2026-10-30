@@ -48,6 +48,24 @@ const EXPECTED_NIPR_INTEROP_INTERMEDIATES: usize = 46;
 #[cfg(feature = "nipr_cceb_interop")]
 const EXPECTED_NIPR_CCEB_INTEROP_INTERMEDIATES: usize = 45;
 
+/// Digests over each store's intermediate set, which the counts above cannot see: a stream that
+/// retires some CAs and adds as many others leaves the count where it was. The stream's TAMP
+/// signature says the material is DoD's; these say a person reviewed what changed.
+///
+/// To update: `UPDATE_PINS=1 cargo test --workspace --all-features` (see `conformance::check_pin`).
+#[cfg(feature = "nipr")]
+const EXPECTED_NIPR_INTERMEDIATE_SET: &str =
+    "c9a99ac4c1b00cbf941a6ebfdbd7b279b9c7dc116f0d41728b40d352e09350c7";
+#[cfg(feature = "om_nipr")]
+const EXPECTED_OM_NIPR_INTERMEDIATE_SET: &str =
+    "857e3ea572aec65048ec195f3f9f31db9a821d9a6c8c72902d738fbabeba4c71";
+#[cfg(feature = "nipr_interop")]
+const EXPECTED_NIPR_INTEROP_INTERMEDIATE_SET: &str =
+    "d82ad8d34773c65f6ab836d3848c1d314c0f6c99eaad696793af4b44de4d3b4b";
+#[cfg(feature = "nipr_cceb_interop")]
+const EXPECTED_NIPR_CCEB_INTEROP_INTERMEDIATE_SET: &str =
+    "9cb5f6bae0cdb90baa108085ad1caec7093bcc6912cdc0cc6198b74be82e87be";
+
 fn providers() -> Vec<&'static dyn TrustStoreProvider> {
     vec![certval_stores_nipr::provider()]
 }
@@ -67,6 +85,22 @@ fn load(cbor: &[u8]) -> CertSource {
     let mut cert_source = CertSource::new_from_cbor(cbor).expect("store must deserialize");
     cert_source.initialize(&cps).expect("store must initialize");
     cert_source
+}
+
+/// The digest the `_SET` constants pin, over a store's certificates.
+#[cfg(any(
+    feature = "nipr",
+    feature = "om_nipr",
+    feature = "nipr_interop",
+    feature = "nipr_cceb_interop"
+))]
+fn set_digest_of(cert_source: &CertSource) -> String {
+    conformance::set_digest(
+        cert_source
+            .get_buffers()
+            .iter()
+            .map(|cf| cf.bytes.as_slice()),
+    )
 }
 
 #[cfg(any(
@@ -95,6 +129,7 @@ fn nipr_entry_carries_four_roots_and_a_ca_store() {
     assert_eq!(nipr.roots.len(), 4);
     let cert_source = load(nipr.cert_store_cbor.expect("NIPR must carry a CA store"));
     certval_stores_core::pin!(EXPECTED_NIPR_INTERMEDIATES, cert_source.len());
+    certval_stores_core::pin!(EXPECTED_NIPR_INTERMEDIATE_SET, set_digest_of(&cert_source));
 }
 
 #[test]
@@ -104,6 +139,10 @@ fn om_nipr_entry_carries_four_roots_and_a_ca_store() {
     assert_eq!(om.roots.len(), 4);
     let cert_source = load(om.cert_store_cbor.expect("OM_NIPR must carry a CA store"));
     certval_stores_core::pin!(EXPECTED_OM_NIPR_INTERMEDIATES, cert_source.len());
+    certval_stores_core::pin!(
+        EXPECTED_OM_NIPR_INTERMEDIATE_SET,
+        set_digest_of(&cert_source)
+    );
 }
 
 /// The shared checks are only worth running if they fail on a store that has
@@ -266,6 +305,10 @@ fn nipr_interop_entry_carries_five_roots_and_a_ca_store() {
             .expect("interop must carry a CA store"),
     );
     certval_stores_core::pin!(EXPECTED_NIPR_INTEROP_INTERMEDIATES, cert_source.len());
+    certval_stores_core::pin!(
+        EXPECTED_NIPR_INTEROP_INTERMEDIATE_SET,
+        set_digest_of(&cert_source)
+    );
 }
 
 #[test]
@@ -279,6 +322,10 @@ fn nipr_cceb_interop_entry_carries_five_roots_and_a_ca_store() {
             .expect("CCEB interop must carry a CA store"),
     );
     certval_stores_core::pin!(EXPECTED_NIPR_CCEB_INTEROP_INTERMEDIATES, cert_source.len());
+    certval_stores_core::pin!(
+        EXPECTED_NIPR_CCEB_INTEROP_INTERMEDIATE_SET,
+        set_digest_of(&cert_source)
+    );
 }
 
 /// The interoperability roots are hand-carried: DoD Interoperability Root CA 2 and US DoD CCEB

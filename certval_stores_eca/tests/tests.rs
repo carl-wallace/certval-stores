@@ -21,6 +21,15 @@ use certval_stores_core::{conformance, get_roots, TrustStoreProvider};
 #[cfg(feature = "eca")]
 const EXPECTED_INTERMEDIATES: usize = 6;
 
+/// Digest over the intermediate set, which the count above cannot see: a stream that retires some
+/// CAs and adds as many others leaves the count where it was. The stream's TAMP signature says the
+/// material is DoD's; this says a person reviewed what changed.
+///
+/// To update: `UPDATE_PINS=1 cargo test --workspace --all-features` (see `conformance::check_pin`).
+#[cfg(feature = "eca")]
+const EXPECTED_INTERMEDIATE_SET: &str =
+    "0daa7cfe53ca2fdcc1c8f67fbf7ed254979539ee8db3faaebac4d04953ea8c2d";
+
 fn providers() -> Vec<&'static dyn TrustStoreProvider> {
     vec![certval_stores_eca::provider()]
 }
@@ -58,6 +67,13 @@ fn eca_entry_carries_two_roots_and_a_ca_store() {
     assert_eq!(eca.roots.len(), 2);
     let cert_source = load(eca.cert_store_cbor.expect("ECA must carry a CA store"));
     certval_stores_core::pin!(EXPECTED_INTERMEDIATES, cert_source.len());
+    let set = conformance::set_digest(
+        cert_source
+            .get_buffers()
+            .iter()
+            .map(|cf| cf.bytes.as_slice()),
+    );
+    certval_stores_core::pin!(EXPECTED_INTERMEDIATE_SET, set);
 }
 
 /// The shared checks are only worth running if they fail on a store that has

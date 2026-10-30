@@ -73,13 +73,16 @@ the Microsoft one, shows its changes in the file list instead. Trust anchors get
 own (`.github/scripts/roots-diff.sh`): each root the refresh added, removed or replaced, by file and
 subject, since a change of roots is the larger event the versioning below marks as a minor bump.
 
-**A refresh is expected to arrive red, and that is the mechanism rather than a defect.** Each crate
-pins both the counts and a **digest over the certificate set** its material had when a person last
-reviewed it. When a publisher moves, the tests fail and name what changed; someone reads the
-certificate diff, updates the constants, and merges. The failure *is* the acknowledgement gate.
-A pull request opened by the workflow starts no CI by itself, so the first run is the one the
-reviewer's push of the updated constants starts (or, for a refresh that moves nothing pinned, a
-close and reopen).
+**A refresh is expected to arrive red, and that is the mechanism rather than a defect.** Each
+crate's tests pin the counts and a **digest over the certificate set** its material had when a
+person last reviewed it; `webpki_root_certs`, which follows the `webpki-root-certs` crate's version,
+pins nothing. For `nipr`, `eca` and `wcf` the material also arrives as signed TAMP messages
+(InstallRoot `.ir4` streams), which `certval-store-gen` verifies: the signature says the material is
+DoD's, the digest says a person reviewed what changed. When a publisher moves, the tests fail and
+name what changed; someone reads the certificate diff, updates the constants, and merges. The
+failure *is* the acknowledgement gate. A pull request opened by the workflow starts no CI by itself,
+so the first run is the one the reviewer's push of the updated constants starts (or, for a refresh
+that moves nothing pinned, a close and reopen).
 
 Every pinned constant is checked with `certval_stores_core::pin!`, so updating them is one command
 on the refresh branch:

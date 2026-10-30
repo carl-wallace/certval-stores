@@ -12,7 +12,7 @@ categories = ["cryptography"]
 # embedded certificates and stores, and the provenance dates. inputs/ and tests/ are read only by
 # the tests, as are the .der files under cas/, which are the generator's inputs for the .cbor beside
 # them.
-include = ["src/**", "README.md", "CHANGELOG.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "provenance/**/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["src/**/*.rs", "README.md", "CHANGELOG.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "provenance/**/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0-rc.1" }

@@ -10,7 +10,7 @@ keywords = ["x509", "pki", "trust-anchor", "fpki", "certval"]
 categories = ["cryptography"]
 # What the build reads, plus the changelog: the sources, the README lib.rs takes its docs from, the
 # embedded certificates and store, and the walk date. inputs/ and tests/ are read only by the tests.
-include = ["src/**", "README.md", "CHANGELOG.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["src/**/*.rs", "README.md", "CHANGELOG.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0-rc.1" }

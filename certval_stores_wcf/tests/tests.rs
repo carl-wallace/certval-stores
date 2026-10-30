@@ -22,6 +22,15 @@ use certval_stores_core::{conformance, get_roots, TrustStoreProvider};
 #[cfg(feature = "wcf")]
 const EXPECTED_INTERMEDIATES: usize = 11;
 
+/// Digest over the intermediate set, which the count above cannot see: a stream that retires some
+/// CAs and adds as many others leaves the count where it was. The stream's TAMP signature says the
+/// material is DoD's; this says a person reviewed what changed.
+///
+/// To update: `UPDATE_PINS=1 cargo test --workspace --all-features` (see `conformance::check_pin`).
+#[cfg(feature = "wcf")]
+const EXPECTED_INTERMEDIATE_SET: &str =
+    "86d3df8663d4520f47230dcb639a8950334487edde1821efcac7cddf4ef9797b";
+
 fn providers() -> Vec<&'static dyn TrustStoreProvider> {
     vec![certval_stores_wcf::provider()]
 }
@@ -59,6 +68,13 @@ fn wcf_entry_carries_one_root_and_a_ca_store() {
     assert_eq!(wcf.roots.len(), 1);
     let cert_source = load(wcf.cert_store_cbor.expect("WCF must carry a CA store"));
     certval_stores_core::pin!(EXPECTED_INTERMEDIATES, cert_source.len());
+    let set = conformance::set_digest(
+        cert_source
+            .get_buffers()
+            .iter()
+            .map(|cf| cf.bytes.as_slice()),
+    );
+    certval_stores_core::pin!(EXPECTED_INTERMEDIATE_SET, set);
 }
 
 /// The store is two deep: the root issues one intermediate and that intermediate
