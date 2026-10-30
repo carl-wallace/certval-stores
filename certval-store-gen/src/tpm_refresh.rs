@@ -22,6 +22,10 @@
 //! `version.txt` inside the cabinet states when the contents last changed. A fetch offering a date
 //! *older* than the committed one is a stale mirror rather than an update, and is refused --
 //! carried over from `tpm_roots`, where it was the reason the version file was read at all.
+//!
+//! The *same* date does not end a refresh unless the cabinet is also byte for byte the committed
+//! `inputs/TrustedTpm.cab`, because Microsoft reissues the cabinet with new vendor CAs without
+//! moving `version.txt`.
 
 use std::fs;
 use std::path::Path;
@@ -60,7 +64,7 @@ pub fn refresh_crate(
 
 /// What a refresh did.
 pub enum Outcome {
-    /// The publisher's cabinet is the one already committed, by its own date.
+    /// The publisher's cabinet is the one already committed, by its date and its bytes.
     Current { published: String },
     /// Nothing usable came back, or what did was older than what is in hand.
     Kept { why: String },
@@ -166,12 +170,21 @@ fn refresh_with(env: &str, cab: Vec<u8>, source: Source, as_of: Option<&str>) ->
                 ),
             });
         }
-        // Current *and* present. The date says the publisher has nothing newer; it says nothing
-        // about whether this crate still has what that date describes, and a refresh that reports
-        // "current" over a missing store leaves a build failing on an include_bytes! of a file
-        // nothing will now write.
-        if published.as_str() == have.as_str() && Path::new(&store_path(env)).is_file() {
+        let committed_cab = fs::read("inputs/TrustedTpm.cab").ok();
+        if is_current(
+            &published,
+            have,
+            Path::new(&store_path(env)).is_file(),
+            &cab,
+            committed_cab.as_deref(),
+        ) {
             return Ok(Outcome::Current { published });
+        }
+        if published.as_str() == have.as_str() {
+            log::info!(
+                "the cabinet served states the committed date {published} but differs from \
+                 inputs/TrustedTpm.cab; regenerating"
+            );
         }
     }
 
@@ -272,6 +285,23 @@ fn store_path(env: &str) -> String {
     format!("cas/{env}/{env}.cbor")
 }
 
+/// Whether a fetched cabinet leaves nothing to do: the date its `version.txt` states is the
+/// committed one, the store that date describes is present, and the cabinet is byte for byte
+/// `inputs/TrustedTpm.cab`.
+///
+/// The date alone is not enough, because Microsoft reissues the cabinet with new vendor CAs
+/// without moving it. A re-signed cabinet with the same certificates also differs in its bytes;
+/// regenerating from it writes the same store, so the cost is a run, not a wrong answer.
+fn is_current(
+    published: &str,
+    committed_date: &str,
+    store_present: bool,
+    cab: &[u8],
+    committed_cab: Option<&[u8]>,
+) -> bool {
+    published == committed_date && store_present && committed_cab == Some(cab)
+}
+
 /// Fetch the cabinet, retrying what gives no answer.
 fn fetch_with_retries() -> std::result::Result<Vec<u8>, String> {
     let mut last = String::new();
@@ -354,4 +384,37 @@ pub fn regenerate_from(
         &contents.inputs,
         core::published_as_time_of_interest(reference)?,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const DATE: &str = "2026-10-23";
+
+    #[test]
+    fn same_date_same_bytes_with_a_store_is_current() {
+        assert!(is_current(DATE, DATE, true, b"cab", Some(b"cab")));
+    }
+
+    #[test]
+    fn same_date_different_bytes_is_regenerated() {
+        // The case the date check alone missed: a reissue that leaves version.txt where it was.
+        assert!(!is_current(DATE, DATE, true, b"reissued", Some(b"cab")));
+    }
+
+    #[test]
+    fn same_cabinet_without_its_store_is_regenerated() {
+        assert!(!is_current(DATE, DATE, false, b"cab", Some(b"cab")));
+    }
+
+    #[test]
+    fn nothing_committed_is_regenerated() {
+        assert!(!is_current(DATE, DATE, true, b"cab", None));
+    }
+
+    #[test]
+    fn a_newer_date_is_regenerated() {
+        assert!(!is_current("2026-11-01", DATE, true, b"cab", Some(b"cab")));
+    }
 }
