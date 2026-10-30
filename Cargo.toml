@@ -14,6 +14,18 @@ members = [
     "certval-store-gen",
 ]
 
+# Shared by every member: each states `edition.workspace = true` and so on, so a change here (the
+# MSRV, the next certval) is one line rather than eleven.
+[workspace.package]
+edition = "2021"
+rust-version = "1.88"
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/carl-wallace/certval-stores"
+
+# Members add their own features with `certval = { workspace = true, features = [...] }`.
+[workspace.dependencies]
+certval = { version = "0.2.0-rc.1", default-features = false }
+
 # Reached only by way of rfc5934, which certval-store-gen takes for the InstallRoot adapter and which
 # takes x509-ocsp's 0.3.0-pre line, not on crates.io. A patch table does not travel with a git
 # dependency, so this one governs builds of this workspace (e.g. its CI); a larger workspace that

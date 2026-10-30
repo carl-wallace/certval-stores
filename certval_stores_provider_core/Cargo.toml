@@ -1,10 +1,10 @@
 [package]
 name = "certval_stores_provider_core"
 version = "1.0.0-rc.1"
-edition = "2021"
-rust-version = "1.88"
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/carl-wallace/certval-stores"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "The StoreEntry type and TrustStoreProvider trait that certval_stores_* trust-store crates implement"
 keywords = ["x509", "pki", "trust-store", "certval"]
 categories = ["cryptography"]

@@ -1,10 +1,10 @@
 [package]
 name = "certval_stores_tpm"
 version = "1.0.0-rc.1"
-edition = "2021"
-rust-version = "1.88"
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/carl-wallace/certval-stores"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "TPM vendor trust store for certval, from Microsoft's TrustedTpm.cab"
 keywords = ["x509", "tpm", "trust-anchor", "attestation", "certval"]
 categories = ["cryptography"]
@@ -27,7 +27,7 @@ tpm = []
 
 
 [dev-dependencies]
-certval = { version = "0.2.0-rc.1", default-features = false, features = [
+certval = { workspace = true, features = [
     "std",
     "rsa",
     "sha1_sig",
