@@ -335,7 +335,7 @@ dependencies = [
 
 [[package]]
 name = "certval_stores_fpki"
-version = "1.0.0-rc.1"
+version = "1.0.0-rc.2"
 dependencies = [
  "certval",
  "certval-store-gen",
