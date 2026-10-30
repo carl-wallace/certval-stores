@@ -236,9 +236,10 @@ For each crate with changes merged since its last release:
 3. Bump `version` in the crate's `Cargo.toml`, and the `version =` requirement of any crate here
    that depends on it. For `certval_stores_webpki_root_certs`, also raise its `webpki-root-certs`
    minimum to the release in `Cargo.lock`.
-4. Check: `cargo test --workspace --all-features`; one pass with the `[patch.crates-io]` table
-   removed, since that is the dependency graph a crates.io user resolves; `cargo package -p
-   <crate>`; and the MSRV build.
+4. Check: `cargo test --workspace --all-features`; the `no-patch` CI job, which packages every
+   published crate and builds it without the `[patch.crates-io]` table, since that is the
+   dependency graph a crates.io user resolves (`.github/scripts/no-patch-build.sh` runs it
+   locally); and the MSRV build.
 5. Publish in dependency order: `certval_stores_provider_core`, `certval_stores_core`, the
    providers, then `certval_stores_mozilla` from its own repository.
 6. Tag each published crate as `<crate>-v<version>`.
