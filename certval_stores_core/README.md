@@ -305,7 +305,7 @@ Freshness is a separate question, answered by each store's refresh procedure.
 
    ```toml
    [dev-dependencies]
-   certval = { git = "…", features = ["std", "rsa"] }  # + eddsa / pqc as needed
+   certval = { version = "0.2.0-rc.1", features = ["std", "rsa"] }  # + eddsa / pqc as needed
    ```
 
    ```rust,ignore

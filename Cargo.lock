@@ -236,7 +236,8 @@ dependencies = [
 [[package]]
 name = "certval"
 version = "0.2.0-rc.1"
-source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#8e0e084cf21924a5e6076f63048cbda10f467e2f"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc6f0bddbf3de03eac84e36737d40f788805a49472d25c00f1e2c0b784757995"
 dependencies = [
  "base64ct",
  "bitvec",
@@ -1800,7 +1801,8 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 [[package]]
 name = "pkiprocmacros"
 version = "0.1.2"
-source = "git+https://github.com/carl-wallace/rust-pki.git?branch=main#8e0e084cf21924a5e6076f63048cbda10f467e2f"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5df93c69801978b114a3e8f84e395bc72cee6666b26794adc799cfa4d95fc07"
 dependencies = [
  "quote",
  "syn 2.0.119",
@@ -2756,7 +2758,7 @@ checksum = "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3"
 [[package]]
 name = "tpm_cab_verify"
 version = "0.1.2"
-source = "git+https://github.com/carl-wallace/tpm_cab_verify.git?branch=main#d758cad9ebe8dfc8e152429e3f458da7b36406cc"
+source = "git+https://github.com/carl-wallace/tpm_cab_verify.git?branch=main#7b31c2f1cc64fa38a3bf120a0c153d6ff741794b"
 dependencies = [
  "authenticode",
  "bincode",
