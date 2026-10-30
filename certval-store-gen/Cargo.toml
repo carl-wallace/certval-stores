@@ -1,10 +1,10 @@
 [package]
 name = "certval-store-gen"
 version = "0.1.0"
-edition = "2021"
-rust-version = "1.88"
+edition.workspace = true
+rust-version.workspace = true
 description = "Offline generator for certval CBOR trust-anchor and intermediate-CA stores (Web PKI, DoD TAMP, FPKI PKCS#7)"
-license = "MIT OR Apache-2.0"
+license.workspace = true
 publish = false  # until the move to a public repo settles
 
 [dependencies]
@@ -20,7 +20,7 @@ publish = false  # until the move to a public repo settles
 #
 # Versions of the shared ASN.1 crates below are pinned to match certval's so the
 # x509-cert / der / cms types unify across the crate boundary.
-certval = { version = "0.2.0-rc.1", default-features = false, features = [
+certval = { workspace = true, features = [
     "std",
     "webpki",
     "rsa",

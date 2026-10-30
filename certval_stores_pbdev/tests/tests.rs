@@ -20,6 +20,14 @@ use certval_stores_core::{conformance, get_roots, TrustStoreProvider};
 #[cfg(feature = "dev")]
 const EXPECTED_DEV_INTERMEDIATES: usize = 4;
 
+/// Digest over the intermediate set, which the count above cannot see: swapping one CA for another
+/// leaves the count where it was.
+///
+/// To update: `UPDATE_PINS=1 cargo test --workspace --all-features` (see `conformance::check_pin`).
+#[cfg(feature = "dev")]
+const EXPECTED_DEV_INTERMEDIATE_SET: &str =
+    "bf59590636619763ec87630033dbcad8e85181bde6b7f0d9b45c56801cd56b9b";
+
 fn providers() -> Vec<&'static dyn TrustStoreProvider> {
     vec![certval_stores_pbdev::provider()]
 }
@@ -48,6 +56,13 @@ fn dev_entry_carries_one_root_and_a_ca_store() {
         .initialize(&cps)
         .expect("dev.cbor must initialize");
     certval_stores_core::pin!(EXPECTED_DEV_INTERMEDIATES, cert_source.len());
+    let set = conformance::set_digest(
+        cert_source
+            .get_buffers()
+            .iter()
+            .map(|cf| cf.bytes.as_slice()),
+    );
+    certval_stores_core::pin!(EXPECTED_DEV_INTERMEDIATE_SET, set);
 }
 
 /// `get_roots` is the provider's anchors as certval sees them, so it must expose

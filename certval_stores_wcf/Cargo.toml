@@ -1,10 +1,10 @@
 [package]
 name = "certval_stores_wcf"
 version = "1.0.0-rc.1"
-edition = "2021"
-rust-version = "1.88"
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/carl-wallace/certval-stores"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "DoD WCF PKI trust store for certval"
 keywords = ["x509", "pki", "trust-anchor", "dod", "certval"]
 categories = ["cryptography"]
@@ -12,7 +12,7 @@ categories = ["cryptography"]
 # embedded certificates and stores, and the provenance dates. inputs/ and tests/ are read only by
 # the tests, as are the .der files under cas/, which are the generator's inputs for the .cbor beside
 # them.
-include = ["src/**", "README.md", "CHANGELOG.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "provenance/**/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["src/**/*.rs", "README.md", "CHANGELOG.md", "roots/**/*.der", "cas/**/*.cbor", "provenance/**/collected.txt", "provenance/**/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0-rc.1" }
@@ -34,7 +34,7 @@ certval-store-gen = { path = "../certval-store-gen", default-features = false }
 # defaults pull reqwest, and a dev-dependency taking them puts the HTTP stack
 # back into the test graph however core's client features are configured, so a
 # --no-default-features test run would not build the shape it claims to.
-certval = { version = "0.2.0-rc.1", default-features = false, features = ["std", "rsa"] }
+certval = { workspace = true, features = ["std", "rsa"] }
 certval_stores_core = { path = "../certval_stores_core", default-features = false, features = ["test-util"] }
 
 [package.metadata.docs.rs]

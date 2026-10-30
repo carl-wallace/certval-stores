@@ -156,8 +156,8 @@ build.
 
 **What keeps it current** is `.github/workflows/refresh.yml`, which runs the command weekly and
 opens a pull request when the publisher has moved. That pull request arrives with failing tests by
-design: the counts below are pinned, so a change names itself and a person reads the certificate
-diff before it lands.
+design: the tests pin the counts and a digest of the certificate set (see `MAINTENANCE.md`), so a
+change names itself and a person reads the certificate diff before it lands.
 
 `certval-store-gen authroot --check-only` verifies the committed material and fetches nothing.
 

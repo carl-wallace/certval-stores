@@ -1,17 +1,17 @@
 [package]
 name = "certval_stores_msft"
 version = "1.0.0-rc.1"
-edition = "2021"
-rust-version = "1.88"
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/carl-wallace/certval-stores"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
 description = "Microsoft root program trust stores for certval, split by the purposes the program grants"
 keywords = ["x509", "pki", "trust-anchor", "microsoft", "certval"]
 categories = ["cryptography"]
 # What the build reads, plus the changelog: the sources, the README lib.rs takes its docs from,
 # build.rs and the roots it checks, and the provenance dates. inputs/ and tests/ are read only by
 # the tests.
-include = ["src/**", "README.md", "CHANGELOG.md", "build.rs", "roots/**/*.der", "provenance/collected.txt", "provenance/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
+include = ["src/**/*.rs", "README.md", "CHANGELOG.md", "build.rs", "roots/**/*.der", "provenance/collected.txt", "provenance/published.txt", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 certval_stores_provider_core = { path = "../certval_stores_provider_core", version = "1.0.0-rc.1" }
@@ -52,7 +52,7 @@ sha1 = "0.11.0"
 # default-features = false for the same reason as the core crate: certval's defaults pull reqwest,
 # and a dev-dependency taking them puts the HTTP stack back into the test graph however
 # core's client features are configured.
-certval = { version = "0.2.0-rc.1", default-features = false, features = [
+certval = { workspace = true, features = [
     "std",
     "rsa",
     # A third of the program is signed with SHA-1 and two roots with MD2. Without this the tests

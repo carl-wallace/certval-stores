@@ -140,8 +140,9 @@ fork and a pre-release ASN.1 stack, whose patch-table entries do not travel with
 so keeping it out of the build means a consumer embedding this store resolves none of it.
 
 **What keeps it current** is `.github/workflows/refresh.yml`, weekly, opening a pull request when
-the cabinet changes. It arrives with failing tests by design: the counts here are pinned, so a
-change names itself and a person reads the diff before it lands.
+the cabinet changes. It arrives with failing tests by design: the tests pin the counts and a digest
+of the certificate set (see `MAINTENANCE.md`), so a change names itself and a person reads the diff
+before it lands.
 
 **The rollback guard**: `version.txt` states when the contents last changed, and a cabinet dated
 earlier than the committed one is refused as a stale mirror rather than accepted as an update.
