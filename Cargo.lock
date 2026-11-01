@@ -2758,7 +2758,7 @@ checksum = "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3"
 [[package]]
 name = "tpm_cab_verify"
 version = "0.1.2"
-source = "git+https://github.com/carl-wallace/tpm_cab_verify.git?branch=main#7b31c2f1cc64fa38a3bf120a0c153d6ff741794b"
+source = "git+https://github.com/carl-wallace/tpm_cab_verify.git?branch=main#056984a37f9c610680937bdb345be6253455819b"
 dependencies = [
  "authenticode",
  "bincode",
