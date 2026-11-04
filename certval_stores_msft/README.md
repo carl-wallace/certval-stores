@@ -172,4 +172,4 @@ roots are judged as of the list's `thisUpdate`, not the day the refresh runs.
 tell "the CDN re-served the same list" from "the program changed".
 
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
-[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.89+-blue.svg

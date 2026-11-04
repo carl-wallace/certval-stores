@@ -179,4 +179,4 @@ ECA intermediates are issued directly by the roots. A CA that appears in no path
 consumer however well-connected it looks.
 
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
-[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.89+-blue.svg

@@ -147,4 +147,4 @@ a minimum so that it never conflicts with other crates in your build that also d
 Each release's changes are listed in `CHANGELOG.md`.
 
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
-[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.89+-blue.svg
