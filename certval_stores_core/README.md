@@ -351,4 +351,4 @@ provider crates depend on `certval_stores_provider_core`, not on this crate, so 
 listed in `CHANGELOG.md`.
 
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
-[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.89+-blue.svg

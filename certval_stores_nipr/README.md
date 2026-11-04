@@ -220,4 +220,4 @@ an expired CA that was serialized without a path would be missing from a
 validation run against an earlier time, when it was current.
 
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
-[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.89+-blue.svg

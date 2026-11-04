@@ -192,4 +192,4 @@ one intermediate is issued by the root and the rest by that intermediate. A CA t
 unreachable to an offline consumer however well-connected it looks.
 
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
-[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.89+-blue.svg
