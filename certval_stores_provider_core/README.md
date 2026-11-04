@@ -59,4 +59,4 @@ a struct literal, and a new field can be added in a minor release without breaki
 in `CHANGELOG.md`.
 
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
-[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.89+-blue.svg
