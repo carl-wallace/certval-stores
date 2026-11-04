@@ -17,17 +17,17 @@ use x509_cert::Certificate;
 /// restricted past their disallowed date. Update alongside the material -- a change here is the
 /// point at which a refresh gets acknowledged in review.
 #[cfg(feature = "msft_all")]
-const EXPECTED_ALL: usize = 357;
+const EXPECTED_ALL: usize = 350;
 #[cfg(feature = "msft_tls")]
-const EXPECTED_TLS: usize = 234;
+const EXPECTED_TLS: usize = 229;
 #[cfg(feature = "msft_client_auth")]
-const EXPECTED_CLIENT_AUTH: usize = 267;
+const EXPECTED_CLIENT_AUTH: usize = 264;
 #[cfg(feature = "msft_email")]
-const EXPECTED_EMAIL: usize = 215;
+const EXPECTED_EMAIL: usize = 212;
 #[cfg(feature = "msft_code_signing")]
-const EXPECTED_CODE_SIGNING: usize = 143;
+const EXPECTED_CODE_SIGNING: usize = 140;
 #[cfg(feature = "msft_timestamping")]
-const EXPECTED_TIMESTAMPING: usize = 162;
+const EXPECTED_TIMESTAMPING: usize = 159;
 /// Digest over the root set itself, which the counts above cannot see: a count measures size
 /// where the question is membership, so a list that drops one root and adds another passes every
 /// assertion here unchanged. Taken over `msft_all` alone because the five narrowed environments
@@ -36,7 +36,7 @@ const EXPECTED_TIMESTAMPING: usize = 162;
 ///
 /// To update: `UPDATE_PINS=1 cargo test --workspace --all-features` (see `conformance::check_pin`).
 #[cfg(feature = "msft_all")]
-const EXPECTED_ALL_SET: &str = "02454e837907f80656324b2bafee3c406bdcff92ea0a57ae5168fb18684aa489";
+const EXPECTED_ALL_SET: &str = "3c63e80d0e392f6a4ca3464b5d2b58b8100943a0105e3de3856059452d30235c";
 
 /// Gated like the tests that call it: with no environment feature enabled this crate serves
 /// nothing, so there is no entry to look up.
