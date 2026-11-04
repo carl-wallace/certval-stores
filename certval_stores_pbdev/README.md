@@ -118,4 +118,4 @@ Every certificate in the store should yield a path of one certificate, each
 rooted at DoD ENG Root CA 6.
 
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
-[rustc-image]: https://img.shields.io/badge/rustc-1.88+-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.89+-blue.svg

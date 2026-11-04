@@ -176,8 +176,8 @@ crate serves is never buried in a lockfile pull request.
   `PkiEnvironment`.
 - **wasm32, without the HTTP client** — the shape `pittv3-wasm` builds, and the one that cannot
   fall back, since reqwest's wasm backend has no `Certificate` or `add_root_certificate`.
-- **MSRV 1.88 on two no-client builds** — `nipr`, the multi-environment shape, and `msft`, the
-  only crate with a build script. 1.88 is certval's own floor and what every crate here declares.
+- **MSRV 1.89 on two no-client builds** — `nipr`, the multi-environment shape, and `msft`, the
+  only crate with a build script. 1.89 matches certval and is what every crate here declares.
 - **`rustfmt`, and `clippy` twice** — default features and `--all-features`, because
   `--all-features` cannot catch a warning that exists only when a feature is *absent*.
 - **Ten generator feature shapes**, each with warnings fatal, `fail-fast: false`. This is the job
