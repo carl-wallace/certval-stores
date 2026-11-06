@@ -26,13 +26,7 @@ repository = "https://github.com/carl-wallace/certval-stores"
 [workspace.dependencies]
 certval = { version = "0.2.0-rc.1", default-features = false }
 
-# Reached only by way of rfc5934, which certval-store-gen takes for the InstallRoot adapter and which
-# takes x509-ocsp's 0.3.0-pre line, not on crates.io. A patch table does not travel with a git
-# dependency, so this one governs builds of this workspace (e.g. its CI); a larger workspace that
-# consumes these crates (e.g. pbyk) applies its own.
 [patch.crates-io]
-x509-ocsp  = { git = "https://github.com/RustCrypto/formats.git" }
-
 # Reached only under certval-store-gen's `cab` feature, by way of tpm_cab_verify, which verifies an
 # RFC 3161 timestamp with x509-tsp. The 0.2.0-pre line is not on crates.io (0.1.0 is), and it pulls
 # cmpv2, which in turn pulls crmf. tpm_cab_verify patches these in its own workspace, and a patch
