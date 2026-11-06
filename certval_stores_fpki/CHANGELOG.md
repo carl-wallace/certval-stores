@@ -3,6 +3,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 an increase to the minimum supported Rust version is not treated as a breaking change.
 See the README's "Versioning" section for what each level means for the trust material.
 
+## [1.0.0-rc.3] - 2026-11-06
+
+### Changed
+- The Federal Common Policy CA G2 certificate for the U.S. Department of State AD Root CA issued on
+  2026-10-29 (serial `2EFB491BD42A8998CD2B0AA123138776`, valid to 2029-10-29) is in the store,
+  alongside the one that expires on 2026-11-08 (serial `23D03CB4DF4C43D5AB11CE630F41EF9D38DA7FA1`).
+  The store carries 151 intermediate CA certificates, from 150, and was collected on 2026-11-05.
+  Its trust anchors are unchanged.
+- The minimum supported Rust version is 1.89.
+
 ## [1.0.0-rc.2] - 2026-10-30
 
 ### Changed
