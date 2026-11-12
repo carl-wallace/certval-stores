@@ -41,7 +41,7 @@ certval = { workspace = true, features = [
 rfc5934 = { git = "https://github.com/carl-wallace/rfc5934.git", branch = "main" }
 
 x509-cert = { version = "0.3.0", default-features = false, features = ["pem"] }
-cms = "0.3.0-pre.2"
+cms = "=0.3.0-rc.2"
 der = { version = "0.8.1", features = ["alloc", "derive", "oid", "pem"] }
 const-oid = { version = "0.10.2", features = ["db"] }
 # The store's own CBOR codec, for reading a store back and rewriting it. certval serializes with
@@ -72,8 +72,7 @@ ureq = { version = "3", optional = true }
 # (`authrootstl.cab`) and the TPM vendor roots (`TrustedTpm.cab`). `cab` reads the container --
 # including MSZIP, whose blocks cannot be decompressed independently -- and `tpm_cab_verify`
 # checks the Authenticode signature over it against the Microsoft roots it carries, at the
-# timestamped signing time. Taken by git for the same reason certval is: it takes certval from
-# that same source, and a path or crates.io copy would put two certvals in one graph.
+# timestamped signing time. Taken by git because it is not on crates.io.
 #
 # `cab` is pinned to an upstream commit for `Cabinet::read_folder`, which decompresses a folder in one
 # pass; 0.6.0's `read_file` decompresses from the folder's start for every member. Back to a version

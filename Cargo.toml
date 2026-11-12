@@ -24,7 +24,7 @@ repository = "https://github.com/carl-wallace/certval-stores"
 
 # Members add their own features with `certval = { workspace = true, features = [...] }`.
 [workspace.dependencies]
-certval = { version = "0.2.0-rc.1", default-features = false }
+certval = { version = "0.2.0-rc.3", default-features = false }
 
 [patch.crates-io]
 # Reached only under certval-store-gen's `cab` feature, by way of tpm_cab_verify, which verifies an
