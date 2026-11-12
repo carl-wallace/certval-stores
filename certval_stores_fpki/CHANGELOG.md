@@ -3,6 +3,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 an increase to the minimum supported Rust version is not treated as a breaking change.
 See the README's "Versioning" section for what each level means for the trust material.
 
+## [1.0.0-rc.4] - 2026-11-12
+
+### Changed
+- The Federal Common Policy CA G2 certificate for the U.S. Department of State AD Root CA that
+  expired on 2026-11-08 (serial `23D03CB4DF4C43D5AB11CE630F41EF9D38DA7FA1`) is no longer in the
+  store. The one issued on 2026-10-29 (serial `2EFB491BD42A8998CD2B0AA123138776`, valid to
+  2029-10-29) remains, so paths to the State PKI are still found. The store carries 150 intermediate
+  CA certificates, from 151, and was collected on 2026-11-10. Its trust anchors are unchanged.
+
 ## [1.0.0-rc.3] - 2026-11-06
 
 ### Changed
