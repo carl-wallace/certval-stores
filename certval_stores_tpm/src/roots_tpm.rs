@@ -4,6 +4,8 @@
 /// The trust anchors of this environment, one per file, in file name order.
 #[rustfmt::skip]
 pub(crate) static ROOTS: &[&[u8]] = &[
+    include_bytes!("../roots/tpm/AMD_AMD fTPM EK Root E3.der"),
+    include_bytes!("../roots/tpm/AMD_AMD fTPM EK Root R2.der"),
     include_bytes!("../roots/tpm/AMD_AMD-Pluton-Global-Factory-ICA.der"),
     include_bytes!("../roots/tpm/AMD_AMD-Root-CA.der"),
     include_bytes!("../roots/tpm/AMD_Microsoft Pluton Root CA 2021.der"),
