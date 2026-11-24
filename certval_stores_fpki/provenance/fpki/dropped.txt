@@ -19,6 +19,7 @@ unvalidated  Exostar_Digital_Certificate_Service_Signing_CA_1  Some(PathValidati
 unvalidated  Exostar_Federated_Identity_Service_Signing_CA_3  Some(PathValidation(InvalidNotAfterDate))
 unvalidated  Federal_Bridge_CA_G4  Some(PathValidation(NameConstraintsViolation))
 unvalidated  IGC_Server_CA_1  Some(PathValidation(InvalidNotAfterDate))
+unvalidated  Leidos_FBCA_Cloud_PKI_CA-1  Some(PathValidation(InvalidNotAfterDate))
 unvalidated  Northrop_Grumman_Corporate_Signing_CA-G2  Some(PathValidation(InvalidNotAfterDate))
 unvalidated  OU_U.S._Department_of_State_PIV_CA2_OU_Certification_Authorities_OU_PIV_OU_Department_of_State_O_U.S._Government_C_US  Some(PathValidation(InvalidNotAfterDate))
 unvalidated  OU_US_Treasury_Root_CA_OU_Certification_Authorities_OU_Department_of_the_Treasury_O_U.S._Government_C_US  Some(PathValidation(SignatureVerificationFailure))
